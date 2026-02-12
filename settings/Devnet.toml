@@ -1,0 +1,9 @@
+[node]
+# Local devnet placeholder (not used for testnet deploy)
+rpc_bind = "http://localhost:20443"
+
+[accounts.deployer]
+mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+
+[network]
+name = "devnet"

@@ -1,0 +1,12 @@
+[node]
+# RPC for Stacks testnet (Hiro endpoint)
+rpc_bind = "https://api.testnet.hiro.so"
+
+[accounts.deployer]
+# Replace with your 24-word testnet mnemonic
+mnemonic = "observe live dirt include sun twice patch vanish swamp window floor vocal ready very adapt awake patch noise foot suggest chuckle seminar erode open"
+# Optional: clarinet can derive from mnemonic, keep blank if unsure
+# stx_address = "ST..."
+
+[network]
+name = "testnet"
