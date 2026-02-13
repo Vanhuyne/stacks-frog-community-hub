@@ -299,10 +299,16 @@ button:disabled {
   box-shadow: var(--shadow);
 }
 
+.card h2 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-size: 16px;
+  margin: 0 0 14px;
+}
+
 .card label {
   display: block;
   margin-bottom: 12px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--muted);
 }
 
@@ -312,7 +318,7 @@ button:disabled {
   border-radius: 12px;
   border: 1px solid rgba(15, 26, 20, 0.15);
   margin-top: 6px;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .card ul {
@@ -328,7 +334,7 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .ecosystem {

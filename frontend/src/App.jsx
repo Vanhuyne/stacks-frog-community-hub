@@ -300,6 +300,18 @@ export default function App() {
               <p className="subtext">
                 Claim 1,000 FROG every 24h. Connect your wallet, claim tokens, and transfer to friends.
               </p>
+              <div className="frog-mascot" aria-hidden="true">
+                <div className="frog-shadow" />
+                <div className="frog-body">
+                  <div className="frog-eye left"><span className="frog-pupil" /></div>
+                  <div className="frog-eye right"><span className="frog-pupil" /></div>
+                  <div className="frog-mouth" />
+                  <div className="frog-cheek left" />
+                  <div className="frog-cheek right" />
+                  <div className="frog-leg left" />
+                  <div className="frog-leg right" />
+                </div>
+              </div>
             </div>
             <div className="panel">
               <div className="row">
