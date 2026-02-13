@@ -386,6 +386,23 @@ button:disabled {
   gap: 12px;
 }
 
+.app-media {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 26, 20, 0.08);
+  background: #f6fbf8;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.app-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .app-card h2 {
   margin: 0;
   font-size: 24px;
