@@ -31,6 +31,36 @@ h1, h2 {
   padding: 40px 6vw 80px;
 }
 
+.tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  border: 1px solid rgba(29, 111, 75, 0.24);
+  background: #fff;
+  color: var(--accent);
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  text-transform: capitalize;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(29, 111, 75, 0.12);
+}
+
+.tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .hero {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(260px, 360px);
@@ -49,7 +79,147 @@ h1, h2 {
 .subtext {
   font-size: 16px;
   color: var(--muted);
-  max-width: 520px;
+  max-width: 620px;
+}
+
+.frog-mascot {
+  position: relative;
+  width: 170px;
+  height: 140px;
+  margin-top: 20px;
+}
+
+.frog-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 94px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(15, 26, 20, 0.2);
+  transform: translateX(-50%);
+  animation: frog-shadow 1.6s ease-in-out infinite;
+}
+
+.frog-body {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  width: 126px;
+  height: 98px;
+  border-radius: 58% 58% 50% 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #47be76 0%, #259e5f 100%);
+  border: 3px solid #187a48;
+  animation: frog-bounce 1.6s ease-in-out infinite;
+}
+
+.frog-eye {
+  position: absolute;
+  top: -16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #187a48;
+  display: grid;
+  place-items: center;
+  animation: frog-blink 4s linear infinite;
+}
+
+.frog-eye.left {
+  left: 22px;
+}
+
+.frog-eye.right {
+  right: 22px;
+}
+
+.frog-pupil {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #0f1a14;
+}
+
+.frog-mouth {
+  position: absolute;
+  left: 50%;
+  top: 48px;
+  width: 40px;
+  height: 18px;
+  border-bottom: 3px solid #134f32;
+  border-radius: 0 0 40px 40px;
+  transform: translateX(-50%);
+}
+
+.frog-cheek {
+  position: absolute;
+  top: 56px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 167, 181, 0.65);
+}
+
+.frog-cheek.left {
+  left: 30px;
+}
+
+.frog-cheek.right {
+  right: 30px;
+}
+
+.frog-leg {
+  position: absolute;
+  bottom: -12px;
+  width: 34px;
+  height: 24px;
+  border-radius: 20px;
+  background: #1f8a52;
+  border: 3px solid #187a48;
+}
+
+.frog-leg.left {
+  left: 20px;
+}
+
+.frog-leg.right {
+  right: 20px;
+}
+@keyframes frog-bounce {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  50% {
+    transform: translateX(-50%) translateY(-9px);
+  }
+}
+@keyframes frog-shadow {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.25;
+  }
+
+  50% {
+    transform: translateX(-50%) scale(0.85);
+    opacity: 0.15;
+  }
+}
+@keyframes frog-blink {
+  0%,
+  44%,
+  48%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  46% {
+    transform: scaleY(0.08);
+  }
 }
 
 .panel {
@@ -159,6 +329,92 @@ button:disabled {
   justify-content: space-between;
   gap: 12px;
   font-size: 14px;
+}
+
+.ecosystem {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ecosystem-header {
+  max-width: 800px;
+}
+
+.ecosystem-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  border: 1px solid rgba(29, 111, 75, 0.2);
+  background: #ffffff;
+  color: #1d6f4b;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chip.active {
+  background: #145438;
+  border-color: #145438;
+  color: #ffffff;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.app-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 26, 20, 0.08);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-card h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.app-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e8f6ef;
+  color: #1f6f4b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.app-link {
+  color: #145438;
+  font-weight: 700;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.app-link:hover {
+  text-decoration: underline;
 }
 
 .mono {
