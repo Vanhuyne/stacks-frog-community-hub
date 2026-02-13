@@ -1,9 +1,9 @@
 # FROG FT + Faucet (24h cooldown)
 
-MVP gồm:
+MVP includes:
 - Fungible Token `FROG` (decimals = 0)
-- Faucet cho phép mỗi địa chỉ claim 1,000 FROG mỗi 24h (ước tính ~144 block)
-- Frontend React + Vite: connect ví, claim, xem balance, transfer
+- Faucet allows each address to claim 1,000 FROG every 24h (~144 blocks)
+- React + Vite frontend: connect wallet, claim, view balance, transfer
 
 ## Contract (Clarinet)
 
@@ -12,7 +12,7 @@ clarinet check
 clarinet console
 ```
 
-Contract nằm tại `contracts/frog-token.clar`.
+Contract is at `contracts/frog-token.clar`.
 
 ## Frontend
 
@@ -23,9 +23,9 @@ npm install
 npm run dev
 ```
 
-Cập nhật `VITE_CONTRACT_ADDRESS` trong `.env` sau khi deploy contract.
+Update `VITE_CONTRACT_ADDRESS` in `.env` after deploying the contract.
 
 ## TODO
-- Deploy contract lên testnet
-- Update contract address cho frontend
-- Demo flow end-to-end
+- Deploy contract to testnet
+- Update contract address for frontend
+- Demo end-to-end flow
