@@ -174,7 +174,11 @@ export default function App() {
               </div>
               <div className="row">
                 <span>DAO pass</span>
-                <strong>{dao.hasPass ? `Minted (#${dao.passId || '?'})` : 'Not minted'}</strong>
+                <strong>
+                  {dao.hasPass
+                    ? (dao.passId ? `Minted (#${dao.passId})` : 'Minted')
+                    : 'Not minted'}
+                </strong>
               </div>
               <div className="actions">
                 {!faucet.address ? (
