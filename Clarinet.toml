@@ -9,6 +9,11 @@ path = "contracts/frog-token.clar"
 clarity_version = 3
 epoch = "latest"
 
+[contracts.frog-dao-nft]
+path = "contracts/frog-dao-nft.clar"
+clarity_version = 3
+epoch = "latest"
+
 [repl]
 costs_version = 2
 

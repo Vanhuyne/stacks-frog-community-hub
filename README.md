@@ -3,6 +3,7 @@
 MVP includes:
 - Fungible Token `FROG` (decimals = 0)
 - Faucet allows each address to claim 1,000 FROG every 24h (~144 blocks)
+- DAO NFT: register username + hold 1,000 FROG to mint a non-transferable membership pass
 - React + Vite frontend: connect wallet, claim, view balance, transfer
 
 ## Contract (Clarinet)
@@ -12,7 +13,9 @@ clarinet check
 clarinet console
 ```
 
-Contract is at `contracts/frog-token.clar`.
+Contracts:
+- `contracts/frog-token.clar`
+- `contracts/frog-dao-nft.clar`
 
 ## Frontend
 
