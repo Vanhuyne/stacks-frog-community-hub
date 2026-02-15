@@ -22,12 +22,12 @@ const reducer = (state, action) => {
   }
 };
 
-export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnlyNetwork, address, enabled }) => {
+export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnlyBaseUrl, address, enabled }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const service = useMemo(
-    () => createFrogDaoNftService({ contractAddress, contractName, network, readOnlyNetwork }),
-    [contractAddress, contractName, network, readOnlyNetwork]
+    () => createFrogDaoNftService({ contractAddress, contractName, network, readOnlyBaseUrl }),
+    [contractAddress, contractName, network, readOnlyBaseUrl]
   );
 
   const ready = useMemo(

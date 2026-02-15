@@ -11,7 +11,7 @@ const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft'
 
 const network = 'testnet';
 // Read-only calls use a local proxy in dev to avoid CORS.
-const readOnlyNetwork = { coreApiUrl: import.meta.env.VITE_HIRO_PROXY || '/hiro' };
+const readOnlyBaseUrl = import.meta.env.VITE_HIRO_PROXY || '/hiro';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('faucet');
@@ -21,7 +21,7 @@ export default function App() {
     contractAddress,
     contractName,
     network,
-    readOnlyNetwork,
+    readOnlyBaseUrl,
     appName: 'FROG Faucet'
   });
 
@@ -29,7 +29,7 @@ export default function App() {
     contractAddress: daoContractAddress,
     contractName: daoContractName,
     network,
-    readOnlyNetwork,
+    readOnlyBaseUrl,
     address: faucet.address,
     enabled: activeTab === 'dao-nft'
   });

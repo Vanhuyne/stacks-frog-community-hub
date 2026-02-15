@@ -27,15 +27,18 @@ const stringifyClarityValue = (value) => {
   return JSON.stringify(value);
 };
 
-export const createFrogDaoNftService = ({ contractAddress, contractName, network, readOnlyNetwork }) => {
+export const createFrogDaoNftService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
   const readOnly = async (senderAddress, functionName, functionArgs = []) => {
+    const client = readOnlyBaseUrl ? { baseUrl: readOnlyBaseUrl } : undefined;
+
     const result = await fetchCallReadOnlyFunction({
       contractAddress,
       contractName,
       functionName,
       functionArgs,
       senderAddress,
-      network: readOnlyNetwork || network
+      network,
+      client
     });
     return unwrapResponse(result);
   };
@@ -66,7 +69,7 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
       contract: `${contractAddress}.${contractName}`,
       functionName: 'register-username',
       functionArgs: [Cl.stringAscii(name)],
-      network: readOnlyNetwork || network
+      network
     });
   };
 
@@ -75,7 +78,7 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
       contract: `${contractAddress}.${contractName}`,
       functionName: 'mint-pass',
       functionArgs: [],
-      network: readOnlyNetwork || network
+      network
     });
   };
 
