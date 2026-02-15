@@ -23,6 +23,7 @@ const reducer = (state, action) => {
 };
 
 export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnlyBaseUrl, address, enabled }) => {
+  const debug = import.meta.env.DEV;
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const service = useMemo(
@@ -39,6 +40,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
     if (!ready || !address) return;
     try {
       const snapshot = await service.fetchDaoSnapshot(address);
+      if (debug) console.log('[DAO NFT] snapshot:', snapshot);
       dispatch({ type: 'merge', payload: snapshot });
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Read data failed: ${err?.message || err}` } });
@@ -52,6 +54,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       for (let attempt = 0; attempt < 8; attempt += 1) {
         try {
           const snapshot = await service.fetchDaoSnapshot(address);
+      if (debug) console.log('[DAO NFT] snapshot:', snapshot);
           dispatch({ type: 'merge', payload: snapshot });
           if (predicate(snapshot)) return true;
         } catch (_) {
@@ -139,6 +142,8 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
 
   useEffect(() => {
     if (!state.username) return;
+   
+    
     console.log('[DAO NFT] username:', state.username);
   }, [state.username]);
 
