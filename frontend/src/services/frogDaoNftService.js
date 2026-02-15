@@ -17,6 +17,19 @@ const unwrapOptional = (value) => {
   return value;
 };
 
+const getTupleField = (tuple, keys) => {
+  if (!tuple) return undefined;
+  if (typeof tuple !== 'object') return undefined;
+
+  for (const key of keys) {
+    if (key in tuple) return tuple[key];
+  }
+
+  const tupleKeys = Object.keys(tuple);
+  if (tupleKeys.length === 1) return tuple[tupleKeys[0]];
+  return undefined;
+};
+
 const stringifyClarityValue = (value) => {
   if (value === null || value === undefined) return '';
   if (typeof value === 'bigint') return value.toString();
@@ -52,8 +65,11 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
     const usernameTuple = unwrapOptional(usernameRaw);
     const passTuple = unwrapOptional(passRaw);
 
-    const username = usernameTuple?.name || '';
-    const passId = passTuple?.['token-id'];
+    const usernameField = getTupleField(usernameTuple, ['name', 'username']);
+    const passIdField = getTupleField(passTuple, ['token-id', 'token_id', 'tokenId']);
+
+    const username = stringifyClarityValue(usernameField);
+    const passId = passIdField;
 
     return {
       frogBalance: stringifyClarityValue(frogBalanceRaw),
