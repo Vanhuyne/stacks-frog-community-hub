@@ -1,0 +1,77 @@
+import { request } from '@stacks/connect';
+import { Cl, cvToValue, fetchCallReadOnlyFunction, principalCV } from '@stacks/transactions';
+
+const unwrapResponse = (cv) => {
+  const value = cvToValue(cv);
+  if (value && typeof value === 'object' && 'type' in value) {
+    if (value.type === 'ok') return value.value;
+    if (value.type === 'err') throw new Error(`Contract error: ${value.value}`);
+  }
+  return value;
+};
+
+const stringifyClarityValue = (value) => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'bigint') return value.toString();
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'string') return value;
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'object' && 'value' in value) return stringifyClarityValue(value.value);
+  return JSON.stringify(value);
+};
+
+export const createFrogDaoNftService = ({ contractAddress, contractName, network }) => {
+  const readOnly = async (senderAddress, functionName, functionArgs = []) => {
+    const result = await fetchCallReadOnlyFunction({
+      contractAddress,
+      contractName,
+      functionName,
+      functionArgs,
+      senderAddress,
+      network
+    });
+    return unwrapResponse(result);
+  };
+
+  const fetchDaoSnapshot = async (address) => {
+    const frogBalanceRaw = await readOnly(address, 'get-frog-balance', [principalCV(address)]);
+    const usernameRaw = await readOnly(address, 'get-username', [principalCV(address)]);
+    const passRaw = await readOnly(address, 'get-pass-id', [principalCV(address)]);
+    const eligibleRaw = await readOnly(address, 'is-eligible-to-mint?', [principalCV(address)]);
+
+    const username = usernameRaw?.name || '';
+    const passId = passRaw?.['token-id'];
+
+    return {
+      frogBalance: stringifyClarityValue(frogBalanceRaw),
+      username,
+      hasPass: Boolean(passRaw),
+      passId: stringifyClarityValue(passId),
+      eligible: Boolean(eligibleRaw)
+    };
+  };
+
+  const registerUsername = async (name) => {
+    await request('stx_callContract', {
+      contract: `${contractAddress}.${contractName}`,
+      functionName: 'register-username',
+      functionArgs: [Cl.stringAscii(name)],
+      network
+    });
+  };
+
+  const mintPass = async () => {
+    await request('stx_callContract', {
+      contract: `${contractAddress}.${contractName}`,
+      functionName: 'mint-pass',
+      functionArgs: [],
+      network
+    });
+  };
+
+  return {
+    fetchDaoSnapshot,
+    registerUsername,
+    mintPass
+  };
+};

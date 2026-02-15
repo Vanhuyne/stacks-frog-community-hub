@@ -1,35 +1,33 @@
 import { useMemo, useState } from 'react';
 import { ecosystemCategories, highlightedApps, tabs } from './data/ecosystemData';
 import { useFrogFaucet } from './hooks/useFrogFaucet';
+import { useFrogDaoNft } from './hooks/useFrogDaoNft';
 
 const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || '';
 const contractName = import.meta.env.VITE_CONTRACT_NAME || 'frog-token';
+
+const daoContractAddress = import.meta.env.VITE_DAO_CONTRACT_ADDRESS || contractAddress;
+const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft';
+
 const network = 'testnet';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('faucet');
   const [ecosystemCategory, setEcosystemCategory] = useState('Highlighted Apps');
 
-  const {
-    address,
-    balance,
-    nextClaimBlock,
-    canClaim,
-    status,
-    recipient,
-    amount,
-    ready,
-    connectWallet,
-    disconnectWallet,
-    claim,
-    transfer,
-    setRecipient,
-    setAmount
-  } = useFrogFaucet({
+  const faucet = useFrogFaucet({
     contractAddress,
     contractName,
     network,
     appName: 'FROG Faucet'
+  });
+
+  const dao = useFrogDaoNft({
+    contractAddress: daoContractAddress,
+    contractName: daoContractName,
+    network,
+    address: faucet.address,
+    enabled: activeTab === 'dao-nft'
   });
 
   const ecosystemApps = useMemo(() => {
@@ -77,35 +75,35 @@ export default function App() {
             <div className="panel">
               <div className="row">
                 <span>Status</span>
-                <strong>{address ? 'Connected' : 'Not connected'}</strong>
+                <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
               </div>
               <div className="row">
                 <span>Wallet</span>
-                <strong className="mono">{address || '-'}</strong>
+                <strong className="mono">{faucet.address || '-'}</strong>
               </div>
               <div className="row">
                 <span>Balance</span>
-                <strong>{balance || '-'} FROG</strong>
+                <strong>{faucet.balance || '-'} FROG</strong>
               </div>
               <div className="row">
                 <span>Next claim (block)</span>
-                <strong>{nextClaimBlock || '-'}</strong>
+                <strong>{faucet.nextClaimBlock || '-'}</strong>
               </div>
               <div className="actions">
-                {!address ? (
-                  <button onClick={connectWallet} disabled={!ready}>Connect Wallet</button>
+                {!faucet.address ? (
+                  <button onClick={faucet.connectWallet} disabled={!faucet.ready}>Connect Wallet</button>
                 ) : (
                   <>
-                    <button onClick={claim} disabled={!canClaim}>
-                      {canClaim ? 'Claim 1,000 FROG' : '24h cooldown'}
+                    <button onClick={faucet.claim} disabled={!faucet.canClaim}>
+                      {faucet.canClaim ? 'Claim 1,000 FROG' : '24h cooldown'}
                     </button>
-                    <button className="ghost" onClick={disconnectWallet}>Disconnect</button>
+                    <button className="ghost" onClick={faucet.disconnectWallet}>Disconnect</button>
                   </>
                 )}
               </div>
-              {status && <p className="status">{status}</p>}
-              {!canClaim && (
-                <p className="status">Faucet is limited to once every 24h. Wait until block {nextClaimBlock} to claim again.</p>
+              {faucet.status && <p className="status">{faucet.status}</p>}
+              {!faucet.canClaim && (
+                <p className="status">Faucet is limited to once every 24h. Wait until block {faucet.nextClaimBlock} to claim again.</p>
               )}
             </div>
           </header>
@@ -116,8 +114,8 @@ export default function App() {
               <label>
                 Recipient wallet
                 <input
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
+                  value={faucet.recipient}
+                  onChange={(e) => faucet.setRecipient(e.target.value)}
                   placeholder="SP..."
                 />
               </label>
@@ -126,12 +124,12 @@ export default function App() {
                 <input
                   type="number"
                   min="1"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  value={faucet.amount}
+                  onChange={(e) => faucet.setAmount(e.target.value)}
                   placeholder="100"
                 />
               </label>
-              <button onClick={transfer} disabled={!address || !recipient || !amount}>
+              <button onClick={faucet.transfer} disabled={!faucet.address || !faucet.recipient || !faucet.amount}>
                 Send
               </button>
             </div>
@@ -143,6 +141,95 @@ export default function App() {
                 <li><span>Network</span> <strong>{network}</strong></li>
                 <li><span>Decimals</span> <strong>0</strong></li>
                 <li><span>Cooldown</span> <strong>24h (~144 blocks)</strong></li>
+              </ul>
+            </div>
+          </section>
+        </>
+      ) : activeTab === 'dao-nft' ? (
+        <>
+          <header className="hero">
+            <div>
+              <p className="eyebrow">FROG DAO</p>
+              <h1>Mint DAO Pass NFT</h1>
+              <p className="subtext">
+                Register a username and hold at least 1,000 FROG to mint a non-transferable DAO pass.
+              </p>
+            </div>
+            <div className="panel">
+              <div className="row">
+                <span>Status</span>
+                <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
+              </div>
+              <div className="row">
+                <span>Wallet</span>
+                <strong className="mono">{faucet.address || '-'}</strong>
+              </div>
+              <div className="row">
+                <span>FROG balance</span>
+                <strong>{dao.frogBalance || faucet.balance || '-'} FROG</strong>
+              </div>
+              <div className="row">
+                <span>Username</span>
+                <strong>{dao.username || '-'}</strong>
+              </div>
+              <div className="row">
+                <span>DAO pass</span>
+                <strong>{dao.hasPass ? `Minted (#${dao.passId || '?'})` : 'Not minted'}</strong>
+              </div>
+              <div className="actions">
+                {!faucet.address ? (
+                  <button onClick={faucet.connectWallet} disabled={!faucet.ready}>Connect Wallet</button>
+                ) : (
+                  <>
+                    <button className="ghost" onClick={dao.refresh} disabled={!dao.ready}>Refresh</button>
+                    <button className="ghost" onClick={faucet.disconnectWallet}>Disconnect</button>
+                  </>
+                )}
+              </div>
+              {(dao.status || faucet.status) && <p className="status">{dao.status || faucet.status}</p>}
+            </div>
+          </header>
+
+          <section className="grid">
+            <div className="card">
+              <h2>Register username</h2>
+              <label>
+                Username (ASCII, max 32 chars)
+                <input
+                  value={dao.usernameInput}
+                  onChange={(e) => dao.setUsernameInput(e.target.value)}
+                  placeholder="frogking"
+                  disabled={Boolean(dao.username)}
+                />
+              </label>
+              <button
+                onClick={dao.registerUsername}
+                disabled={!faucet.address || !dao.ready || Boolean(dao.username) || !dao.usernameInput.trim()}
+              >
+                {dao.username ? 'Username already set' : 'Register'}
+              </button>
+            </div>
+
+            <div className="card">
+              <h2>Mint DAO pass</h2>
+              <p className="subtext" style={{ marginTop: 0 }}>
+                Requirement: username registered + hold at least 1,000 FROG.
+              </p>
+              <button
+                onClick={dao.mintPass}
+                disabled={!faucet.address || !dao.ready || dao.hasPass || !dao.eligible}
+              >
+                {dao.hasPass ? 'Already minted' : dao.eligible ? 'Mint pass' : 'Not eligible'}
+              </button>
+            </div>
+
+            <div className="card">
+              <h2>DAO contract</h2>
+              <ul>
+                <li><span>Contract</span> <strong className="mono">{daoContractAddress}.{daoContractName}</strong></li>
+                <li><span>Network</span> <strong>{network}</strong></li>
+                <li><span>Mint rule</span> <strong>1 pass per address</strong></li>
+                <li><span>Transfer</span> <strong>Disabled</strong></li>
               </ul>
             </div>
           </section>

@@ -1,0 +1,148 @@
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { createFrogDaoNftService } from '../services/frogDaoNftService';
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const initialState = {
+  frogBalance: '',
+  username: '',
+  usernameInput: '',
+  hasPass: false,
+  passId: '',
+  eligible: false,
+  status: ''
+};
+
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'merge':
+      return { ...state, ...action.payload };
+    default:
+      return state;
+  }
+};
+
+export const useFrogDaoNft = ({ contractAddress, contractName, network, address, enabled }) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  const service = useMemo(
+    () => createFrogDaoNftService({ contractAddress, contractName, network }),
+    [contractAddress, contractName, network]
+  );
+
+  const ready = useMemo(
+    () => enabled && contractAddress.length > 0 && contractName.length > 0,
+    [enabled, contractAddress, contractName]
+  );
+
+  const refresh = useCallback(async () => {
+    if (!ready || !address) return;
+    try {
+      const snapshot = await service.fetchDaoSnapshot(address);
+      dispatch({ type: 'merge', payload: snapshot });
+    } catch (err) {
+      dispatch({ type: 'merge', payload: { status: `Read data failed: ${err?.message || err}` } });
+    }
+  }, [address, ready, service]);
+
+  const syncUntil = useCallback(
+    async (predicate) => {
+      if (!ready || !address) return false;
+
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        try {
+          const snapshot = await service.fetchDaoSnapshot(address);
+          dispatch({ type: 'merge', payload: snapshot });
+          if (predicate(snapshot)) return true;
+        } catch (_) {
+          // keep polling
+        }
+
+        await sleep(4000);
+      }
+
+      return false;
+    },
+    [address, ready, service]
+  );
+
+  const setUsernameInput = useCallback((usernameInput) => {
+    dispatch({ type: 'merge', payload: { usernameInput } });
+  }, []);
+
+  const registerUsername = useCallback(async () => {
+    const name = (state.usernameInput || '').trim();
+
+    if (!address) {
+      dispatch({ type: 'merge', payload: { status: 'Please connect wallet first.' } });
+      return;
+    }
+
+    if (!ready) {
+      dispatch({ type: 'merge', payload: { status: 'Missing DAO contract configuration.' } });
+      return;
+    }
+
+    if (!name) {
+      dispatch({ type: 'merge', payload: { status: 'Username is required.' } });
+      return;
+    }
+
+    dispatch({ type: 'merge', payload: { status: 'Submitting username registration...' } });
+    try {
+      await service.registerUsername(name);
+      dispatch({ type: 'merge', payload: { status: 'Transaction submitted. Waiting for confirmation...' } });
+
+      const synced = await syncUntil((snapshot) => snapshot.username.length > 0);
+      dispatch({
+        type: 'merge',
+        payload: {
+          status: synced ? 'Username registered.' : 'Username submitted. On-chain data is still syncing.'
+        }
+      });
+    } catch (err) {
+      dispatch({ type: 'merge', payload: { status: `Register username failed: ${err?.message || err}` } });
+    }
+  }, [address, ready, service, state.usernameInput, syncUntil]);
+
+  const mintPass = useCallback(async () => {
+    if (!address) {
+      dispatch({ type: 'merge', payload: { status: 'Please connect wallet first.' } });
+      return;
+    }
+
+    if (!ready) {
+      dispatch({ type: 'merge', payload: { status: 'Missing DAO contract configuration.' } });
+      return;
+    }
+
+    dispatch({ type: 'merge', payload: { status: 'Submitting DAO pass mint...' } });
+    try {
+      await service.mintPass();
+      dispatch({ type: 'merge', payload: { status: 'Transaction submitted. Waiting for confirmation...' } });
+
+      const synced = await syncUntil((snapshot) => snapshot.hasPass === true);
+      dispatch({
+        type: 'merge',
+        payload: {
+          status: synced ? 'DAO pass minted.' : 'Mint submitted. On-chain data is still syncing.'
+        }
+      });
+    } catch (err) {
+      dispatch({ type: 'merge', payload: { status: `Mint failed: ${err?.message || err}` } });
+    }
+  }, [address, ready, service, syncUntil]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return {
+    ...state,
+    ready,
+    refresh,
+    setUsernameInput,
+    registerUsername,
+    mintPass
+  };
+};
