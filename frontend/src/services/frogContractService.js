@@ -20,7 +20,7 @@ const stringifyClarityValue = (value) => {
   return JSON.stringify(value);
 };
 
-export const createFrogContractService = ({ contractAddress, contractName, network }) => {
+export const createFrogContractService = ({ contractAddress, contractName, network, readOnlyNetwork }) => {
   const getStoredAddress = () => {
     const data = getLocalStorage();
     return data?.addresses?.stx?.[0]?.address || '';
@@ -42,7 +42,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
       functionName,
       functionArgs,
       senderAddress,
-      network
+      network: readOnlyNetwork || network
     });
     return unwrapResponse(result);
   };
@@ -64,7 +64,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
       contract: `${contractAddress}.${contractName}`,
       functionName: 'claim',
       functionArgs: [],
-      network
+      network: readOnlyNetwork || network
     });
   };
 
@@ -78,7 +78,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
         Cl.standardPrincipal(recipient),
         Cl.none()
       ],
-      network
+      network: readOnlyNetwork || network
     });
   };
 

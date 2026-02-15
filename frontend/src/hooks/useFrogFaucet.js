@@ -31,12 +31,12 @@ const reducer = (state, action) => {
   }
 };
 
-export const useFrogFaucet = ({ contractAddress, contractName, network, appName }) => {
+export const useFrogFaucet = ({ contractAddress, contractName, network, readOnlyNetwork, appName }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const service = useMemo(
-    () => createFrogContractService({ contractAddress, contractName, network }),
-    [contractAddress, contractName, network]
+    () => createFrogContractService({ contractAddress, contractName, network, readOnlyNetwork }),
+    [contractAddress, contractName, network, readOnlyNetwork]
   );
 
   const ready = useMemo(() => contractAddress.length > 0, [contractAddress]);

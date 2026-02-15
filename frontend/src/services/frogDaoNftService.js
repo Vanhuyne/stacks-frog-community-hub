@@ -10,6 +10,13 @@ const unwrapResponse = (cv) => {
   return value;
 };
 
+const unwrapOptional = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object' && value && value.type === 'some') return value.value;
+  if (typeof value === 'object' && value && value.type === 'none') return null;
+  return value;
+};
+
 const stringifyClarityValue = (value) => {
   if (value === null || value === undefined) return '';
   if (typeof value === 'bigint') return value.toString();
@@ -20,7 +27,7 @@ const stringifyClarityValue = (value) => {
   return JSON.stringify(value);
 };
 
-export const createFrogDaoNftService = ({ contractAddress, contractName, network }) => {
+export const createFrogDaoNftService = ({ contractAddress, contractName, network, readOnlyNetwork }) => {
   const readOnly = async (senderAddress, functionName, functionArgs = []) => {
     const result = await fetchCallReadOnlyFunction({
       contractAddress,
@@ -28,7 +35,7 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
       functionName,
       functionArgs,
       senderAddress,
-      network
+      network: readOnlyNetwork || network
     });
     return unwrapResponse(result);
   };
@@ -39,13 +46,16 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
     const passRaw = await readOnly(address, 'get-pass-id', [principalCV(address)]);
     const eligibleRaw = await readOnly(address, 'is-eligible-to-mint?', [principalCV(address)]);
 
-    const username = usernameRaw?.name || '';
-    const passId = passRaw?.['token-id'];
+    const usernameTuple = unwrapOptional(usernameRaw);
+    const passTuple = unwrapOptional(passRaw);
+
+    const username = usernameTuple?.name || '';
+    const passId = passTuple?.['token-id'];
 
     return {
       frogBalance: stringifyClarityValue(frogBalanceRaw),
       username,
-      hasPass: Boolean(passRaw),
+      hasPass: Boolean(passTuple),
       passId: stringifyClarityValue(passId),
       eligible: Boolean(eligibleRaw)
     };
@@ -56,7 +66,7 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
       contract: `${contractAddress}.${contractName}`,
       functionName: 'register-username',
       functionArgs: [Cl.stringAscii(name)],
-      network
+      network: readOnlyNetwork || network
     });
   };
 
@@ -65,7 +75,7 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
       contract: `${contractAddress}.${contractName}`,
       functionName: 'mint-pass',
       functionArgs: [],
-      network
+      network: readOnlyNetwork || network
     });
   };
 

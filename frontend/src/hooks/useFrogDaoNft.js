@@ -22,12 +22,12 @@ const reducer = (state, action) => {
   }
 };
 
-export const useFrogDaoNft = ({ contractAddress, contractName, network, address, enabled }) => {
+export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnlyNetwork, address, enabled }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const service = useMemo(
-    () => createFrogDaoNftService({ contractAddress, contractName, network }),
-    [contractAddress, contractName, network]
+    () => createFrogDaoNftService({ contractAddress, contractName, network, readOnlyNetwork }),
+    [contractAddress, contractName, network, readOnlyNetwork]
   );
 
   const ready = useMemo(
@@ -136,6 +136,11 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, address,
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!state.username) return;
+    console.log('[DAO NFT] username:', state.username);
+  }, [state.username]);
 
   return {
     ...state,
