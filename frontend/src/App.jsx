@@ -9,9 +9,10 @@ const contractName = import.meta.env.VITE_CONTRACT_NAME || 'frog-token';
 const daoContractAddress = import.meta.env.VITE_DAO_CONTRACT_ADDRESS || contractAddress;
 const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft';
 
-const network = 'testnet';
-// Read-only calls use a local proxy in dev to avoid CORS.
-const readOnlyBaseUrl = import.meta.env.VITE_HIRO_PROXY || '/hiro';
+const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
+const defaultHiroApiBaseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
+// In dev we can proxy via /hiro to avoid CORS; in production call Hiro API directly unless overridden.
+const readOnlyBaseUrl = import.meta.env.VITE_HIRO_API_BASE_URL || (import.meta.env.DEV ? '/hiro' : defaultHiroApiBaseUrl);
 const primaryButtonClass =
   'rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
@@ -103,13 +104,17 @@ export default function App() {
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
                 {!faucet.address ? (
-                  <button className={primaryButtonClass} onClick={faucet.connectWallet} disabled={!faucet.ready}>Connect Wallet</button>
+                  <button className={primaryButtonClass} onClick={faucet.connectWallet} disabled={!faucet.ready || faucet.isConnecting}>
+                    {faucet.isConnecting ? 'Connecting...' : 'Connect Wallet'}
+                  </button>
                 ) : (
                   <>
-                    <button className={primaryButtonClass} onClick={faucet.claim} disabled={!faucet.canClaim}>
-                      {faucet.canClaim ? 'Claim 1,000 FROG' : '24h cooldown'}
+                    <button className={primaryButtonClass} onClick={faucet.claim} disabled={!faucet.canClaim || faucet.isClaiming}>
+                      {faucet.isClaiming ? 'Processing claim...' : faucet.canClaim ? 'Claim 1,000 FROG' : '24h cooldown'}
                     </button>
-                    <button className={ghostButtonClass} onClick={faucet.disconnectWallet}>Disconnect</button>
+                    <button className={ghostButtonClass} onClick={faucet.disconnectWallet} disabled={faucet.isClaiming || faucet.isTransferring}>
+                      Disconnect
+                    </button>
                   </>
                 )}
               </div>
@@ -143,8 +148,8 @@ export default function App() {
                   placeholder="100"
                 />
               </label>
-              <button className={primaryButtonClass} onClick={faucet.transfer} disabled={!faucet.address || !faucet.recipient || !faucet.amount}>
-                Send
+              <button className={primaryButtonClass} onClick={faucet.transfer} disabled={!faucet.address || !faucet.recipient || !faucet.amount || faucet.isTransferring}>
+                {faucet.isTransferring ? 'Submitting...' : 'Send'}
               </button>
             </div>
 
@@ -196,11 +201,13 @@ export default function App() {
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
                 {!faucet.address ? (
-                  <button className={primaryButtonClass} onClick={faucet.connectWallet} disabled={!faucet.ready}>Connect Wallet</button>
+                  <button className={primaryButtonClass} onClick={faucet.connectWallet} disabled={!faucet.ready || faucet.isConnecting}>
+                    {faucet.isConnecting ? 'Connecting...' : 'Connect Wallet'}
+                  </button>
                 ) : (
                   <>
-                    <button className={ghostButtonClass} onClick={dao.refresh} disabled={!dao.ready}>Refresh</button>
-                    <button className={ghostButtonClass} onClick={faucet.disconnectWallet}>Disconnect</button>
+                    <button className={ghostButtonClass} onClick={dao.refresh} disabled={!dao.ready || dao.isMinting || dao.isRegistering}>Refresh</button>
+                    <button className={ghostButtonClass} onClick={faucet.disconnectWallet} disabled={dao.isMinting || dao.isRegistering}>Disconnect</button>
                   </>
                 )}
               </div>
@@ -218,15 +225,15 @@ export default function App() {
                   value={dao.usernameInput}
                   onChange={(e) => dao.setUsernameInput(e.target.value)}
                   placeholder="frogking"
-                  disabled={Boolean(dao.username)}
+                  disabled={Boolean(dao.username) || dao.isRegistering}
                 />
               </label>
               <button
                 className={primaryButtonClass}
                 onClick={dao.registerUsername}
-                disabled={!faucet.address || !dao.ready || Boolean(dao.username) || !dao.usernameInput.trim()}
+                disabled={!faucet.address || !dao.ready || Boolean(dao.username) || !dao.usernameInput.trim() || dao.isRegistering}
               >
-                {dao.username ? 'Username already set' : 'Register'}
+                {dao.isRegistering ? 'Registering...' : dao.username ? 'Username already set' : 'Register'}
               </button>
             </div>
 
@@ -238,9 +245,9 @@ export default function App() {
               <button
                 className={primaryButtonClass}
                 onClick={dao.mintPass}
-                disabled={!faucet.address || !dao.ready || dao.hasPass || !dao.eligible}
+                disabled={!faucet.address || !dao.ready || dao.hasPass || !dao.eligible || dao.isMinting}
               >
-                {dao.hasPass ? 'Already minted' : dao.eligible ? 'Mint pass' : 'Not eligible'}
+                {dao.isMinting ? 'Minting...' : dao.hasPass ? 'Already minted' : dao.eligible ? 'Mint pass' : 'Not eligible'}
               </button>
             </div>
 

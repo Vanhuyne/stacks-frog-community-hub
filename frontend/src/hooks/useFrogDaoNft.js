@@ -11,7 +11,9 @@ const initialState = {
   hasPass: false,
   passId: '',
   eligible: false,
-  status: ''
+  status: '',
+  isRegistering: false,
+  isMinting: false
 };
 
 const reducer = (state, action) => {
@@ -75,6 +77,8 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
   }, []);
 
   const registerUsername = useCallback(async () => {
+    if (state.isRegistering) return;
+
     const name = (state.usernameInput || '').trim();
 
     if (!address) {
@@ -123,7 +127,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       return;
     }
 
-    dispatch({ type: 'merge', payload: { status: 'Submitting username registration...' } });
+    dispatch({ type: 'merge', payload: { status: 'Submitting username registration...', isRegistering: true } });
     try {
       await service.registerUsername(name);
       dispatch({ type: 'merge', payload: { status: 'Transaction submitted. Waiting for confirmation...' } });
@@ -137,10 +141,14 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       });
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Register username failed: ${err?.message || err}` } });
+    } finally {
+      dispatch({ type: 'merge', payload: { isRegistering: false } });
     }
-  }, [address, ready, refresh, service, state.username, state.usernameInput, syncUntil]);
+  }, [address, ready, refresh, service, state.isRegistering, state.username, state.usernameInput, syncUntil]);
 
   const mintPass = useCallback(async () => {
+    if (state.isMinting) return;
+
     if (!address) {
       dispatch({ type: 'merge', payload: { status: 'Please connect wallet first.' } });
       return;
@@ -151,7 +159,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       return;
     }
 
-    dispatch({ type: 'merge', payload: { status: 'Submitting DAO pass mint...' } });
+    dispatch({ type: 'merge', payload: { status: 'Submitting DAO pass mint...', isMinting: true } });
     try {
       await service.mintPass();
       dispatch({ type: 'merge', payload: { status: 'Transaction submitted. Waiting for confirmation...' } });
@@ -165,8 +173,10 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       });
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Mint failed: ${err?.message || err}` } });
+    } finally {
+      dispatch({ type: 'merge', payload: { isMinting: false } });
     }
-  }, [address, ready, service, syncUntil]);
+  }, [address, ready, service, state.isMinting, syncUntil]);
 
   useEffect(() => {
     refresh();

@@ -11,7 +11,10 @@ const initialState = {
   canClaim: true,
   status: '',
   recipient: '',
-  amount: ''
+  amount: '',
+  isConnecting: false,
+  isClaiming: false,
+  isTransferring: false
 };
 
 const reducer = (state, action) => {
@@ -24,7 +27,10 @@ const reducer = (state, action) => {
         address: '',
         balance: '',
         nextClaimBlock: '',
-        canClaim: true
+        canClaim: true,
+        isConnecting: false,
+        isClaiming: false,
+        isTransferring: false
       };
     default:
       return state;
@@ -83,7 +89,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
       return;
     }
 
-    dispatch({ type: 'merge', payload: { status: 'Connecting wallet...' } });
+    dispatch({ type: 'merge', payload: { status: 'Connecting wallet...', isConnecting: true } });
     try {
       const address = await service.connectWallet({ name: appName });
       if (!address) {
@@ -95,6 +101,8 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
       await refreshData(address);
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Connection failed: ${err?.message || err}` } });
+    } finally {
+      dispatch({ type: 'merge', payload: { isConnecting: false } });
     }
   }, [appName, ready, refreshData, service]);
 
@@ -105,6 +113,8 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
   }, [service]);
 
   const claim = useCallback(async () => {
+    if (state.isClaiming) return;
+
     if (!state.canClaim) {
       dispatch({ type: 'merge', payload: { status: '24h cooldown not reached yet. Please try again later.' } });
       return;
@@ -115,7 +125,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
       return;
     }
 
-    dispatch({ type: 'merge', payload: { status: 'Submitting claim...' } });
+    dispatch({ type: 'merge', payload: { status: 'Submitting claim...', isClaiming: true } });
     try {
       await service.claim();
       dispatch({
@@ -137,13 +147,15 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
       });
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Claim failed: ${err?.message || err}` } });
+    } finally {
+      dispatch({ type: 'merge', payload: { isClaiming: false } });
     }
-  }, [service, state.address, state.canClaim, syncAfterClaim]);
+  }, [service, state.address, state.canClaim, state.isClaiming, syncAfterClaim]);
 
   const transfer = useCallback(async () => {
-    if (!state.address || !state.recipient || !state.amount) return;
+    if (state.isTransferring || !state.address || !state.recipient || !state.amount) return;
 
-    dispatch({ type: 'merge', payload: { status: 'Submitting transfer...' } });
+    dispatch({ type: 'merge', payload: { status: 'Submitting transfer...', isTransferring: true } });
     try {
       await service.transfer({
         amount: state.amount,
@@ -153,8 +165,10 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
       dispatch({ type: 'merge', payload: { status: 'Transfer transaction submitted.' } });
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Transfer failed: ${err?.message || err}` } });
+    } finally {
+      dispatch({ type: 'merge', payload: { isTransferring: false } });
     }
-  }, [service, state.address, state.amount, state.recipient]);
+  }, [service, state.address, state.amount, state.recipient, state.isTransferring]);
 
   const setRecipient = useCallback((recipient) => {
     dispatch({ type: 'merge', payload: { recipient } });
