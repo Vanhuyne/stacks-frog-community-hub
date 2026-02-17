@@ -5,9 +5,18 @@ frontend/node_modules/
 # Vite build
 frontend/dist/
 
-# Env
+# Env and local secrets
 .env
+.env.*
+!.env.example
 frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Clarinet local config (keep templates only)
+settings/Testnet.toml
+settings/Mainnet.toml
+settings/*.local.toml
 
 # OS
 .DS_Store

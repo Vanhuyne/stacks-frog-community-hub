@@ -3,7 +3,7 @@
 rpc_bind = "https://api.testnet.hiro.so"
 
 [accounts.deployer]
-# Local only. This file is ignored by git.
+# Replace with your 24-word testnet mnemonic
 mnemonic = "REPLACE_WITH_24_WORD_TESTNET_MNEMONIC"
 
 [network]

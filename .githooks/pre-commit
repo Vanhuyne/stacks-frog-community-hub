@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "[pre-commit] gitleaks is required. Install it first: https://github.com/gitleaks/gitleaks"
+  exit 1
+fi
+
+if gitleaks git --help >/dev/null 2>&1; then
+  echo "[pre-commit] Running gitleaks scan on staged changes..."
+  gitleaks git --staged --redact --no-banner
+else
+  echo "[pre-commit] Running legacy gitleaks protect scan on staged changes..."
+  gitleaks protect --staged --redact --verbose
+fi

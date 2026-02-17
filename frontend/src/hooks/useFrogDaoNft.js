@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { createFrogDaoNftService } from '../services/frogDaoNftService';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const asciiRegex = /^[\x20-\x7E]+$/;
 
 const initialState = {
   frogBalance: '',
@@ -45,7 +46,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Read data failed: ${err?.message || err}` } });
     }
-  }, [address, ready, service]);
+  }, [address, ready, service, debug]);
 
   const syncUntil = useCallback(
     async (predicate) => {
@@ -54,7 +55,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       for (let attempt = 0; attempt < 8; attempt += 1) {
         try {
           const snapshot = await service.fetchDaoSnapshot(address);
-      if (debug) console.log('[DAO NFT] snapshot:', snapshot);
+          if (debug) console.log('[DAO NFT] snapshot:', snapshot);
           dispatch({ type: 'merge', payload: snapshot });
           if (predicate(snapshot)) return true;
         } catch (_) {
@@ -66,7 +67,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
 
       return false;
     },
-    [address, ready, service]
+    [address, ready, service, debug]
   );
 
   const setUsernameInput = useCallback((usernameInput) => {
@@ -91,6 +92,37 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       return;
     }
 
+    if (!asciiRegex.test(name)) {
+      dispatch({ type: 'merge', payload: { status: 'Username must contain ASCII characters only.' } });
+      return;
+    }
+
+    if (name.length > 32) {
+      dispatch({ type: 'merge', payload: { status: 'Username must be 32 characters or fewer.' } });
+      return;
+    }
+
+    if (state.username) {
+      dispatch({ type: 'merge', payload: { status: `This wallet already registered username: ${state.username}` } });
+      return;
+    }
+
+    try {
+      const owner = await service.getOwnerByUsername(address, name);
+      if (owner && owner !== address) {
+        dispatch({ type: 'merge', payload: { status: `Username "${name}" is already taken.` } });
+        return;
+      }
+      if (owner && owner === address) {
+        dispatch({ type: 'merge', payload: { status: `Username "${name}" is already owned by this wallet.` } });
+        await refresh();
+        return;
+      }
+    } catch (err) {
+      dispatch({ type: 'merge', payload: { status: `Cannot verify username availability: ${err?.message || err}` } });
+      return;
+    }
+
     dispatch({ type: 'merge', payload: { status: 'Submitting username registration...' } });
     try {
       await service.registerUsername(name);
@@ -106,7 +138,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Register username failed: ${err?.message || err}` } });
     }
-  }, [address, ready, service, state.usernameInput, syncUntil]);
+  }, [address, ready, refresh, service, state.username, state.usernameInput, syncUntil]);
 
   const mintPass = useCallback(async () => {
     if (!address) {
@@ -142,8 +174,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
 
   useEffect(() => {
     if (!state.username) return;
-   
-    
+
     console.log('[DAO NFT] username:', state.username);
   }, [state.username]);
 

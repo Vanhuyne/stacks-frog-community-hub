@@ -1,0 +1,10 @@
+[node]
+# RPC for Stacks mainnet (Hiro endpoint)
+rpc_bind = "https://api.hiro.so"
+
+[accounts.deployer]
+# Replace with your 24-word mainnet mnemonic
+mnemonic = "REPLACE_WITH_24_WORD_MAINNET_MNEMONIC"
+
+[network]
+name = "mainnet"

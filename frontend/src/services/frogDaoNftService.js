@@ -12,14 +12,44 @@ const unwrapResponse = (cv) => {
 
 const unwrapOptional = (value) => {
   if (value === null || value === undefined) return null;
-  if (typeof value === 'object' && value && value.type === 'some') return value.value;
-  if (typeof value === 'object' && value && value.type === 'none') return null;
+
+  if (typeof value === 'object' && value) {
+    if (value.type === 'some') return value.value;
+    if (value.type === 'none') return null;
+    if (value.type === 'optional') return unwrapOptional(value.value);
+    if ('value' in value && value.value !== undefined && value.value !== null) {
+      return unwrapOptional(value.value);
+    }
+  }
+
   return value;
 };
 
-const getTupleField = (tuple, keys) => {
-  if (!tuple) return undefined;
-  if (typeof tuple !== 'object') return undefined;
+const normalizeObject = (value) => {
+  if (value === null || value === undefined) return null;
+
+  if (value instanceof Map) {
+    return Object.fromEntries(value.entries());
+  }
+
+  if (typeof value === 'object') {
+    if (value.type === 'tuple' && value.value) {
+      return normalizeObject(value.value);
+    }
+
+    if ('value' in value && value.value instanceof Map) {
+      return Object.fromEntries(value.value.entries());
+    }
+
+    return value;
+  }
+
+  return null;
+};
+
+const getTupleField = (tupleLike, keys) => {
+  const tuple = normalizeObject(tupleLike);
+  if (!tuple || typeof tuple !== 'object') return undefined;
 
   for (const key of keys) {
     if (key in tuple) return tuple[key];
@@ -36,6 +66,7 @@ const stringifyClarityValue = (value) => {
   if (typeof value === 'number') return String(value);
   if (typeof value === 'string') return value;
   if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (value instanceof Map) return JSON.stringify(Object.fromEntries(value.entries()));
   if (typeof value === 'object' && 'value' in value) return stringifyClarityValue(value.value);
   return JSON.stringify(value);
 };
@@ -57,10 +88,17 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
   };
 
   const fetchDaoSnapshot = async (address) => {
-    const frogBalanceRaw = await readOnly(address, 'get-frog-balance', [principalCV(address)]);
-    const usernameRaw = await readOnly(address, 'get-username', [principalCV(address)]);
-    const passRaw = await readOnly(address, 'get-pass-id', [principalCV(address)]);
-    const eligibleRaw = await readOnly(address, 'is-eligible-to-mint?', [principalCV(address)]);
+    const [frogBalanceResult, usernameResult, passResult, eligibleResult] = await Promise.allSettled([
+      readOnly(address, 'get-frog-balance', [principalCV(address)]),
+      readOnly(address, 'get-username', [principalCV(address)]),
+      readOnly(address, 'get-pass-id', [principalCV(address)]),
+      readOnly(address, 'is-eligible-to-mint?', [principalCV(address)])
+    ]);
+
+    const frogBalanceRaw = frogBalanceResult.status === 'fulfilled' ? frogBalanceResult.value : '';
+    const usernameRaw = usernameResult.status === 'fulfilled' ? usernameResult.value : null;
+    const passRaw = passResult.status === 'fulfilled' ? passResult.value : null;
+    const eligibleRaw = eligibleResult.status === 'fulfilled' ? eligibleResult.value : false;
 
     const usernameTuple = unwrapOptional(usernameRaw);
     const passTuple = unwrapOptional(passRaw);
@@ -68,20 +106,27 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
     const usernameField = getTupleField(usernameTuple, ['name', 'username']);
     const passIdField = getTupleField(passTuple, ['token-id', 'token_id', 'tokenId']);
 
-    const username = stringifyClarityValue(usernameField);
-    const passId = passIdField;
+    const username = stringifyClarityValue(usernameField ?? usernameTuple);
+    const passId = stringifyClarityValue(passIdField ?? passTuple);
 
     return {
       frogBalance: stringifyClarityValue(frogBalanceRaw),
       username,
-      hasPass: Boolean(passTuple),
-      passId: stringifyClarityValue(passId),
+      hasPass: passTuple !== null && passTuple !== undefined,
+      passId,
       eligible: Boolean(eligibleRaw)
     };
   };
 
+  const getOwnerByUsername = async (senderAddress, name) => {
+    const ownerRaw = await readOnly(senderAddress, 'get-owner-by-username', [Cl.stringAscii(name)]);
+    const ownerTuple = unwrapOptional(ownerRaw);
+    const ownerField = getTupleField(ownerTuple, ['owner']);
+    return stringifyClarityValue(ownerField ?? ownerTuple);
+  };
+
   const registerUsername = async (name) => {
-    await request('stx_callContract', {
+    return request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'register-username',
       functionArgs: [Cl.stringAscii(name)],
@@ -90,7 +135,7 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
   };
 
   const mintPass = async () => {
-    await request('stx_callContract', {
+    return request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'mint-pass',
       functionArgs: [],
@@ -100,6 +145,7 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
 
   return {
     fetchDaoSnapshot,
+    getOwnerByUsername,
     registerUsername,
     mintPass
   };
