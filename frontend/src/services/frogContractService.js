@@ -32,6 +32,8 @@ const normalizeClarityValue = (value) => {
 };
 
 export const createFrogContractService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
+  let tokenMetadataCache;
+
   const getStoredAddress = () => {
     const data = getLocalStorage();
     return data?.addresses?.stx?.[0]?.address || '';
@@ -61,12 +63,40 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
     return unwrapResponse(result);
   };
 
+  const fetchTokenMetadata = async (address) => {
+    if (tokenMetadataCache !== undefined) return tokenMetadataCache;
+
+    try {
+      const tokenUriCv = await readOnly(address, 'get-token-uri', []);
+      const tokenUri = stringifyClarityValue(tokenUriCv);
+      if (!tokenUri) {
+        tokenMetadataCache = {};
+        return tokenMetadataCache;
+      }
+
+      const response = await fetch(tokenUri);
+      if (!response.ok) throw new Error(`Fetch metadata failed: ${response.status}`);
+      const metadata = await response.json();
+
+      tokenMetadataCache = {
+        tokenUri,
+        tokenImage: typeof metadata?.image === 'string' ? metadata.image : '',
+        tokenDisplayName: typeof metadata?.name === 'string' ? metadata.name : ''
+      };
+      return tokenMetadataCache;
+    } catch (_) {
+      tokenMetadataCache = {};
+      return tokenMetadataCache;
+    }
+  };
+
   const fetchFaucetSnapshot = async (address) => {
     const bal = await readOnly(address, 'get-balance', [principalCV(address)]);
     const next = await readOnly(address, 'get-next-claim-block', [principalCV(address)]);
     const can = await readOnly(address, 'can-claim?', [principalCV(address)]);
     const config = await readOnly(address, 'get-faucet-config', []);
     const parsedConfig = normalizeClarityValue(config) || {};
+    const metadata = await fetchTokenMetadata(address);
 
     return {
       balance: stringifyClarityValue(bal),
@@ -74,7 +104,10 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
       canClaim: Boolean(can),
       faucetAmount: stringifyClarityValue(parsedConfig.amount),
       cooldownBlocks: stringifyClarityValue(parsedConfig.cooldown),
-      faucetPaused: Boolean(parsedConfig.paused)
+      faucetPaused: Boolean(parsedConfig.paused),
+      tokenImage: metadata.tokenImage || '',
+      tokenDisplayName: metadata.tokenDisplayName || '',
+      tokenUri: metadata.tokenUri || ''
     };
   };
 

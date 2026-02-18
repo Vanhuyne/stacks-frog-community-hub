@@ -99,6 +99,18 @@ export default function App() {
                 <strong>{faucet.balance || '-'} FROG</strong>
               </div>
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+                <span>Token avatar</span>
+                {faucet.tokenImage ? (
+                  <img
+                    src={faucet.tokenImage}
+                    alt={faucet.tokenDisplayName || 'FROG token'}
+                    className="h-8 w-8 rounded-full border border-emerald-950/15 object-cover"
+                  />
+                ) : (
+                  <strong>-</strong>
+                )}
+              </div>
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Faucet status</span>
                 <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
               </div>

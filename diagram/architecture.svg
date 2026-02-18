@@ -16,24 +16,29 @@
 
   <rect x="40" y="130" width="220" height="120" rx="16" fill="#ffffff" stroke="#9fd0b8"/>
   <text x="65" y="175" class="box-title">1. User</text>
-  <text x="65" y="205" class="box-text">Connect / Claim / Transfer</text>
+  <text x="65" y="205" class="box-text">Claim / Transfer</text>
 
   <rect x="330" y="130" width="240" height="120" rx="16" fill="#ffffff" stroke="#9fd0b8"/>
   <text x="355" y="175" class="box-title">2. Frontend</text>
-  <text x="355" y="205" class="box-text">App.jsx + Stacks SDK</text>
+  <text x="355" y="205" class="box-text">UI + SDK</text>
 
   <rect x="640" y="130" width="220" height="120" rx="16" fill="#ffffff" stroke="#9fd0b8"/>
   <text x="665" y="175" class="box-title">3. Wallet</text>
-  <text x="665" y="205" class="box-text">Sign transaction</text>
+  <text x="665" y="205" class="box-text">Sign tx</text>
 
   <rect x="930" y="130" width="230" height="120" rx="16" fill="#ffffff" stroke="#9fd0b8"/>
-  <text x="955" y="175" class="box-title">4. Stacks Testnet</text>
+  <text x="955" y="175" class="box-title">4. Testnet</text>
   <text x="955" y="205" class="box-text">Execute tx</text>
 
   <rect x="450" y="330" width="300" height="130" rx="16" fill="#ffffff" stroke="#86bf9f"/>
-  <text x="475" y="375" class="box-title">5. Clarity Contract</text>
-  <text x="475" y="405" class="box-text">frog-token.clar</text>
-  <text x="475" y="430" class="box-text">claim / transfer / read-only</text>
+  <text x="475" y="375" class="box-title">5. Contracts</text>
+  <text x="475" y="405" class="box-text">frog-token-v3 / frog-dao-nft-v3</text>
+  <text x="475" y="430" class="box-text">claim / admin / token-uri</text>
+
+  <rect x="880" y="330" width="260" height="130" rx="16" fill="#ffffff" stroke="#86bf9f"/>
+  <text x="905" y="375" class="box-title">6. Metadata</text>
+  <text x="905" y="405" class="box-text">metadata.json</text>
+  <text x="905" y="430" class="box-text">logo.png</text>
 
   <line x1="260" y1="190" x2="320" y2="190" stroke="#1f6e4b" stroke-width="3" marker-end="url(#arrow)"/>
   <text x="270" y="175" class="label">actions</text>
@@ -47,6 +52,9 @@
   <line x1="1045" y1="250" x2="730" y2="330" stroke="#1f6e4b" stroke-width="3" marker-end="url(#arrow)"/>
   <text x="830" y="295" class="label">call contract</text>
 
+  <line x1="750" y1="395" x2="870" y2="395" stroke="#2d7f59" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="775" y="380" class="label">token-uri</text>
+
   <line x1="450" y1="395" x2="150" y2="250" stroke="#2d7f59" stroke-width="3" marker-end="url(#arrow)"/>
-  <text x="250" y="325" class="label">result back to UI</text>
+  <text x="250" y="325" class="label">result</text>
 </svg>
