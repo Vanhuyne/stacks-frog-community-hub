@@ -3,8 +3,8 @@
   "description": "FROG is a faucet token for the Frog Faucet + DAO demo on Stacks.",
   "symbol": "FROG",
   "decimals": 0,
-  "image": "https://example.com/images/frog-token.png",
-  "token_uri": "https://example.com/metadata/frog-token-v3.metadata.json",
+  "image": "https://raw.githubusercontent.com/Vanhuyne/stacks-frog-faucet/main/metadata/frog-token-v3-logo.png",
+  "token_uri": "https://raw.githubusercontent.com/Vanhuyne/stacks-frog-faucet/main/metadata/frog-token-v3.metadata.json",
   "properties": {
     "project": "frog-faucet",
     "network": "stacks"
