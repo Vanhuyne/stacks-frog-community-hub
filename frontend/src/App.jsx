@@ -19,7 +19,12 @@ const ghostButtonClass =
   'rounded-full border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('faucet');
+  const initialTab = (() => {
+    const candidate = new URLSearchParams(window.location.search).get('tab');
+    if (candidate === 'dao-nft' || candidate === 'ecosystem' || candidate === 'faucet') return candidate;
+    return 'faucet';
+  })();
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [ecosystemCategory, setEcosystemCategory] = useState('Highlighted Apps');
 
   const faucet = useFrogFaucet({

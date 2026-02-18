@@ -64,6 +64,17 @@ npm install
 npm run dev
 ```
 
+## Demo Screenshots
+
+### Faucet tab
+![Faucet tab](diagram/screenshots/faucet-tab.png)
+
+### DAO tab
+![DAO tab](diagram/screenshots/dao-tab.png)
+
+### Ecosystem tab
+![Ecosystem tab](diagram/screenshots/ecosystem-tab.png)
+
 ## Deploy Testnet
 
 1. Fill mnemonic in local file `settings/Testnet.toml`.
