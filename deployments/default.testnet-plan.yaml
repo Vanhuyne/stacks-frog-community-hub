@@ -1,6 +1,6 @@
 ---
 id: 0
-name: Testnet deployment (DAO NFT only)
+name: Testnet deployment
 network: testnet
 stacks-node: "https://api.testnet.hiro.so"
 bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
@@ -9,10 +9,17 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: frog-dao-nft
+            contract-name: frog-token-v3
             expected-sender: ST18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4FSMA9T0
-            cost: 22000
-            path: contracts/frog-dao-nft.clar
+            cost: 51700
+            path: contracts/frog-token-v3.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: frog-dao-nft-v3
+            expected-sender: ST18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4FSMA9T0
+            cost: 30160
+            path: contracts/frog-dao-nft-v3.clar
             anchor-block-only: true
             clarity-version: 3
       epoch: "3.3"

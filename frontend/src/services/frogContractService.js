@@ -20,6 +20,17 @@ const stringifyClarityValue = (value) => {
   return JSON.stringify(value);
 };
 
+const normalizeClarityValue = (value) => {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'bigint') return value.toString();
+  if (Array.isArray(value)) return value.map((item) => normalizeClarityValue(item));
+  if (typeof value === 'object') {
+    if ('type' in value && 'value' in value) return normalizeClarityValue(value.value);
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, normalizeClarityValue(v)]));
+  }
+  return value;
+};
+
 export const createFrogContractService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
   const getStoredAddress = () => {
     const data = getLocalStorage();
@@ -54,11 +65,16 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
     const bal = await readOnly(address, 'get-balance', [principalCV(address)]);
     const next = await readOnly(address, 'get-next-claim-block', [principalCV(address)]);
     const can = await readOnly(address, 'can-claim?', [principalCV(address)]);
+    const config = await readOnly(address, 'get-faucet-config', []);
+    const parsedConfig = normalizeClarityValue(config) || {};
 
     return {
       balance: stringifyClarityValue(bal),
       nextClaimBlock: stringifyClarityValue(next),
-      canClaim: Boolean(can)
+      canClaim: Boolean(can),
+      faucetAmount: stringifyClarityValue(parsedConfig.amount),
+      cooldownBlocks: stringifyClarityValue(parsedConfig.cooldown),
+      faucetPaused: Boolean(parsedConfig.paused)
     };
   };
 

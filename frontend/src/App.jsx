@@ -4,10 +4,10 @@ import { useFrogFaucet } from './hooks/useFrogFaucet';
 import { useFrogDaoNft } from './hooks/useFrogDaoNft';
 
 const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || '';
-const contractName = import.meta.env.VITE_CONTRACT_NAME || 'frog-token';
+const contractName = import.meta.env.VITE_CONTRACT_NAME || 'frog-token-v3';
 
 const daoContractAddress = import.meta.env.VITE_DAO_CONTRACT_ADDRESS || contractAddress;
-const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft';
+const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-v3';
 
 const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
 const defaultHiroApiBaseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
@@ -70,7 +70,7 @@ export default function App() {
               <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG FT + Faucet</p>
               <h1 className="text-4xl leading-tight md:text-5xl">24h Faucet for FROG Token</h1>
               <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
-                Claim 1,000 FROG every 24h. Connect your wallet, claim tokens, and transfer to friends.
+                Claim FROG on a configurable cooldown. Connect your wallet, claim tokens, and transfer to friends.
               </p>
               <div className="frog-mascot" aria-hidden="true">
                 <div className="frog-shadow" />
@@ -98,6 +98,10 @@ export default function App() {
                 <span>Balance</span>
                 <strong>{faucet.balance || '-'} FROG</strong>
               </div>
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+                <span>Faucet status</span>
+                <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
+              </div>
               <div className="flex items-center justify-between gap-3 py-2">
                 <span>Next claim (block)</span>
                 <strong>{faucet.nextClaimBlock || '-'}</strong>
@@ -109,8 +113,14 @@ export default function App() {
                   </button>
                 ) : (
                   <>
-                    <button className={primaryButtonClass} onClick={faucet.claim} disabled={!faucet.canClaim || faucet.isClaiming}>
-                      {faucet.isClaiming ? 'Processing claim...' : faucet.canClaim ? 'Claim 1,000 FROG' : '24h cooldown'}
+                    <button className={primaryButtonClass} onClick={faucet.claim} disabled={faucet.faucetPaused || !faucet.canClaim || faucet.isClaiming}>
+                      {faucet.isClaiming
+                        ? 'Processing claim...'
+                        : faucet.faucetPaused
+                          ? 'Faucet paused'
+                          : faucet.canClaim
+                            ? `Claim ${faucet.faucetAmount || '0'} FROG`
+                            : 'Cooldown'}
                     </button>
                     <button className={ghostButtonClass} onClick={faucet.disconnectWallet} disabled={faucet.isClaiming || faucet.isTransferring}>
                       Disconnect
@@ -119,8 +129,11 @@ export default function App() {
                 )}
               </div>
               {faucet.status && <p className="mt-3 text-sm text-emerald-900/60">{faucet.status}</p>}
-              {!faucet.canClaim && (
-                <p className="mt-3 text-sm text-emerald-900/60">Faucet is limited to once every 24h. Wait until block {faucet.nextClaimBlock} to claim again.</p>
+              {!faucet.faucetPaused && !faucet.canClaim && (
+                <p className="mt-3 text-sm text-emerald-900/60">Faucet cooldown in effect. Wait until block {faucet.nextClaimBlock} to claim again.</p>
+              )}
+              {faucet.faucetPaused && (
+                <p className="mt-3 text-sm text-emerald-900/60">Claims are temporarily paused by contract admin.</p>
               )}
             </div>
           </header>
@@ -159,7 +172,8 @@ export default function App() {
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-xs">{contractAddress}.{contractName}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Network</span> <strong>{network}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Decimals</span> <strong>0</strong></li>
-                <li className="flex items-center justify-between gap-3"><span>Cooldown</span> <strong>24h (~144 blocks)</strong></li>
+                <li className="flex items-center justify-between gap-3"><span>Claim amount</span> <strong>{faucet.faucetAmount || '-'} FROG</strong></li>
+                <li className="flex items-center justify-between gap-3"><span>Cooldown</span> <strong>{faucet.cooldownBlocks || '-'} blocks</strong></li>
               </ul>
             </div>
           </section>

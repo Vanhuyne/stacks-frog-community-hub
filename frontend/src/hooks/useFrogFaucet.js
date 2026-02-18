@@ -9,6 +9,9 @@ const initialState = {
   balance: '',
   nextClaimBlock: '',
   canClaim: true,
+  faucetAmount: '1000',
+  cooldownBlocks: '144',
+  faucetPaused: false,
   status: '',
   recipient: '',
   amount: '',
@@ -28,6 +31,9 @@ const reducer = (state, action) => {
         balance: '',
         nextClaimBlock: '',
         canClaim: true,
+        faucetAmount: '1000',
+        cooldownBlocks: '144',
+        faucetPaused: false,
         isConnecting: false,
         isClaiming: false,
         isTransferring: false
@@ -115,8 +121,18 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
   const claim = useCallback(async () => {
     if (state.isClaiming) return;
 
+    if (state.faucetPaused) {
+      dispatch({ type: 'merge', payload: { status: 'Faucet is paused by admin. Please try again later.' } });
+      return;
+    }
+
     if (!state.canClaim) {
-      dispatch({ type: 'merge', payload: { status: '24h cooldown not reached yet. Please try again later.' } });
+      dispatch({
+        type: 'merge',
+        payload: {
+          status: `Cooldown not reached yet. Wait until block ${state.nextClaimBlock || '-'}.`
+        }
+      });
       return;
     }
 
@@ -150,7 +166,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
     } finally {
       dispatch({ type: 'merge', payload: { isClaiming: false } });
     }
-  }, [service, state.address, state.canClaim, state.isClaiming, syncAfterClaim]);
+  }, [service, state.address, state.canClaim, state.faucetPaused, state.isClaiming, state.nextClaimBlock, syncAfterClaim]);
 
   const transfer = useCallback(async () => {
     if (state.isTransferring || !state.address || !state.recipient || !state.amount) return;

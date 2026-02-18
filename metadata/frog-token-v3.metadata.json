@@ -1,0 +1,12 @@
+{
+  "name": "FROG Token",
+  "description": "FROG is a faucet token for the Frog Faucet + DAO demo on Stacks.",
+  "symbol": "FROG",
+  "decimals": 0,
+  "image": "https://example.com/images/frog-token.png",
+  "token_uri": "https://example.com/metadata/frog-token-v3.metadata.json",
+  "properties": {
+    "project": "frog-faucet",
+    "network": "stacks"
+  }
+}

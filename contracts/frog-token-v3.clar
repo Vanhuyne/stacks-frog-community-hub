@@ -19,6 +19,8 @@
 (define-constant token-name "frog")
 (define-constant token-symbol "FROG")
 (define-constant token-decimals u0)
+;; Update URL after hosting metadata JSON at a public HTTPS endpoint.
+(define-constant token-uri u"https://example.com/metadata/frog-token-v3.metadata.json")
 
 ;; Owner la principal deploy contract.
 ;; Chi owner duoc phep cap nhat tham so faucet.
@@ -55,6 +57,10 @@
 
 (define-read-only (get-decimals)
   (ok token-decimals))
+
+;; SIP-010 metadata pointer for wallets/indexers.
+(define-read-only (get-token-uri)
+  (ok (some token-uri)))
 
 (define-read-only (get-total-supply)
   (ok (ft-get-supply frog)))

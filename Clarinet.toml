@@ -4,13 +4,13 @@ description = "FROG FT + faucet with 24h cooldown"
 authors = []
 telemetry = false
 
-[contracts.frog-token]
-path = "contracts/frog-token.clar"
+[contracts.frog-token-v3]
+path = "contracts/frog-token-v3.clar"
 clarity_version = 3
 epoch = "latest"
 
-[contracts.frog-dao-nft]
-path = "contracts/frog-dao-nft.clar"
+[contracts.frog-dao-nft-v3]
+path = "contracts/frog-dao-nft-v3.clar"
 clarity_version = 3
 epoch = "latest"
 
