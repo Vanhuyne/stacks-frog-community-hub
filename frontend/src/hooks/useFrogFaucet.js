@@ -9,6 +9,7 @@ const initialState = {
   balance: '',
   nextClaimBlock: '',
   canClaim: true,
+  owner: '',
   faucetAmount: '1000',
   cooldownBlocks: '144',
   faucetPaused: false,
@@ -18,9 +19,12 @@ const initialState = {
   status: '',
   recipient: '',
   amount: '',
+  adminAmountInput: '',
+  adminCooldownInput: '',
   isConnecting: false,
   isClaiming: false,
-  isTransferring: false
+  isTransferring: false,
+  isUpdatingAdmin: false
 };
 
 const reducer = (state, action) => {
@@ -34,15 +38,19 @@ const reducer = (state, action) => {
         balance: '',
         nextClaimBlock: '',
         canClaim: true,
+        owner: '',
         faucetAmount: '1000',
         cooldownBlocks: '144',
         faucetPaused: false,
         tokenImage: '',
         tokenDisplayName: '',
         tokenUri: '',
+        adminAmountInput: '',
+        adminCooldownInput: '',
         isConnecting: false,
         isClaiming: false,
-        isTransferring: false
+        isTransferring: false,
+        isUpdatingAdmin: false
       };
     default:
       return state;
@@ -200,6 +208,72 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
     dispatch({ type: 'merge', payload: { amount } });
   }, []);
 
+  const setAdminAmountInput = useCallback((adminAmountInput) => {
+    dispatch({ type: 'merge', payload: { adminAmountInput } });
+  }, []);
+
+  const setAdminCooldownInput = useCallback((adminCooldownInput) => {
+    dispatch({ type: 'merge', payload: { adminCooldownInput } });
+  }, []);
+
+  const setPauseState = useCallback(async (paused) => {
+    if (state.isUpdatingAdmin || !state.address) return;
+
+    dispatch({ type: 'merge', payload: { isUpdatingAdmin: true, status: `Submitting ${paused ? 'pause' : 'unpause'}...` } });
+    try {
+      await service.setFaucetPaused(paused);
+      dispatch({ type: 'merge', payload: { status: `Admin transaction submitted (${paused ? 'paused' : 'active'}).` } });
+      await sleep(3500);
+      await refreshData(state.address);
+    } catch (err) {
+      dispatch({ type: 'merge', payload: { status: `Admin action failed: ${err?.message || err}` } });
+    } finally {
+      dispatch({ type: 'merge', payload: { isUpdatingAdmin: false } });
+    }
+  }, [refreshData, service, state.address, state.isUpdatingAdmin]);
+
+  const updateFaucetAmount = useCallback(async () => {
+    if (state.isUpdatingAdmin || !state.address || !state.adminAmountInput) return;
+    const nextAmount = Number(state.adminAmountInput);
+    if (!Number.isInteger(nextAmount) || nextAmount <= 0) {
+      dispatch({ type: 'merge', payload: { status: 'Amount must be a positive integer.' } });
+      return;
+    }
+
+    dispatch({ type: 'merge', payload: { isUpdatingAdmin: true, status: 'Submitting faucet amount update...' } });
+    try {
+      await service.setFaucetAmount(state.adminAmountInput);
+      dispatch({ type: 'merge', payload: { status: 'Amount update submitted.' } });
+      await sleep(3500);
+      await refreshData(state.address);
+    } catch (err) {
+      dispatch({ type: 'merge', payload: { status: `Set amount failed: ${err?.message || err}` } });
+    } finally {
+      dispatch({ type: 'merge', payload: { isUpdatingAdmin: false } });
+    }
+  }, [refreshData, service, state.address, state.adminAmountInput, state.isUpdatingAdmin]);
+
+  const updateCooldownBlocks = useCallback(async () => {
+    if (state.isUpdatingAdmin || !state.address || !state.adminCooldownInput) return;
+    const nextCooldown = Number(state.adminCooldownInput);
+    if (!Number.isInteger(nextCooldown) || nextCooldown <= 0) {
+      dispatch({ type: 'merge', payload: { status: 'Cooldown must be a positive integer.' } });
+      return;
+    }
+
+    dispatch({ type: 'merge', payload: { isUpdatingAdmin: true, status: 'Submitting cooldown update...' } });
+    try {
+      await service.setCooldownBlocks(state.adminCooldownInput);
+      dispatch({ type: 'merge', payload: { status: 'Cooldown update submitted.' } });
+      await sleep(3500);
+      await refreshData(state.address);
+    } catch (err) {
+      dispatch({ type: 'merge', payload: { status: `Set cooldown failed: ${err?.message || err}` } });
+    } finally {
+      dispatch({ type: 'merge', payload: { isUpdatingAdmin: false } });
+    }
+  }, [refreshData, service, state.address, state.adminCooldownInput, state.isUpdatingAdmin]);
+
   useEffect(() => {
     if (!ready) return;
     if (isConnected()) {
@@ -222,6 +296,11 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
     claim,
     transfer,
     setRecipient,
-    setAmount
+    setAmount,
+    setPauseState,
+    updateFaucetAmount,
+    updateCooldownBlocks,
+    setAdminAmountInput,
+    setAdminCooldownInput
   };
 };

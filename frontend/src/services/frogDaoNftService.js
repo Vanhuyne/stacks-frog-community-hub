@@ -118,6 +118,42 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
     };
   };
 
+  const fetchTreasurySnapshot = async (senderAddress) => {
+    const [treasuryResult, mintFeeResult] = await Promise.allSettled([
+      readOnly(senderAddress, 'get-dao-treasury', []),
+      readOnly(senderAddress, 'get-pass-mint-fee', [])
+    ]);
+
+    const treasuryAddress = treasuryResult.status === 'fulfilled'
+      ? stringifyClarityValue(treasuryResult.value)
+      : '';
+    const mintFee = mintFeeResult.status === 'fulfilled'
+      ? stringifyClarityValue(mintFeeResult.value)
+      : '';
+
+    if (!treasuryAddress) {
+      return {
+        treasuryAddress: '',
+        treasuryBalance: '',
+        mintFee
+      };
+    }
+
+    const treasuryBalanceResult = await Promise.allSettled([
+      readOnly(senderAddress, 'get-frog-balance', [principalCV(treasuryAddress)])
+    ]);
+
+    const treasuryBalance = treasuryBalanceResult[0].status === 'fulfilled'
+      ? stringifyClarityValue(treasuryBalanceResult[0].value)
+      : '';
+
+    return {
+      treasuryAddress,
+      treasuryBalance,
+      mintFee
+    };
+  };
+
   const getOwnerByUsername = async (senderAddress, name) => {
     const ownerRaw = await readOnly(senderAddress, 'get-owner-by-username', [Cl.stringAscii(name)]);
     const ownerTuple = unwrapOptional(ownerRaw);
@@ -139,12 +175,15 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
       contract: `${contractAddress}.${contractName}`,
       functionName: 'mint-pass',
       functionArgs: [],
+      // mint-pass transfers 99 FROG fee internally; allow unspecified asset movement.
+      postConditionMode: 'allow',
       network
     });
   };
 
   return {
     fetchDaoSnapshot,
+    fetchTreasurySnapshot,
     getOwnerByUsername,
     registerUsername,
     mintPass

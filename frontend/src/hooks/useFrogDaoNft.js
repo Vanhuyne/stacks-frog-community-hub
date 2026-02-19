@@ -11,6 +11,9 @@ const initialState = {
   hasPass: false,
   passId: '',
   eligible: false,
+  treasuryAddress: '',
+  treasuryBalance: '',
+  mintFee: '',
   status: '',
   isRegistering: false,
   isMinting: false
@@ -42,9 +45,12 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
   const refresh = useCallback(async () => {
     if (!ready || !address) return;
     try {
-      const snapshot = await service.fetchDaoSnapshot(address);
+      const [snapshot, treasury] = await Promise.all([
+        service.fetchDaoSnapshot(address),
+        service.fetchTreasurySnapshot(address)
+      ]);
       if (debug) console.log('[DAO NFT] snapshot:', snapshot);
-      dispatch({ type: 'merge', payload: snapshot });
+      dispatch({ type: 'merge', payload: { ...snapshot, ...treasury } });
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Read data failed: ${err?.message || err}` } });
     }

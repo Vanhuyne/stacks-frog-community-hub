@@ -11,15 +11,15 @@ plan:
         - contract-publish:
             contract-name: frog-token-v3
             expected-sender: SP18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4EFYJMNW
-            cost: 36020
+            cost: 52050
             path: contracts/frog-token-v3.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: frog-dao-nft-v3
+            contract-name: frog-dao-nft-v4
             expected-sender: SP18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4EFYJMNW
-            cost: 30040
-            path: contracts/frog-dao-nft-v3.clar
+            cost: 33060
+            path: contracts/frog-dao-nft-v4.clar
             anchor-block-only: true
             clarity-version: 3
       epoch: "3.3"

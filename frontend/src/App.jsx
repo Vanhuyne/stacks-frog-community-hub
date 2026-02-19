@@ -21,7 +21,7 @@ const ghostButtonClass =
 export default function App() {
   const initialTab = (() => {
     const candidate = new URLSearchParams(window.location.search).get('tab');
-    if (candidate === 'dao-nft' || candidate === 'ecosystem' || candidate === 'faucet') return candidate;
+    if (candidate === 'dao-nft' || candidate === 'ecosystem' || candidate === 'faucet' || candidate === 'admin') return candidate;
     return 'faucet';
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -41,13 +41,17 @@ export default function App() {
     network,
     readOnlyBaseUrl,
     address: faucet.address,
-    enabled: activeTab === 'dao-nft'
+    enabled: activeTab === 'dao-nft' || activeTab === 'admin'
   });
 
   const ecosystemApps = useMemo(() => {
     if (ecosystemCategory === 'Highlighted Apps') return highlightedApps;
     return highlightedApps.filter((app) => app.tags.includes(ecosystemCategory));
   }, [ecosystemCategory]);
+  const isOwner = useMemo(
+    () => Boolean(faucet.address && faucet.owner && faucet.address === faucet.owner),
+    [faucet.address, faucet.owner]
+  );
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,#ffffff_0%,#eaf5ef_45%,#d9efe4_100%)] px-[6vw] pb-20 pt-10 text-emerald-950">
@@ -271,7 +275,7 @@ export default function App() {
             <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">Mint DAO pass</h2>
               <p className="mb-3 text-base text-emerald-900/60">
-                Requirement: username registered + hold at least 1,000 FROG.
+                Requirement: username registered + hold at least 1,000 FROG (mint fee: 99 FROG).
               </p>
               <button
                 className={primaryButtonClass}
@@ -290,6 +294,117 @@ export default function App() {
                 <li className="flex items-center justify-between gap-3"><span>Mint rule</span> <strong>1 pass per address</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Transfer</span> <strong>Disabled</strong></li>
               </ul>
+            </div>
+          </section>
+        </>
+      ) : activeTab === 'admin' ? (
+        <>
+          <header className="grid items-center gap-8 md:grid-cols-[minmax(260px,1fr)_minmax(260px,420px)]">
+            <div>
+              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG ADMIN</p>
+              <h1 className="text-4xl leading-tight md:text-5xl">Faucet Admin Controls</h1>
+              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
+                Owner-only controls for pause state, claim amount, and cooldown blocks.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+                <span>Status</span>
+                <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+                <span>Connected wallet</span>
+                <strong className="break-all font-mono text-xs">{faucet.address || '-'}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+                <span>Contract owner</span>
+                <strong className="break-all font-mono text-xs">{faucet.owner || '-'}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3 py-2">
+                <span>Permission</span>
+                <strong>{isOwner ? 'Owner' : 'Read-only'}</strong>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {!faucet.address ? (
+                  <button className={primaryButtonClass} onClick={faucet.connectWallet} disabled={!faucet.ready || faucet.isConnecting}>
+                    {faucet.isConnecting ? 'Connecting...' : 'Connect Wallet'}
+                  </button>
+                ) : (
+                  <button className={ghostButtonClass} onClick={faucet.disconnectWallet} disabled={faucet.isUpdatingAdmin}>
+                    Disconnect
+                  </button>
+                )}
+              </div>
+              {faucet.status && <p className="mt-3 text-sm text-emerald-900/60">{faucet.status}</p>}
+            </div>
+          </header>
+
+          <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <h2 className="mb-3 text-lg font-semibold">Pause / Unpause</h2>
+              <p className="mb-4 text-base text-emerald-900/60">
+                Current faucet state: <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button className={primaryButtonClass} onClick={() => faucet.setPauseState(true)} disabled={!isOwner || faucet.isUpdatingAdmin || faucet.faucetPaused}>
+                  Pause
+                </button>
+                <button className={ghostButtonClass} onClick={() => faucet.setPauseState(false)} disabled={!isOwner || faucet.isUpdatingAdmin || !faucet.faucetPaused}>
+                  Unpause
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <h2 className="mb-3 text-lg font-semibold">Set Claim Amount</h2>
+              <p className="mb-3 text-base text-emerald-900/60">Current amount: <strong>{faucet.faucetAmount || '-'} FROG</strong></p>
+              <label className="mb-3 block text-base text-emerald-900/60">
+                New amount
+                <input
+                  className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  type="number"
+                  min="1"
+                  value={faucet.adminAmountInput}
+                  onChange={(e) => faucet.setAdminAmountInput(e.target.value)}
+                  placeholder="2000"
+                  disabled={!isOwner || faucet.isUpdatingAdmin}
+                />
+              </label>
+              <button className={primaryButtonClass} onClick={faucet.updateFaucetAmount} disabled={!isOwner || !faucet.adminAmountInput || faucet.isUpdatingAdmin}>
+                {faucet.isUpdatingAdmin ? 'Submitting...' : 'Update amount'}
+              </button>
+            </div>
+
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <h2 className="mb-3 text-lg font-semibold">Set Cooldown</h2>
+              <p className="mb-3 text-base text-emerald-900/60">Current cooldown: <strong>{faucet.cooldownBlocks || '-'} blocks</strong></p>
+              <label className="mb-3 block text-base text-emerald-900/60">
+                New cooldown blocks
+                <input
+                  className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  type="number"
+                  min="1"
+                  value={faucet.adminCooldownInput}
+                  onChange={(e) => faucet.setAdminCooldownInput(e.target.value)}
+                  placeholder="144"
+                  disabled={!isOwner || faucet.isUpdatingAdmin}
+                />
+              </label>
+              <button className={primaryButtonClass} onClick={faucet.updateCooldownBlocks} disabled={!isOwner || !faucet.adminCooldownInput || faucet.isUpdatingAdmin}>
+                {faucet.isUpdatingAdmin ? 'Submitting...' : 'Update cooldown'}
+              </button>
+            </div>
+
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <h2 className="mb-3 text-lg font-semibold">DAO Treasury</h2>
+              <ul className="space-y-2.5">
+                <li className="flex items-center justify-between gap-3"><span>Treasury wallet</span> <strong className="break-all font-mono text-xs">{dao.treasuryAddress || '-'}</strong></li>
+                <li className="flex items-center justify-between gap-3"><span>Mint fee</span> <strong>{dao.mintFee || '-'} FROG</strong></li>
+                <li className="flex items-center justify-between gap-3"><span>Treasury balance</span> <strong>{dao.treasuryBalance || '-'} FROG</strong></li>
+              </ul>
+              <button className={ghostButtonClass} onClick={dao.refresh} disabled={!dao.ready || dao.isMinting || dao.isRegistering}>
+                Refresh treasury
+              </button>
             </div>
           </section>
         </>

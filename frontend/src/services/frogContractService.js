@@ -102,6 +102,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
       balance: stringifyClarityValue(bal),
       nextClaimBlock: stringifyClarityValue(next),
       canClaim: Boolean(can),
+      owner: stringifyClarityValue(parsedConfig.owner),
       faucetAmount: stringifyClarityValue(parsedConfig.amount),
       cooldownBlocks: stringifyClarityValue(parsedConfig.cooldown),
       faucetPaused: Boolean(parsedConfig.paused),
@@ -134,12 +135,42 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
     });
   };
 
+  const setFaucetPaused = async (paused) => {
+    await request('stx_callContract', {
+      contract: `${contractAddress}.${contractName}`,
+      functionName: 'set-faucet-paused',
+      functionArgs: [Cl.bool(Boolean(paused))],
+      network
+    });
+  };
+
+  const setFaucetAmount = async (amount) => {
+    await request('stx_callContract', {
+      contract: `${contractAddress}.${contractName}`,
+      functionName: 'set-faucet-amount',
+      functionArgs: [Cl.uint(BigInt(amount))],
+      network
+    });
+  };
+
+  const setCooldownBlocks = async (blocks) => {
+    await request('stx_callContract', {
+      contract: `${contractAddress}.${contractName}`,
+      functionName: 'set-cooldown-blocks',
+      functionArgs: [Cl.uint(BigInt(blocks))],
+      network
+    });
+  };
+
   return {
     connectWallet,
     disconnectWallet: disconnect,
     getStoredAddress,
     fetchFaucetSnapshot,
     claim,
-    transfer
+    transfer,
+    setFaucetPaused,
+    setFaucetAmount,
+    setCooldownBlocks
   };
 };

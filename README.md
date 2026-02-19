@@ -3,7 +3,7 @@
 MVP includes:
 - Fungible Token `FROG` (decimals = 0)
 - Faucet allows each address to claim 1,000 FROG every 24h (~144 blocks)
-- DAO NFT: register username + hold 1,000 FROG to mint a non-transferable membership pass
+- DAO NFT: register username + hold 1,000 FROG and pay 99 FROG fee to mint a non-transferable membership pass
 - React + Vite frontend: connect wallet, claim, view balance, transfer
 - Faucet admin controls: pause/unpause, set claim amount, set cooldown blocks (owner-only)
 
@@ -16,7 +16,7 @@ clarinet console
 
 Contracts:
 - `contracts/frog-token-v3.clar`
-- `contracts/frog-dao-nft-v3.clar`
+- `contracts/frog-dao-nft-v4.clar`
 
 ### Faucet admin functions (`frog-token-v3`)
 
@@ -102,7 +102,7 @@ clarinet deployments generate --mainnet --manual-cost
 
 3. Review `deployments/default.mainnet-plan.yaml`:
 - `expected-sender` matches your deployer address
-- contracts listed: `frog-token-v3`, `frog-dao-nft-v3`
+- contracts listed: `frog-token-v3`, `frog-dao-nft-v4`
 - costs are acceptable
 
 4. Apply deployment:
@@ -115,8 +115,15 @@ clarinet deployments apply --mainnet --no-dashboard --use-on-disk-deployment-pla
 - `VITE_CONTRACT_ADDRESS=<mainnet deployer address>`
 - `VITE_CONTRACT_NAME=frog-token-v3`
 - `VITE_DAO_CONTRACT_ADDRESS=<mainnet deployer address>`
-- `VITE_DAO_CONTRACT_NAME=frog-dao-nft-v3`
+- `VITE_DAO_CONTRACT_NAME=frog-dao-nft-v4`
 - `VITE_HIRO_PROXY=` (empty for production build)
+
+## Mainnet Deployment (Live)
+
+- `SP18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4EFYJMNW.frog-token-v3`
+  - txid: `c4128cd67b5cfacbfe730b03e3f35eb07622e8a0b92b9f39765483dae3524ec0`
+- `SP18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4EFYJMNW.frog-dao-nft-v4`
+  - txid: `e543360e960a7ea0bfe0e8cebaf00fefee95583e44b1a396ef06bc06a113f612`
 
 ## Secret Scan (Pre-commit)
 
