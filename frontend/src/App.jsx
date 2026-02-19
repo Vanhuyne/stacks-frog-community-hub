@@ -21,7 +21,7 @@ const ghostButtonClass =
 export default function App() {
   const initialTab = (() => {
     const candidate = new URLSearchParams(window.location.search).get('tab');
-    if (candidate === 'dao-nft' || candidate === 'ecosystem' || candidate === 'faucet' || candidate === 'admin') return candidate;
+    if (candidate === 'dao-nft' || candidate === 'governance' || candidate === 'ecosystem' || candidate === 'faucet' || candidate === 'admin') return candidate;
     return 'faucet';
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -41,7 +41,7 @@ export default function App() {
     network,
     readOnlyBaseUrl,
     address: faucet.address,
-    enabled: activeTab === 'dao-nft' || activeTab === 'admin'
+    enabled: activeTab === 'dao-nft' || activeTab === 'governance' || activeTab === 'admin'
   });
 
   const ecosystemApps = useMemo(() => {
@@ -185,6 +185,11 @@ export default function App() {
               <button className={primaryButtonClass} onClick={faucet.transfer} disabled={!faucet.address || !faucet.recipient || !faucet.amount || faucet.isTransferring}>
                 {faucet.isTransferring ? 'Submitting...' : 'Send'}
               </button>
+              <p className="mt-3 text-xs text-emerald-900/60">
+                {!dao.hasPass
+                  ? 'Creating proposals requires DAO Pass in this v5 contract. Go to Frog DAO Pass tab to register username and mint pass first.'
+                  : 'You are eligible to submit proposals when title and details are filled.'}
+              </p>
             </div>
 
             <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
@@ -204,9 +209,9 @@ export default function App() {
           <header className="grid items-center gap-8 md:grid-cols-[minmax(260px,1fr)_minmax(260px,360px)]">
             <div>
               <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG DAO</p>
-              <h1 className="text-4xl leading-tight md:text-5xl">Mint DAO Pass NFT</h1>
+              <h1 className="text-4xl leading-tight md:text-5xl">DAO Membership Pass</h1>
               <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
-                Register a username and hold at least 1,000 FROG to mint a non-transferable DAO pass.
+                Register your on-chain username and mint one non-transferable DAO pass to unlock governance.
               </p>
             </div>
             <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
@@ -252,14 +257,14 @@ export default function App() {
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-semibold">Register username</h2>
+              <h2 className="mb-3 text-lg font-semibold">Register Username</h2>
               <label className="block text-base text-emerald-900/60">
                 Username (ASCII, max 32 chars)
                 <input
                   className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base text-emerald-950 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
                   value={dao.usernameInput}
                   onChange={(e) => dao.setUsernameInput(e.target.value)}
-                  placeholder="frogking"
+                  placeholder="froggovernor"
                   disabled={Boolean(dao.username) || dao.isRegistering}
                 />
               </label>
@@ -273,7 +278,7 @@ export default function App() {
             </div>
 
             <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-semibold">Mint DAO pass</h2>
+              <h2 className="mb-3 text-lg font-semibold">Mint DAO Pass</h2>
               <p className="mb-3 text-base text-emerald-900/60">
                 Requirement: username registered + hold at least 1,000 FROG (mint fee: 99 FROG).
               </p>
@@ -287,13 +292,187 @@ export default function App() {
             </div>
 
             <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-semibold">DAO contract</h2>
+              <h2 className="mb-3 text-lg font-semibold">DAO Contract</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-xs">{daoContractAddress}.{daoContractName}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Network</span> <strong>{network}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Mint rule</span> <strong>1 pass per address</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Transfer</span> <strong>Disabled</strong></li>
               </ul>
+            </div>
+          </section>
+        </>
+      ) : activeTab === 'governance' ? (
+        <>
+          <header className="grid items-center gap-8 md:grid-cols-[minmax(320px,1fr)_minmax(280px,420px)]">
+            <div>
+              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG GOVERNANCE</p>
+              <h1 className="text-4xl leading-tight md:text-5xl">Proposal & Voting Board</h1>
+              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
+                Governance-style workspace for proposing upgrades, tracking vote counts, and executing results.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <h2 className="mb-3 text-lg font-semibold">Overview</h2>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/60 p-3">
+                  <p className="text-xs uppercase tracking-wide text-emerald-800/60">Voting Period</p>
+                  <p className="text-xl font-bold">{dao.governanceVotingPeriodBlocks || '-'} <span className="text-sm font-medium">blocks</span></p>
+                </div>
+                <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/60 p-3">
+                  <p className="text-xs uppercase tracking-wide text-emerald-800/60">Quorum</p>
+                  <p className="text-xl font-bold">{dao.governanceMinVotesQuorum || '-'}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/60 p-3">
+                  <p className="text-xs uppercase tracking-wide text-emerald-800/60">Last Proposal</p>
+                  <p className="text-xl font-bold">#{dao.governanceLastProposalId || '-'}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/60 p-3">
+                  <p className="text-xs uppercase tracking-wide text-emerald-800/60">Membership</p>
+                  <p className="text-xl font-bold">{dao.hasPass ? 'Eligible' : 'No pass'}</p>
+                </div>
+              </div>
+              {(dao.status || faucet.status) && <p className="mt-3 text-sm text-emerald-900/60">{dao.status || faucet.status}</p>}
+            </div>
+          </header>
+
+          <section className="mt-8 grid gap-5 lg:grid-cols-[minmax(330px,420px)_minmax(350px,1fr)]">
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <h2 className="mb-3 text-lg font-semibold">Create Proposal</h2>
+              <p className="mb-3 text-sm text-emerald-900/60">Submit upgrade proposals in a concise governance format.</p>
+              <label className="mb-3 block text-sm text-emerald-900/70">
+                Title
+                <input
+                  className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
+                  value={dao.proposalTitleInput}
+                  onChange={(e) => dao.setProposalTitleInput(e.target.value)}
+                  placeholder="Reduce faucet cooldown to 120 blocks"
+                  disabled={dao.isCreatingProposal}
+                />
+              </label>
+              <label className="mb-3 block text-sm text-emerald-900/70">
+                Details (URI/hash/text)
+                <textarea
+                  className="mt-1.5 min-h-[110px] w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
+                  value={dao.proposalDetailsInput}
+                  onChange={(e) => dao.setProposalDetailsInput(e.target.value)}
+                  placeholder="ipfs://Qm..."
+                  disabled={dao.isCreatingProposal}
+                />
+              </label>
+              <button
+                className={primaryButtonClass}
+                onClick={dao.createProposal}
+                disabled={!faucet.address || !dao.ready || !dao.hasPass || !dao.proposalTitleInput.trim() || !dao.proposalDetailsInput.trim() || dao.isCreatingProposal}
+              >
+                {dao.isCreatingProposal ? 'Submitting...' : !dao.hasPass ? 'Mint DAO Pass First' : 'Submit Proposal'}
+              </button>
+              <p className="mt-3 text-xs text-emerald-900/60">
+                {!dao.hasPass
+                  ? 'Creating proposals requires DAO Pass in this v5 contract. Go to Frog DAO Pass tab to register username and mint pass first.'
+                  : 'You are eligible to submit proposals when title and details are filled.'}
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <div className="mb-4">
+                <p className="mb-2 text-xs uppercase tracking-wide text-emerald-800/60">Recent Proposals</p>
+                {dao.proposalList.length > 0 ? (
+                  <div className="max-h-[220px] space-y-2 overflow-auto pr-1">
+                    {dao.proposalList.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`w-full rounded-xl border px-3 py-2 text-left transition ${dao.proposalIdInput === item.id ? 'border-emerald-700 bg-emerald-50' : 'border-emerald-950/10 bg-white hover:border-emerald-700/50 hover:bg-emerald-50/40'}`}
+                        onClick={() => {
+                          dao.setProposalIdInput(item.id);
+                          dao.refreshProposal(item.id);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-3 text-xs text-emerald-900/60">
+                          <span>Proposal #{item.id}</span>
+                          <span>{item.result?.active ? 'Active' : item.result?.executed ? 'Executed' : item.result?.canceled ? 'Canceled' : 'Closed'}</span>
+                        </div>
+                        <p className="mt-1 truncate text-sm font-semibold text-emerald-950">{item.title || 'Untitled'}</p>
+                        <p className="mt-1 text-xs text-emerald-900/65">Votes: {item.result?.totalVotes || '0'} | {item.canVote ? 'Can vote' : 'No vote action'}</p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-3 text-sm text-emerald-900/70">
+                    No proposals found yet.
+                  </div>
+                )}
+              </div>
+
+              <div className="mb-4 flex flex-wrap items-end gap-3">
+                <label className="min-w-[180px] flex-1 text-sm text-emerald-900/70">
+                  Proposal ID
+                  <input
+                    className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                    value={dao.proposalIdInput}
+                    onChange={(e) => dao.setProposalIdInput(e.target.value)}
+                    placeholder="1"
+                  />
+                </label>
+                <button
+                  className={ghostButtonClass}
+                  onClick={() => dao.refreshProposal(dao.proposalIdInput)}
+                  disabled={!faucet.address || !dao.ready || !dao.proposalIdInput.trim()}
+                >
+                  Load
+                </button>
+              </div>
+
+              {dao.proposal ? (
+                <>
+                  <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/50 p-4">
+                    <p className="text-xs uppercase tracking-wide text-emerald-800/60">Active Record</p>
+                    <h3 className="mt-1 text-xl font-semibold leading-tight">{dao.proposal.title || '-'}</h3>
+                    <p className="mt-2 break-all font-mono text-xs text-emerald-900/70">{dao.proposal.detailsUri || '-'}</p>
+                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                      <div className="flex items-center justify-between gap-3"><span>Creator</span> <strong className="break-all font-mono text-xs">{dao.proposal.creator || '-'}</strong></div>
+                      <div className="flex items-center justify-between gap-3"><span>Status</span> <strong>{dao.proposalResult?.active ? 'Active' : dao.proposalResult?.executed ? 'Executed' : dao.proposalResult?.canceled ? 'Canceled' : 'Closed'}</strong></div>
+                      <div className="flex items-center justify-between gap-3"><span>Start / End</span> <strong>{dao.proposal.startBlock || '-'} / {dao.proposal.endBlock || '-'}</strong></div>
+                      <div className="flex items-center justify-between gap-3"><span>Your vote</span> <strong>{dao.proposalVoteChoice || '-'}</strong></div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-emerald-950/10 p-4">
+                      <p className="text-xs uppercase tracking-wide text-emerald-800/60">Vote Stats</p>
+                      <p className="mt-2 text-sm">Yes: <strong>{dao.proposalResult?.yesVotes || '0'}</strong></p>
+                      <p className="text-sm">No: <strong>{dao.proposalResult?.noVotes || '0'}</strong></p>
+                      <p className="text-sm">Abstain: <strong>{dao.proposalResult?.abstainVotes || '0'}</strong></p>
+                      <p className="mt-2 text-sm">Total: <strong>{dao.proposalResult?.totalVotes || '-'}</strong></p>
+                      <p className="text-sm">Quorum: <strong>{dao.proposalResult?.quorum || '-'}</strong></p>
+                      <p className="text-sm">Result: <strong>{dao.proposalResult?.passed ? 'Passed' : 'Pending/Failed'}</strong></p>
+                    </div>
+                    <div className="rounded-2xl border border-emerald-950/10 p-4">
+                      <p className="text-xs uppercase tracking-wide text-emerald-800/60">Actions</p>
+                      <div className="mt-2 flex flex-wrap gap-2.5">
+                        <button className={primaryButtonClass} onClick={() => dao.vote(1)} disabled={!faucet.address || !dao.ready || !dao.proposalIdInput.trim() || dao.isVoting}>
+                          {dao.isVoting ? 'Submitting...' : 'Vote Yes'}
+                        </button>
+                        <button className={ghostButtonClass} onClick={() => dao.vote(2)} disabled={!faucet.address || !dao.ready || !dao.proposalIdInput.trim() || dao.isVoting}>Vote No</button>
+                        <button className={ghostButtonClass} onClick={() => dao.vote(3)} disabled={!faucet.address || !dao.ready || !dao.proposalIdInput.trim() || dao.isVoting}>Abstain</button>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2.5">
+                        <button className={primaryButtonClass} onClick={dao.executeProposal} disabled={!faucet.address || !dao.ready || !dao.proposalIdInput.trim() || dao.isExecutingProposal}>
+                          {dao.isExecutingProposal ? 'Executing...' : 'Execute'}
+                        </button>
+                        <button className={ghostButtonClass} onClick={dao.cancelProposal} disabled={!faucet.address || !dao.ready || !dao.proposalIdInput.trim() || dao.isCancelingProposal}>
+                          {dao.isCancelingProposal ? 'Canceling...' : 'Cancel'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 p-5 text-sm text-emerald-900/70">
+                  Load a proposal ID to display the governance board.
+                </div>
+              )}
             </div>
           </section>
         </>

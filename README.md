@@ -16,7 +16,7 @@ clarinet console
 
 Active contracts:
 - `contracts/frog-token-v3.clar`
-- `contracts/frog-dao-nft-v4.clar`
+- `contracts/frog-dao-nft-v5.clar`
 
 Archived (legacy) contracts:
 - `contracts/archive/frog-token.clar`
@@ -107,7 +107,7 @@ clarinet deployments generate --mainnet --manual-cost
 
 3. Review `deployments/default.mainnet-plan.yaml`:
 - `expected-sender` matches your deployer address
-- contracts listed: `frog-token-v3`, `frog-dao-nft-v4`
+- contracts listed: `frog-token-v3`, `frog-dao-nft-v5`
 - costs are acceptable
 
 4. Apply deployment:
@@ -120,7 +120,7 @@ clarinet deployments apply --mainnet --no-dashboard --use-on-disk-deployment-pla
 - `VITE_CONTRACT_ADDRESS=<mainnet deployer address>`
 - `VITE_CONTRACT_NAME=frog-token-v3`
 - `VITE_DAO_CONTRACT_ADDRESS=<mainnet deployer address>`
-- `VITE_DAO_CONTRACT_NAME=frog-dao-nft-v4`
+- `VITE_DAO_CONTRACT_NAME=frog-dao-nft-v5`
 - `VITE_HIRO_PROXY=` (empty for production build)
 
 ## Mainnet Deployment (Live)

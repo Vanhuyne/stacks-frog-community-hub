@@ -9,8 +9,8 @@ path = "contracts/frog-token-v3.clar"
 clarity_version = 3
 epoch = "latest"
 
-[contracts.frog-dao-nft-v4]
-path = "contracts/frog-dao-nft-v4.clar"
+[contracts.frog-dao-nft-v5]
+path = "contracts/frog-dao-nft-v5.clar"
 clarity_version = 3
 epoch = "latest"
 
