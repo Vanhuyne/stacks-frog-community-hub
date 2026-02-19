@@ -14,9 +14,14 @@ clarinet check
 clarinet console
 ```
 
-Contracts:
+Active contracts:
 - `contracts/frog-token-v3.clar`
 - `contracts/frog-dao-nft-v4.clar`
+
+Archived (legacy) contracts:
+- `contracts/archive/frog-token.clar`
+- `contracts/archive/frog-dao-nft.clar`
+- `contracts/archive/frog-dao-nft-v3.clar`
 
 ### Faucet admin functions (`frog-token-v3`)
 
@@ -44,7 +49,7 @@ Run once after cloning:
 
 What this does:
 - creates local config files from templates
-- installs pre-commit hook for secret scanning
+- installs pre-commit hook for secret scanning and active-contract checks
 
 Local files generated (ignored by git):
 - `settings/Testnet.toml`

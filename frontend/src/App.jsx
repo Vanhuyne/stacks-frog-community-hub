@@ -7,7 +7,7 @@ const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || '';
 const contractName = import.meta.env.VITE_CONTRACT_NAME || 'frog-token-v3';
 
 const daoContractAddress = import.meta.env.VITE_DAO_CONTRACT_ADDRESS || contractAddress;
-const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-v3';
+const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-v4';
 
 const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
 const defaultHiroApiBaseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';

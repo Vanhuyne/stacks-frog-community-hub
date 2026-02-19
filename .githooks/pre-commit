@@ -13,3 +13,6 @@ else
   echo "[pre-commit] Running legacy gitleaks protect scan on staged changes..."
   gitleaks protect --staged --redact --verbose
 fi
+
+echo "[pre-commit] Validating active contract names..."
+./scripts/check-active-contracts.sh
