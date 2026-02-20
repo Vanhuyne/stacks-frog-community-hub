@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
-import { isConnected } from '@stacks/connect';
 import { createFrogContractService } from '../services/frogContractService';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -276,12 +275,25 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
 
   useEffect(() => {
     if (!ready) return;
-    if (isConnected()) {
-      const storedAddress = service.getStoredAddress();
-      if (storedAddress) {
-        dispatch({ type: 'merge', payload: { address: storedAddress } });
+
+    let mounted = true;
+
+    const restoreAddress = async () => {
+      try {
+        const storedAddress = await service.getStoredAddress();
+        if (mounted && storedAddress) {
+          dispatch({ type: 'merge', payload: { address: storedAddress } });
+        }
+      } catch (_) {
+        // skip: wallet state is unavailable until user connects
       }
-    }
+    };
+
+    restoreAddress();
+
+    return () => {
+      mounted = false;
+    };
   }, [ready, service]);
 
   useEffect(() => {

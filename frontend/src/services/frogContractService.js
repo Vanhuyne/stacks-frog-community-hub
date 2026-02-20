@@ -1,7 +1,17 @@
-import { connect, disconnect, getLocalStorage, request } from '@stacks/connect';
-import { Cl, cvToValue, fetchCallReadOnlyFunction, principalCV } from '@stacks/transactions';
+let connectModulePromise;
+let transactionsModulePromise;
 
-const unwrapResponse = (cv) => {
+const loadConnectModule = async () => {
+  if (!connectModulePromise) connectModulePromise = import('@stacks/connect');
+  return connectModulePromise;
+};
+
+const loadTransactionsModule = async () => {
+  if (!transactionsModulePromise) transactionsModulePromise = import('@stacks/transactions');
+  return transactionsModulePromise;
+};
+
+const unwrapResponse = (cv, cvToValue) => {
   const value = cvToValue(cv);
   if (value && typeof value === 'object' && 'type' in value) {
     if (value.type === 'ok') return value.value;
@@ -34,21 +44,25 @@ const normalizeClarityValue = (value) => {
 export const createFrogContractService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
   let tokenMetadataCache;
 
-  const getStoredAddress = () => {
+  const getStoredAddress = async () => {
+    const { getLocalStorage } = await loadConnectModule();
     const data = getLocalStorage();
     return data?.addresses?.stx?.[0]?.address || '';
   };
 
   const connectWallet = async (appDetails) => {
+    const { connect } = await loadConnectModule();
     const response = await connect({ appDetails });
+    const storedAddress = await getStoredAddress();
     return (
       response?.addresses?.stx?.[0]?.address ||
       response?.addresses?.find?.((item) => item?.address?.startsWith?.('S'))?.address ||
-      getStoredAddress()
+      storedAddress
     );
   };
 
   const readOnly = async (senderAddress, functionName, functionArgs = []) => {
+    const { cvToValue, fetchCallReadOnlyFunction } = await loadTransactionsModule();
     const client = readOnlyBaseUrl ? { baseUrl: readOnlyBaseUrl } : undefined;
 
     const result = await fetchCallReadOnlyFunction({
@@ -60,7 +74,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
       network,
       client
     });
-    return unwrapResponse(result);
+    return unwrapResponse(result, cvToValue);
   };
 
   const fetchTokenMetadata = async (address) => {
@@ -91,6 +105,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
   };
 
   const fetchFaucetSnapshot = async (address) => {
+    const { principalCV } = await loadTransactionsModule();
     const bal = await readOnly(address, 'get-balance', [principalCV(address)]);
     const next = await readOnly(address, 'get-next-claim-block', [principalCV(address)]);
     const can = await readOnly(address, 'can-claim?', [principalCV(address)]);
@@ -113,6 +128,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
   };
 
   const claim = async () => {
+    const { request } = await loadConnectModule();
     await request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'claim',
@@ -122,6 +138,8 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
   };
 
   const transfer = async ({ amount, sender, recipient }) => {
+    const { request } = await loadConnectModule();
+    const { Cl } = await loadTransactionsModule();
     await request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'transfer',
@@ -136,6 +154,8 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
   };
 
   const setFaucetPaused = async (paused) => {
+    const { request } = await loadConnectModule();
+    const { Cl } = await loadTransactionsModule();
     await request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'set-faucet-paused',
@@ -145,6 +165,8 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
   };
 
   const setFaucetAmount = async (amount) => {
+    const { request } = await loadConnectModule();
+    const { Cl } = await loadTransactionsModule();
     await request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'set-faucet-amount',
@@ -154,6 +176,8 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
   };
 
   const setCooldownBlocks = async (blocks) => {
+    const { request } = await loadConnectModule();
+    const { Cl } = await loadTransactionsModule();
     await request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'set-cooldown-blocks',
@@ -164,7 +188,10 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
 
   return {
     connectWallet,
-    disconnectWallet: disconnect,
+    disconnectWallet: async () => {
+      const { disconnect } = await loadConnectModule();
+      disconnect();
+    },
     getStoredAddress,
     fetchFaucetSnapshot,
     claim,
