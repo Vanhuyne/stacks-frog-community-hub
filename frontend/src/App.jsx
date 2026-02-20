@@ -32,7 +32,7 @@ export default function App() {
     contractName,
     network,
     readOnlyBaseUrl,
-    appName: 'FROG Faucet'
+    appName: 'FROG Community Hub'
   });
 
   const dao = useFrogDaoNft({
@@ -76,7 +76,7 @@ export default function App() {
         <>
           <header className="grid items-center gap-8 md:grid-cols-[minmax(260px,1fr)_minmax(260px,360px)]">
             <div>
-              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG FT + Faucet</p>
+              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG Community Hub</p>
               <h1 className="text-4xl leading-tight md:text-5xl">24h Faucet for FROG Token</h1>
               <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
                 Claim FROG on a configurable cooldown. Connect your wallet, claim tokens, and transfer to friends.

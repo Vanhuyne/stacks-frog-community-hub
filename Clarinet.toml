@@ -1,5 +1,5 @@
 [project]
-name = "frog-mvp"
+name = "frog-community-hub"
 description = "FROG FT + faucet with 24h cooldown"
 authors = []
 telemetry = false

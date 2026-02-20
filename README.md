@@ -1,4 +1,4 @@
-# FROG FT + Faucet (24h cooldown)
+# FROG Community Hub (24h faucet + DAO governance)
 
 MVP includes:
 - Fungible Token `FROG` (decimals = 0)
