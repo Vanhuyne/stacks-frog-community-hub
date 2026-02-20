@@ -17,6 +17,7 @@ const primaryButtonClass =
   'rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
   'rounded-full border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+const SOCIAL_POSTS_STORAGE_KEY = 'frog-community-social-posts-v1';
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -26,11 +27,25 @@ const shortenAddress = (address) => {
 export default function App() {
   const initialTab = (() => {
     const candidate = new URLSearchParams(window.location.search).get('tab');
-    if (candidate === 'dao-nft' || candidate === 'governance' || candidate === 'ecosystem' || candidate === 'faucet' || candidate === 'admin') return candidate;
+    if (candidate === 'dao-nft' || candidate === 'governance' || candidate === 'social' || candidate === 'ecosystem' || candidate === 'faucet' || candidate === 'admin') return candidate;
     return 'faucet';
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [ecosystemCategory, setEcosystemCategory] = useState('Highlighted Apps');
+  const [showCreateProposalModal, setShowCreateProposalModal] = useState(false);
+  const [socialPostInput, setSocialPostInput] = useState('');
+  const [socialStatus, setSocialStatus] = useState('');
+  const [socialPosts, setSocialPosts] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(SOCIAL_POSTS_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  });
 
   const faucet = useFrogFaucet({
     contractAddress,
@@ -68,6 +83,73 @@ export default function App() {
       setActiveTab('faucet');
     }
   }, [activeTab, faucet.address, isOwner]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(SOCIAL_POSTS_STORAGE_KEY, JSON.stringify(socialPosts));
+  }, [socialPosts]);
+
+  const socialFeed = useMemo(
+    () => [...socialPosts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [socialPosts]
+  );
+
+  const topSocialPosts = useMemo(
+    () => [...socialPosts].sort((a, b) => (b.likeCount - a.likeCount) || (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())).slice(0, 3),
+    [socialPosts]
+  );
+
+  const createSocialPost = () => {
+    if (!faucet.address) {
+      setSocialStatus('Connect wallet to create a post.');
+      return;
+    }
+    const content = socialPostInput.trim();
+    if (!content) {
+      setSocialStatus('Post content cannot be empty.');
+      return;
+    }
+    if (content.length > 500) {
+      setSocialStatus('Post is too long (max 500 characters).');
+      return;
+    }
+
+    const nextPost = {
+      id: String(Date.now()),
+      author: faucet.address,
+      content,
+      createdAt: new Date().toISOString(),
+      likeCount: 0,
+      likedBy: []
+    };
+
+    setSocialPosts((prev) => [nextPost, ...prev]);
+    setSocialPostInput('');
+    setSocialStatus('Post created. Share it with the community.');
+  };
+
+  const likeSocialPost = (postId) => {
+    if (!faucet.address) {
+      setSocialStatus('Connect wallet to like posts.');
+      return;
+    }
+
+    let alreadyLiked = false;
+    setSocialPosts((prev) => prev.map((post) => {
+      if (post.id !== postId) return post;
+      if ((post.likedBy || []).includes(faucet.address)) {
+        alreadyLiked = true;
+        return post;
+      }
+      return {
+        ...post,
+        likeCount: Number(post.likeCount || 0) + 1,
+        likedBy: [...(post.likedBy || []), faucet.address]
+      };
+    }));
+
+    setSocialStatus(alreadyLiked ? 'You can only like each post once.' : 'Like recorded.');
+  };
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,#ffffff_0%,#eaf5ef_45%,#d9efe4_100%)] text-emerald-950">
@@ -391,75 +473,63 @@ export default function App() {
             </div>
           </header>
 
-          <section className="mt-8 grid gap-5 lg:grid-cols-[minmax(330px,420px)_minmax(350px,1fr)]">
+          <section className="mt-8 grid gap-5 lg:grid-cols-[minmax(300px,420px)_minmax(420px,1fr)]">
             <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-semibold">Create Proposal</h2>
-              <p className="mb-3 text-sm text-emerald-900/60">Submit upgrade proposals in a concise governance format.</p>
-              <label className="mb-3 block text-sm text-emerald-900/70">
-                Title
-                <input
-                  className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
-                  value={dao.proposalTitleInput}
-                  onChange={(e) => dao.setProposalTitleInput(e.target.value)}
-                  placeholder="Reduce faucet cooldown to 120 blocks"
-                  disabled={dao.isCreatingProposal}
-                />
-              </label>
-              <label className="mb-3 block text-sm text-emerald-900/70">
-                Details (URI/hash/text)
-                <textarea
-                  className="mt-1.5 min-h-[110px] w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
-                  value={dao.proposalDetailsInput}
-                  onChange={(e) => dao.setProposalDetailsInput(e.target.value)}
-                  placeholder="ipfs://Qm..."
-                  disabled={dao.isCreatingProposal}
-                />
-              </label>
-              <button
-                className={primaryButtonClass}
-                onClick={dao.createProposal}
-                disabled={!faucet.address || !dao.ready || !dao.hasPass || !dao.proposalTitleInput.trim() || !dao.proposalDetailsInput.trim() || dao.isCreatingProposal}
-              >
-                {dao.isCreatingProposal ? 'Submitting...' : !dao.hasPass ? 'Mint DAO Pass First' : 'Submit Proposal'}
-              </button>
-              <p className="mt-3 text-xs text-emerald-900/60">
-                {!dao.hasPass
-                  ? 'Creating proposals requires DAO Pass in this v5 contract. Go to Frog DAO Pass tab to register username and mint pass first.'
-                  : 'You are eligible to submit proposals when title and details are filled.'}
-              </p>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-emerald-800/60">Recent Proposals</p>
+                  <p className="mt-1 text-sm text-emerald-900/60">Live governance feed from newest to oldest.</p>
+                </div>
+                <button
+                  className={primaryButtonClass}
+                  type="button"
+                  onClick={() => setShowCreateProposalModal(true)}
+                  disabled={!faucet.address || !dao.ready || dao.isCreatingProposal}
+                >
+                  New Proposal
+                </button>
+              </div>
+
+              {dao.proposalList.length > 0 ? (
+                <div className="relative max-h-[540px] overflow-auto pr-1">
+                  <div className="absolute bottom-0 left-[13px] top-1 w-px bg-emerald-900/12" aria-hidden="true" />
+                  <div className="space-y-3">
+                    {dao.proposalList.map((item) => (
+                      <article key={item.id} className="relative pl-8">
+                        <span
+                          className={dao.proposalIdInput === item.id
+                            ? 'absolute left-0 top-3 h-3 w-3 rounded-full border border-emerald-700 bg-emerald-700'
+                            : 'absolute left-0 top-3 h-3 w-3 rounded-full border border-emerald-700/40 bg-white'}
+                        />
+                        <button
+                          type="button"
+                          className={dao.proposalIdInput === item.id
+                            ? 'w-full rounded-2xl border border-emerald-700 bg-emerald-50 px-3.5 py-3 text-left transition'
+                            : 'w-full rounded-2xl border border-emerald-950/10 bg-white px-3.5 py-3 text-left transition hover:border-emerald-700/50 hover:bg-emerald-50/40'}
+                          onClick={() => {
+                            dao.selectProposal(item);
+                            dao.refreshProposal(item.id);
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-3 text-xs text-emerald-900/60">
+                            <span>Proposal #{item.id}</span>
+                            <span>{item.result?.active ? 'Active' : item.result?.executed ? 'Executed' : item.result?.canceled ? 'Canceled' : 'Closed'}</span>
+                          </div>
+                          <p className="mt-1 text-sm font-semibold text-emerald-950">{item.title || 'Untitled'}</p>
+                          <p className="mt-1 text-xs text-emerald-900/65">Yes {item.result?.yesVotes || '0'} · No {item.result?.noVotes || '0'} · Abstain {item.result?.abstainVotes || '0'}</p>
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-3 text-sm text-emerald-900/70">
+                  No proposals found yet.
+                </div>
+              )}
             </div>
 
             <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <div className="mb-4">
-                <p className="mb-2 text-xs uppercase tracking-wide text-emerald-800/60">Recent Proposals</p>
-                {dao.proposalList.length > 0 ? (
-                  <div className="max-h-[220px] space-y-2 overflow-auto pr-1">
-                    {dao.proposalList.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`w-full rounded-xl border px-3 py-2 text-left transition ${dao.proposalIdInput === item.id ? 'border-emerald-700 bg-emerald-50' : 'border-emerald-950/10 bg-white hover:border-emerald-700/50 hover:bg-emerald-50/40'}`}
-                        onClick={() => {
-                          dao.selectProposal(item);
-                          dao.refreshProposal(item.id);
-                        }}
-                      >
-                        <div className="flex items-center justify-between gap-3 text-xs text-emerald-900/60">
-                          <span>Proposal #{item.id}</span>
-                          <span>{item.result?.active ? 'Active' : item.result?.executed ? 'Executed' : item.result?.canceled ? 'Canceled' : 'Closed'}</span>
-                        </div>
-                        <p className="mt-1 truncate text-sm font-semibold text-emerald-950">{item.title || 'Untitled'}</p>
-                        <p className="mt-1 text-xs text-emerald-900/65">Votes: {item.result?.totalVotes || '0'} | {item.canVote ? 'Can vote' : 'No vote action'}</p>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-3 text-sm text-emerald-900/70">
-                    No proposals found yet.
-                  </div>
-                )}
-              </div>
-
               <div className="mb-4 flex flex-wrap items-end gap-3">
                 <label className="min-w-[180px] flex-1 text-sm text-emerald-900/70">
                   Proposal ID
@@ -531,6 +601,151 @@ export default function App() {
                   {dao.isRefreshingProposal
                     ? 'Loading proposal details...'
                     : 'Load a proposal ID to display the governance board.'}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {showCreateProposalModal && (
+            <div className="fixed inset-0 z-50 grid place-items-center bg-emerald-950/40 px-4 py-8 backdrop-blur-sm">
+              <div className="w-full max-w-xl rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_24px_50px_rgba(14,35,24,0.2)]">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-semibold">Create Proposal</h2>
+                    <p className="mt-1 text-sm text-emerald-900/60">Submit an upgrade proposal in governance format.</p>
+                  </div>
+                  <button className={ghostButtonClass} type="button" onClick={() => setShowCreateProposalModal(false)} disabled={dao.isCreatingProposal}>
+                    Close
+                  </button>
+                </div>
+
+                <label className="mb-3 block text-sm text-emerald-900/70">
+                  Title
+                  <input
+                    className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
+                    value={dao.proposalTitleInput}
+                    onChange={(e) => dao.setProposalTitleInput(e.target.value)}
+                    placeholder="Reduce faucet cooldown to 120 blocks"
+                    disabled={dao.isCreatingProposal}
+                  />
+                </label>
+
+                <label className="mb-3 block text-sm text-emerald-900/70">
+                  Details (URI/hash/text)
+                  <textarea
+                    className="mt-1.5 min-h-[120px] w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
+                    value={dao.proposalDetailsInput}
+                    onChange={(e) => dao.setProposalDetailsInput(e.target.value)}
+                    placeholder="ipfs://Qm..."
+                    disabled={dao.isCreatingProposal}
+                  />
+                </label>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    className={primaryButtonClass}
+                    onClick={dao.createProposal}
+                    disabled={!faucet.address || !dao.ready || !dao.hasPass || !dao.proposalTitleInput.trim() || !dao.proposalDetailsInput.trim() || dao.isCreatingProposal}
+                  >
+                    {dao.isCreatingProposal ? 'Submitting...' : !dao.hasPass ? 'Mint DAO Pass First' : 'Submit Proposal'}
+                  </button>
+                  <button className={ghostButtonClass} type="button" onClick={() => setShowCreateProposalModal(false)} disabled={dao.isCreatingProposal}>
+                    Cancel
+                  </button>
+                </div>
+
+                <p className="mt-3 text-xs text-emerald-900/60">
+                  {!dao.hasPass
+                    ? 'Creating proposals requires DAO Pass in this v5 contract. Go to Frog DAO Pass tab to register username and mint pass first.'
+                    : 'You are eligible to submit proposals when title and details are filled.'}
+                </p>
+              </div>
+            </div>
+          )}
+        </>
+      ) : activeTab === 'social' ? (
+        <>
+          <header className="grid items-center gap-8 md:grid-cols-[minmax(300px,1fr)_minmax(260px,360px)]">
+            <div>
+              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG SOCIAL</p>
+              <h1 className="text-4xl leading-tight md:text-5xl">Community Feed</h1>
+              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
+                Publish short posts, collect likes, and prepare for weekly FROG rewards for top creators.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <h2 className="mb-3 text-lg font-semibold">Reward Snapshot</h2>
+              <p className="text-sm text-emerald-900/65">Top posts by likes in current feed.</p>
+              <div className="mt-4 space-y-2.5">
+                {topSocialPosts.length > 0 ? topSocialPosts.map((post, index) => (
+                  <div key={post.id} className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-950/10 bg-emerald-50/60 px-3 py-2">
+                    <span className="text-sm font-semibold text-emerald-900">#{index + 1} {shortenAddress(post.author)}</span>
+                    <strong>{post.likeCount || 0} likes</strong>
+                  </div>
+                )) : (
+                  <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-2 text-sm text-emerald-900/70">
+                    No posts yet. Create the first one.
+                  </div>
+                )}
+              </div>
+              <p className="mt-4 text-xs text-emerald-900/60">Reward distribution will be added in step 2.</p>
+            </div>
+          </header>
+
+          <section className="mt-8 grid gap-5 lg:grid-cols-[minmax(320px,420px)_minmax(420px,1fr)]">
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <h2 className="mb-3 text-lg font-semibold">Create Post</h2>
+              <p className="mb-3 text-sm text-emerald-900/60">1 wallet = 1 like per post. Keep posts concise (max 500 chars).</p>
+              <textarea
+                className="min-h-[170px] w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                value={socialPostInput}
+                onChange={(event) => setSocialPostInput(event.target.value)}
+                placeholder="Share an update with the FROG community..."
+                maxLength={500}
+              />
+              <div className="mt-2 flex items-center justify-between text-xs text-emerald-900/60">
+                <span>Connected: {faucet.address ? shortenAddress(faucet.address) : 'No wallet'}</span>
+                <span>{socialPostInput.length}/500</span>
+              </div>
+              <button className={primaryButtonClass + ' mt-4'} onClick={createSocialPost}>Publish Post</button>
+              {socialStatus && <p className="mt-3 text-sm text-emerald-900/60">{socialStatus}</p>}
+            </div>
+
+            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold">Recent Posts</h2>
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
+              </div>
+
+              {socialFeed.length > 0 ? (
+                <div className="max-h-[560px] space-y-3 overflow-auto pr-1">
+                  {socialFeed.map((post) => {
+                    const hasLiked = faucet.address ? (post.likedBy || []).includes(faucet.address) : false;
+                    return (
+                      <article key={post.id} className="rounded-2xl border border-emerald-950/10 bg-emerald-50/40 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-mono text-xs text-emerald-900/70">{shortenAddress(post.author)}</p>
+                          <p className="text-xs text-emerald-900/60">{new Date(post.createdAt).toLocaleString()}</p>
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-emerald-950">{post.content}</p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            className={hasLiked ? ghostButtonClass : primaryButtonClass}
+                            type="button"
+                            onClick={() => likeSocialPost(post.id)}
+                            disabled={hasLiked}
+                          >
+                            {hasLiked ? 'Liked' : 'Like'}
+                          </button>
+                          <span className="text-sm text-emerald-900/70">{post.likeCount || 0} likes</span>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 p-5 text-sm text-emerald-900/70">
+                  Feed is empty. Publish the first post to start engagement.
                 </div>
               )}
             </div>
