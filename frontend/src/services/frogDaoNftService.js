@@ -18,31 +18,6 @@ const isRateLimitedError = (err) => {
   return message.includes('429') || message.includes('too many requests') || message.includes('rate limit');
 };
 
-const READONLY_CACHE_TTL_MS = 5000;
-const READONLY_CACHE_FUNCTIONS = new Set(['get-proposal', 'get-proposal-result']);
-
-const serializeCacheArg = (value) => {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'bigint' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) return `[${value.map((item) => serializeCacheArg(item)).join(',')}]`;
-  if (typeof value === 'object') {
-    if ('type' in value && 'value' in value) {
-      return `${String(value.type)}:${serializeCacheArg(value.value)}`;
-    }
-    return Object.keys(value)
-      .sort()
-      .map((key) => `${key}:${serializeCacheArg(value[key])}`)
-      .join('|');
-  }
-  return String(value);
-};
-
-const getReadOnlyCacheKey = (safeSender, functionName, functionArgs) => {
-  const argsKey = (functionArgs || []).map((arg) => serializeCacheArg(arg)).join('||');
-  return `${safeSender}::${functionName}::${argsKey}`;
-};
-
 const unwrapResponse = (cv, cvToValue) => {
   const value = cvToValue(cv);
   if (value && typeof value === 'object' && 'type' in value) {
@@ -113,62 +88,8 @@ const stringifyClarityValue = (value) => {
   return JSON.stringify(value);
 };
 
-const toBool = (value) => {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') return value.toLowerCase() === 'true';
-  if (value && typeof value === 'object' && 'value' in value) return toBool(value.value);
-  return Boolean(value);
-};
-
-const parseProposalTuple = (raw) => {
-  const tuple = unwrapOptional(raw);
-  if (!tuple) return null;
-
-  return {
-    creator: stringifyClarityValue(getTupleField(tuple, ['creator'])),
-    title: stringifyClarityValue(getTupleField(tuple, ['title'])),
-    detailsUri: stringifyClarityValue(getTupleField(tuple, ['details-uri', 'details_uri', 'detailsUri'])),
-    startBlock: stringifyClarityValue(getTupleField(tuple, ['start-block', 'start_block', 'startBlock'])),
-    endBlock: stringifyClarityValue(getTupleField(tuple, ['end-block', 'end_block', 'endBlock'])),
-    yesVotes: stringifyClarityValue(getTupleField(tuple, ['yes-votes', 'yes_votes', 'yesVotes'])),
-    noVotes: stringifyClarityValue(getTupleField(tuple, ['no-votes', 'no_votes', 'noVotes'])),
-    abstainVotes: stringifyClarityValue(getTupleField(tuple, ['abstain-votes', 'abstain_votes', 'abstainVotes'])),
-    executed: toBool(getTupleField(tuple, ['executed'])),
-    canceled: toBool(getTupleField(tuple, ['canceled']))
-  };
-};
-
-const parseProposalResultTuple = (raw) => {
-  const tuple = normalizeObject(raw);
-  if (!tuple) return null;
-
-  return {
-    yesVotes: stringifyClarityValue(getTupleField(tuple, ['yes-votes', 'yes_votes', 'yesVotes'])),
-    noVotes: stringifyClarityValue(getTupleField(tuple, ['no-votes', 'no_votes', 'noVotes'])),
-    abstainVotes: stringifyClarityValue(getTupleField(tuple, ['abstain-votes', 'abstain_votes', 'abstainVotes'])),
-    totalVotes: stringifyClarityValue(getTupleField(tuple, ['total-votes', 'total_votes', 'totalVotes'])),
-    quorum: stringifyClarityValue(getTupleField(tuple, ['quorum'])),
-    passed: toBool(getTupleField(tuple, ['passed'])),
-    executed: toBool(getTupleField(tuple, ['executed'])),
-    canceled: toBool(getTupleField(tuple, ['canceled'])),
-    active: toBool(getTupleField(tuple, ['active']))
-  };
-};
-
-const toSafeInt = (value) => {
-  try {
-    const next = Number.parseInt(String(value || '0'), 10);
-    if (Number.isNaN(next) || next < 0) return 0;
-    return next;
-  } catch (_) {
-    return 0;
-  }
-};
-
 export const createFrogDaoNftService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
   const isLikelyPrincipal = (value) => /^S[PT][A-Z0-9]{39}$/.test(String(value || '').trim());
-  const readOnlyCache = new Map();
-  const readOnlyInFlight = new Map();
 
   const readOnly = async (senderAddress, functionName, functionArgs = []) => {
     const { cvToValue, fetchCallReadOnlyFunction } = await loadTransactionsModule();
@@ -178,71 +99,28 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
       ? normalizedSender
       : String(contractAddress || '').trim();
 
-    const shouldCache = READONLY_CACHE_FUNCTIONS.has(functionName);
-    const cacheKey = shouldCache
-      ? getReadOnlyCacheKey(safeSender, functionName, functionArgs)
-      : '';
+    const maxAttempts = 3;
 
-    if (shouldCache) {
-      const cached = readOnlyCache.get(cacheKey);
-      if (cached && cached.expiresAt > Date.now()) {
-        return cached.value;
-      }
-      if (cached && cached.expiresAt <= Date.now()) {
-        readOnlyCache.delete(cacheKey);
-      }
-
-      const inFlight = readOnlyInFlight.get(cacheKey);
-      if (inFlight) {
-        return inFlight;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const result = await fetchCallReadOnlyFunction({
+          contractAddress,
+          contractName,
+          functionName,
+          functionArgs,
+          senderAddress: safeSender,
+          network,
+          client
+        });
+        return unwrapResponse(result, cvToValue);
+      } catch (err) {
+        const isLastAttempt = attempt === maxAttempts - 1;
+        if (!isRateLimitedError(err) || isLastAttempt) throw err;
+        await sleep(250 * (2 ** attempt));
       }
     }
 
-    const executeReadOnly = async () => {
-      const maxAttempts = 3;
-
-      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-        try {
-          const result = await fetchCallReadOnlyFunction({
-            contractAddress,
-            contractName,
-            functionName,
-            functionArgs,
-            senderAddress: safeSender,
-            network,
-            client
-          });
-          return unwrapResponse(result, cvToValue);
-        } catch (err) {
-          const isLastAttempt = attempt === maxAttempts - 1;
-          if (!isRateLimitedError(err) || isLastAttempt) throw err;
-          await sleep(250 * (2 ** attempt));
-        }
-      }
-
-      throw new Error('Read-only request failed unexpectedly.');
-    };
-
-    if (!shouldCache) {
-      return executeReadOnly();
-    }
-
-    const requestPromise = (async () => {
-      const value = await executeReadOnly();
-      readOnlyCache.set(cacheKey, {
-        value,
-        expiresAt: Date.now() + READONLY_CACHE_TTL_MS
-      });
-      return value;
-    })();
-
-    readOnlyInFlight.set(cacheKey, requestPromise);
-
-    try {
-      return await requestPromise;
-    } finally {
-      readOnlyInFlight.delete(cacheKey);
-    }
+    throw new Error('Read-only request failed unexpectedly.');
   };
 
   const toSafePrincipal = async (value) => {
@@ -323,81 +201,6 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
     };
   };
 
-  const fetchGovernanceSnapshot = async (senderAddress, proposalId) => {
-    const { Cl } = await loadTransactionsModule();
-    const safeSenderPrincipal = await toSafePrincipal(senderAddress);
-
-    const [configResult, proposalResult, resultResult, voteResult, canVoteResult] = await Promise.allSettled([
-      readOnly(senderAddress, 'get-governance-config', []),
-      proposalId ? readOnly(senderAddress, 'get-proposal', [Cl.uint(proposalId)]) : Promise.resolve(null),
-      proposalId ? readOnly(senderAddress, 'get-proposal-result', [Cl.uint(proposalId)]) : Promise.resolve(null),
-      proposalId ? readOnly(senderAddress, 'get-vote', [Cl.uint(proposalId), safeSenderPrincipal]) : Promise.resolve(null),
-      proposalId ? readOnly(senderAddress, 'can-vote?', [Cl.uint(proposalId), safeSenderPrincipal]) : Promise.resolve(false)
-    ]);
-
-    const configTuple = configResult.status === 'fulfilled' ? normalizeObject(configResult.value) : null;
-    const voteTuple = voteResult.status === 'fulfilled' ? unwrapOptional(voteResult.value) : null;
-    const voteChoice = voteTuple ? stringifyClarityValue(getTupleField(voteTuple, ['choice'])) : '';
-
-    return {
-      governanceConfig: {
-        votingPeriodBlocks: stringifyClarityValue(getTupleField(configTuple, ['voting-period-blocks', 'voting_period_blocks', 'votingPeriodBlocks'])),
-        minVotesQuorum: stringifyClarityValue(getTupleField(configTuple, ['min-votes-quorum', 'min_votes_quorum', 'minVotesQuorum'])),
-        lastProposalId: stringifyClarityValue(getTupleField(configTuple, ['last-proposal-id', 'last_proposal_id', 'lastProposalId']))
-      },
-      proposal: proposalResult.status === 'fulfilled' ? parseProposalTuple(proposalResult.value) : null,
-      proposalResult: resultResult.status === 'fulfilled' ? parseProposalResultTuple(resultResult.value) : null,
-      voteChoice,
-      canVote: canVoteResult.status === 'fulfilled' ? toBool(canVoteResult.value) : false
-    };
-  };
-
-  const fetchProposalBoard = async (senderAddress, limit = 8) => {
-    const governanceBase = await fetchGovernanceSnapshot(senderAddress, null);
-    const lastId = toSafeInt(governanceBase.governanceConfig.lastProposalId);
-
-    if (lastId === 0) {
-      return {
-        governanceConfig: governanceBase.governanceConfig,
-        proposals: []
-      };
-    }
-
-    const safeLimit = Math.min(8, Math.max(1, limit));
-    const fromId = Math.max(1, lastId - safeLimit + 1);
-    const ids = [];
-    for (let id = lastId; id >= fromId; id -= 1) ids.push(id);
-
-    const { Cl } = await loadTransactionsModule();
-    const rows = [];
-
-    for (const id of ids) {
-      try {
-        const proposalRaw = await readOnly(senderAddress, 'get-proposal', [Cl.uint(BigInt(id))]);
-        const proposalResultRaw = await readOnly(senderAddress, 'get-proposal-result', [Cl.uint(BigInt(id))]);
-
-        const proposal = parseProposalTuple(proposalRaw);
-        if (!proposal) continue;
-
-        const result = parseProposalResultTuple(proposalResultRaw);
-        rows.push({
-          id: String(id),
-          ...proposal,
-          result,
-          voteChoice: '',
-          canVote: Boolean(result?.active)
-        });
-      } catch (_) {
-        // Skip this proposal if one of the reads is rate-limited or missing.
-      }
-    }
-
-    return {
-      governanceConfig: governanceBase.governanceConfig,
-      proposals: rows
-    };
-  };
-
   const getOwnerByUsername = async (senderAddress, name) => {
     const { Cl } = await loadTransactionsModule();
     const ownerRaw = await readOnly(senderAddress, 'get-owner-by-username', [Cl.stringAscii(name)]);
@@ -428,61 +231,11 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
     });
   };
 
-  const createProposal = async (title, detailsUri) => {
-    const { request } = await loadConnectModule();
-    const { Cl } = await loadTransactionsModule();
-    return request('stx_callContract', {
-      contract: `${contractAddress}.${contractName}`,
-      functionName: 'create-proposal',
-      functionArgs: [Cl.stringAscii(title), Cl.stringAscii(detailsUri)],
-      network
-    });
-  };
-
-  const vote = async (proposalId, choice) => {
-    const { request } = await loadConnectModule();
-    const { Cl } = await loadTransactionsModule();
-    return request('stx_callContract', {
-      contract: `${contractAddress}.${contractName}`,
-      functionName: 'vote',
-      functionArgs: [Cl.uint(proposalId), Cl.uint(choice)],
-      network
-    });
-  };
-
-  const executeProposal = async (proposalId) => {
-    const { request } = await loadConnectModule();
-    const { Cl } = await loadTransactionsModule();
-    return request('stx_callContract', {
-      contract: `${contractAddress}.${contractName}`,
-      functionName: 'execute-proposal',
-      functionArgs: [Cl.uint(proposalId)],
-      network
-    });
-  };
-
-  const cancelProposal = async (proposalId) => {
-    const { request } = await loadConnectModule();
-    const { Cl } = await loadTransactionsModule();
-    return request('stx_callContract', {
-      contract: `${contractAddress}.${contractName}`,
-      functionName: 'cancel-proposal',
-      functionArgs: [Cl.uint(proposalId)],
-      network
-    });
-  };
-
   return {
     fetchDaoSnapshot,
     fetchTreasurySnapshot,
-    fetchGovernanceSnapshot,
-    fetchProposalBoard,
     getOwnerByUsername,
     registerUsername,
-    mintPass,
-    createProposal,
-    vote,
-    executeProposal,
-    cancelProposal
+    mintPass
   };
 };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ecosystemCategories, highlightedApps, tabs } from './data/ecosystemData';
 import { useFrogFaucet } from './hooks/useFrogFaucet';
 import { useFrogDaoNft } from './hooks/useFrogDaoNft';
@@ -24,6 +24,94 @@ const shortenAddress = (address) => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
+const socialHandleFromAddress = (address) => {
+  const raw = String(address || '').trim();
+  if (!raw) return 'guest';
+  return `frog-${raw.slice(2, 8).toLowerCase()}`;
+};
+
+const formatPostTime = (iso) => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+};
+
+
+const renderInlineFormatting = (text, keyPrefix = 'part') => {
+  const chunks = String(text || '').split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  return chunks.map((chunk, index) => {
+    const key = `${keyPrefix}-${index}`;
+    if (/^`[^`]+`$/.test(chunk)) {
+      return <code key={key} className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[12px] text-emerald-900">{chunk.slice(1, -1)}</code>;
+    }
+    if (/^\*\*[^*]+\*\*$/.test(chunk)) {
+      return <strong key={key}>{chunk.slice(2, -2)}</strong>;
+    }
+    if (/^\*[^*]+\*$/.test(chunk)) {
+      return <em key={key}>{chunk.slice(1, -1)}</em>;
+    }
+    return <span key={key}>{chunk}</span>;
+  });
+};
+
+const renderPostContent = (content) => {
+  const lines = String(content || '').split('\n');
+  return lines.map((line, index) => {
+    const lineKey = `line-${index}`;
+
+    if (/^#{1,3}\s+/.test(line)) {
+      const level = Math.min(3, line.match(/^#+/)[0].length);
+      const text = line.replace(/^#{1,3}\s+/, '');
+      const className = level === 1
+        ? 'text-lg font-bold'
+        : level === 2
+          ? 'text-base font-semibold'
+          : 'text-sm font-semibold';
+      return (
+        <p key={lineKey} className={`${className} mt-1 text-emerald-950`}>
+          {renderInlineFormatting(text, `${lineKey}-h`) }
+        </p>
+      );
+    }
+
+    if (/^\s*[-*]\s+/.test(line)) {
+      const text = line.replace(/^\s*[-*]\s+/, '');
+      return (
+        <div key={lineKey} className="mt-1 flex items-start gap-2 text-[15px] leading-relaxed text-emerald-950">
+          <span aria-hidden="true" className="mt-1 text-xs">•</span>
+          <span>{renderInlineFormatting(text, `${lineKey}-b`)}</span>
+        </div>
+      );
+    }
+
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const marker = line.match(/^\s*\d+\./)?.[0] || '1.';
+      const text = line.replace(/^\s*\d+\.\s+/, '');
+      return (
+        <div key={lineKey} className="mt-1 flex items-start gap-2 text-[15px] leading-relaxed text-emerald-950">
+          <span className="text-xs font-semibold text-emerald-900/70">{marker}</span>
+          <span>{renderInlineFormatting(text, `${lineKey}-n`)}</span>
+        </div>
+      );
+    }
+
+    if (!line.trim()) {
+      return <div key={lineKey} className="h-3" aria-hidden="true" />;
+    }
+
+    return (
+      <p key={lineKey} className="mt-1 text-[15px] leading-relaxed text-emerald-950">
+        {renderInlineFormatting(line, `${lineKey}-p`) }
+      </p>
+    );
+  });
+};
+
 export default function App() {
   const initialTab = (() => {
     const candidate = new URLSearchParams(window.location.search).get('tab');
@@ -34,6 +122,9 @@ export default function App() {
   const [ecosystemCategory, setEcosystemCategory] = useState('Highlighted Apps');
   const [socialPostInput, setSocialPostInput] = useState('');
   const [socialStatus, setSocialStatus] = useState('');
+  const [socialSelection, setSocialSelection] = useState({ start: 0, end: 0 });
+  const [socialComposerFocused, setSocialComposerFocused] = useState(false);
+  const socialComposerRef = useRef(null);
   const [socialPosts, setSocialPosts] = useState(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -98,6 +189,61 @@ export default function App() {
     [socialPosts]
   );
 
+  const updateSocialSelection = () => {
+    const node = socialComposerRef.current;
+    if (!node) return;
+    setSocialSelection({
+      start: node.selectionStart || 0,
+      end: node.selectionEnd || 0
+    });
+  };
+
+  const applyWrapFormat = (prefix, suffix = prefix) => {
+    const node = socialComposerRef.current;
+    if (!node) return;
+
+    const start = node.selectionStart || 0;
+    const end = node.selectionEnd || 0;
+    if (start === end) return;
+
+    const selected = socialPostInput.slice(start, end);
+    const next = `${socialPostInput.slice(0, start)}${prefix}${selected}${suffix}${socialPostInput.slice(end)}`;
+
+    setSocialPostInput(next);
+    requestAnimationFrame(() => {
+      node.focus();
+      node.setSelectionRange(start + prefix.length, end + prefix.length);
+      updateSocialSelection();
+    });
+  };
+
+  const applyLinePrefixFormat = (prefix) => {
+    const node = socialComposerRef.current;
+    if (!node) return;
+
+    const start = node.selectionStart || 0;
+    const end = node.selectionEnd || 0;
+    if (start === end) return;
+
+    const lineStart = socialPostInput.lastIndexOf('\n', start - 1) + 1;
+    const lineEndSearch = socialPostInput.indexOf('\n', end);
+    const lineEnd = lineEndSearch === -1 ? socialPostInput.length : lineEndSearch;
+    const block = socialPostInput.slice(lineStart, lineEnd);
+    const nextBlock = block
+      .split('\n')
+      .map((line) => (line.trim() ? `${prefix}${line}` : line))
+      .join('\n');
+
+    const next = `${socialPostInput.slice(0, lineStart)}${nextBlock}${socialPostInput.slice(lineEnd)}`;
+
+    setSocialPostInput(next);
+    requestAnimationFrame(() => {
+      node.focus();
+      node.setSelectionRange(lineStart, lineStart + nextBlock.length);
+      updateSocialSelection();
+    });
+  };
+
   const createSocialPost = () => {
     if (!faucet.address) {
       setSocialStatus('Connect wallet to create a post.');
@@ -124,6 +270,7 @@ export default function App() {
 
     setSocialPosts((prev) => [nextPost, ...prev]);
     setSocialPostInput('');
+    setSocialSelection({ start: 0, end: 0 });
     setSocialStatus('Post created. Share it with the community.');
   };
 
@@ -187,11 +334,7 @@ export default function App() {
                     faucet.isTransferring ||
                     faucet.isUpdatingAdmin ||
                     dao.isMinting ||
-                    dao.isRegistering ||
-                    dao.isCreatingProposal ||
-                    dao.isVoting ||
-                    dao.isExecutingProposal ||
-                    dao.isCancelingProposal
+                    dao.isRegistering
                   }
                 >
                   Disconnect
@@ -440,90 +583,129 @@ export default function App() {
         </>
       ) : activeTab === 'social' ? (
         <>
-          <header className="grid items-center gap-8 md:grid-cols-[minmax(300px,1fr)_minmax(260px,360px)]">
-            <div>
-              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG SOCIAL</p>
-              <h1 className="text-4xl leading-tight md:text-5xl">Community Feed</h1>
-              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
-                Publish short posts, collect likes, and prepare for weekly FROG rewards for top creators.
-              </p>
+          <header className="grid items-start gap-8 lg:grid-cols-[minmax(440px,1fr)_minmax(260px,340px)]">
+            <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-700 text-sm font-bold text-white">
+                  {faucet.address ? socialHandleFromAddress(faucet.address).slice(0, 2).toUpperCase() : 'FG'}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-emerald-950">{faucet.address ? `@${socialHandleFromAddress(faucet.address)}` : '@guest'}</p>
+                  <p className="text-xs text-emerald-900/60">{faucet.address ? shortenAddress(faucet.address) : 'Connect wallet to publish and like posts'}</p>
+                </div>
+              </div>
+
+              <textarea
+                ref={socialComposerRef}
+                className="mt-4 min-h-[150px] w-full resize-none rounded-2xl border border-emerald-900/15 bg-emerald-50/35 px-4 py-3 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                value={socialPostInput}
+                onFocus={() => setSocialComposerFocused(true)}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setSocialComposerFocused(false);
+                    setSocialSelection({ start: 0, end: 0 });
+                  }, 80);
+                }}
+                onSelect={updateSocialSelection}
+                onKeyUp={updateSocialSelection}
+                onClick={updateSocialSelection}
+                onChange={(event) => {
+                  setSocialPostInput(event.target.value);
+                  updateSocialSelection();
+                }}
+                placeholder="What is happening in FROG community today?"
+                maxLength={500}
+              />
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-900/15 bg-emerald-50/60 px-3 py-2">
+                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}>Bold</button>
+                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}>Italic</button>
+                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}>Code</button>
+                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}>H1</button>
+                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}>List</button>
+                </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-emerald-900/60">{socialPostInput.length}/500 characters</p>
+                <button className={primaryButtonClass} onClick={createSocialPost}>Publish</button>
+              </div>
+              {socialStatus && <p className="mt-3 text-sm text-emerald-900/65">{socialStatus}</p>}
             </div>
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-semibold">Reward Snapshot</h2>
-              <p className="text-sm text-emerald-900/65">Top posts by likes in current feed.</p>
+
+            <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Weekly Leaderboard</p>
+              <h2 className="mt-1 text-xl font-semibold">Top Creators</h2>
               <div className="mt-4 space-y-2.5">
                 {topSocialPosts.length > 0 ? topSocialPosts.map((post, index) => (
-                  <div key={post.id} className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-950/10 bg-emerald-50/60 px-3 py-2">
-                    <span className="text-sm font-semibold text-emerald-900">#{index + 1} {shortenAddress(post.author)}</span>
-                    <strong>{post.likeCount || 0} likes</strong>
+                  <div key={post.id} className="flex items-center justify-between rounded-2xl border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
+                    <div>
+                      <p className="text-xs text-emerald-900/60">Rank #{index + 1}</p>
+                      <p className="text-sm font-semibold text-emerald-950">@{socialHandleFromAddress(post.author)}</p>
+                    </div>
+                    <strong className="text-sm">{post.likeCount || 0} likes</strong>
                   </div>
                 )) : (
                   <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-2 text-sm text-emerald-900/70">
-                    No posts yet. Create the first one.
+                    No rankings yet.
                   </div>
                 )}
               </div>
-              <p className="mt-4 text-xs text-emerald-900/60">Reward distribution will be added in step 2.</p>
+              <p className="mt-4 text-xs text-emerald-900/60">Top liked posts can receive FROG rewards in next phase.</p>
             </div>
           </header>
 
-          <section className="mt-8 grid gap-5 lg:grid-cols-[minmax(320px,420px)_minmax(420px,1fr)]">
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-semibold">Create Post</h2>
-              <p className="mb-3 text-sm text-emerald-900/60">1 wallet = 1 like per post. Keep posts concise (max 500 chars).</p>
-              <textarea
-                className="min-h-[170px] w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
-                value={socialPostInput}
-                onChange={(event) => setSocialPostInput(event.target.value)}
-                placeholder="Share an update with the FROG community..."
-                maxLength={500}
-              />
-              <div className="mt-2 flex items-center justify-between text-xs text-emerald-900/60">
-                <span>Connected: {faucet.address ? shortenAddress(faucet.address) : 'No wallet'}</span>
-                <span>{socialPostInput.length}/500</span>
+          <section className="mt-8">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Community Feed</p>
+                <h2 className="text-2xl font-semibold">Latest Posts</h2>
               </div>
-              <button className={primaryButtonClass + ' mt-4'} onClick={createSocialPost}>Publish Post</button>
-              {socialStatus && <p className="mt-3 text-sm text-emerald-900/60">{socialStatus}</p>}
+              <span className="rounded-full border border-emerald-700/20 bg-white px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
             </div>
 
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold">Recent Posts</h2>
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
-              </div>
+            {socialFeed.length > 0 ? (
+              <div className="mx-auto grid max-w-3xl gap-4">
+                {socialFeed.map((post) => {
+                  const hasLiked = faucet.address ? (post.likedBy || []).includes(faucet.address) : false;
+                  return (
+                    <article key={post.id} className="overflow-hidden rounded-3xl border border-emerald-900/15 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                      <div className="flex items-center justify-between border-b border-emerald-900/10 px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">
+                            {socialHandleFromAddress(post.author).slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-emerald-950">@{socialHandleFromAddress(post.author)}</p>
+                            <p className="font-mono text-[11px] text-emerald-900/60">{shortenAddress(post.author)}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-emerald-900/60">{formatPostTime(post.createdAt)}</p>
+                      </div>
 
-              {socialFeed.length > 0 ? (
-                <div className="max-h-[560px] space-y-3 overflow-auto pr-1">
-                  {socialFeed.map((post) => {
-                    const hasLiked = faucet.address ? (post.likedBy || []).includes(faucet.address) : false;
-                    return (
-                      <article key={post.id} className="rounded-2xl border border-emerald-950/10 bg-emerald-50/40 p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="font-mono text-xs text-emerald-900/70">{shortenAddress(post.author)}</p>
-                          <p className="text-xs text-emerald-900/60">{new Date(post.createdAt).toLocaleString()}</p>
-                        </div>
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-emerald-950">{post.content}</p>
-                        <div className="mt-3 flex items-center gap-2">
-                          <button
-                            className={hasLiked ? ghostButtonClass : primaryButtonClass}
-                            type="button"
-                            onClick={() => likeSocialPost(post.id)}
-                            disabled={hasLiked}
-                          >
-                            {hasLiked ? 'Liked' : 'Like'}
-                          </button>
-                          <span className="text-sm text-emerald-900/70">{post.likeCount || 0} likes</span>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 p-5 text-sm text-emerald-900/70">
-                  Feed is empty. Publish the first post to start engagement.
-                </div>
-              )}
-            </div>
+                      <div className="px-4 py-4">
+                        {renderPostContent(post.content)}
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-emerald-900/10 bg-emerald-50/40 px-4 py-3">
+                        <span className="text-sm text-emerald-900/70">{post.likeCount || 0} likes</span>
+                        <button
+                          className={hasLiked ? ghostButtonClass : primaryButtonClass}
+                          type="button"
+                          onClick={() => likeSocialPost(post.id)}
+                          disabled={hasLiked}
+                        >
+                          {hasLiked ? 'Liked' : 'Like'}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-emerald-900/25 bg-emerald-50/40 p-6 text-sm text-emerald-900/70">
+                Feed is empty. Publish the first post to kickstart community discussions.
+              </div>
+            )}
           </section>
         </>
       ) : activeTab === 'admin' ? (
