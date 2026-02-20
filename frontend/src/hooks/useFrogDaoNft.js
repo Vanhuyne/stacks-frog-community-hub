@@ -32,7 +32,8 @@ const initialState = {
   isCreatingProposal: false,
   isVoting: false,
   isExecutingProposal: false,
-  isCancelingProposal: false
+  isCancelingProposal: false,
+  isRefreshingProposal: false
 };
 
 const reducer = (state, action) => {
@@ -117,7 +118,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       const [snapshot, treasury, board] = await Promise.all([
         service.fetchDaoSnapshot(readSender),
         service.fetchTreasurySnapshot(readSender),
-        service.fetchProposalBoard(readSender, 30)
+        service.fetchProposalBoard(readSender, 12)
       ]);
 
       const selected = pickSelected(board.proposals, board.governanceConfig.lastProposalId || '');
@@ -158,44 +159,25 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       return;
     }
 
+    dispatch({ type: 'merge', payload: { isRefreshingProposal: true, status: 'Refreshing proposal data...' } });
+
     try {
-      const [governance, board] = await Promise.all([
-        service.fetchGovernanceSnapshot(readSender, parsedProposalId),
-        service.fetchProposalBoard(readSender, 30)
-      ]);
-
-      const selectedFromBoard = pickSelected(board.proposals, String(parsedProposalId));
-
-      const recentSummary = board.proposals
-        .map((p) => String(p.id) + ':' + (p.title || 'untitled'))
-        .join(' | ');
-      console.log('[DAO GOV] Recent Proposals (refreshProposal):', board.proposals);
-      if (debug) console.log('[DAO GOV] Recent Proposal Summary (refreshProposal):', recentSummary);
+      const governance = await service.fetchGovernanceSnapshot(readSender, parsedProposalId);
 
       dispatch({
         type: 'merge',
         payload: {
-          governanceVotingPeriodBlocks: board.governanceConfig.votingPeriodBlocks,
-          governanceMinVotesQuorum: board.governanceConfig.minVotesQuorum,
-          governanceLastProposalId: board.governanceConfig.lastProposalId,
-          proposalList: board.proposals,
           proposalIdInput: String(parsedProposalId),
-          proposal: selectedFromBoard
-            ? mapSelectedPayload(selectedFromBoard).proposal
-            : governance.proposal,
-          proposalResult: selectedFromBoard
-            ? mapSelectedPayload(selectedFromBoard).proposalResult
-            : governance.proposalResult,
-          proposalVoteChoice: selectedFromBoard
-            ? mapSelectedPayload(selectedFromBoard).proposalVoteChoice
-            : governance.voteChoice,
-          proposalCanVote: selectedFromBoard
-            ? mapSelectedPayload(selectedFromBoard).proposalCanVote
-            : governance.canVote
+          proposal: governance.proposal,
+          proposalResult: governance.proposalResult,
+          proposalVoteChoice: governance.voteChoice,
+          proposalCanVote: governance.canVote
         }
       });
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Read proposal data failed: ${err?.message || err}` } });
+    } finally {
+      dispatch({ type: 'merge', payload: { isRefreshingProposal: false } });
     }
   }, [address, contractAddress, ready, service, debug]);
 
@@ -253,6 +235,19 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
 
   const setProposalIdInput = useCallback((proposalIdInput) => {
     dispatch({ type: 'merge', payload: { proposalIdInput } });
+  }, []);
+
+  const selectProposal = useCallback((proposalItem) => {
+    if (!proposalItem) return;
+
+    const proposalIdInput = String(proposalItem.id || '');
+    dispatch({
+      type: 'merge',
+      payload: {
+        proposalIdInput,
+        ...mapSelectedPayload(proposalItem)
+      }
+    });
   }, []);
 
   const setProposalTitleInput = useCallback((proposalTitleInput) => {
@@ -587,6 +582,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
     ready,
     refresh,
     refreshProposal,
+    selectProposal,
     setUsernameInput,
     setProposalIdInput,
     setProposalTitleInput,

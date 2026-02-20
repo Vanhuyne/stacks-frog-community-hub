@@ -385,7 +385,7 @@ export default function App() {
                         type="button"
                         className={`w-full rounded-xl border px-3 py-2 text-left transition ${dao.proposalIdInput === item.id ? 'border-emerald-700 bg-emerald-50' : 'border-emerald-950/10 bg-white hover:border-emerald-700/50 hover:bg-emerald-50/40'}`}
                         onClick={() => {
-                          dao.setProposalIdInput(item.id);
+                          dao.selectProposal(item);
                           dao.refreshProposal(item.id);
                         }}
                       >
@@ -418,14 +418,17 @@ export default function App() {
                 <button
                   className={ghostButtonClass}
                   onClick={() => dao.refreshProposal(dao.proposalIdInput)}
-                  disabled={!faucet.address || !dao.ready || !dao.proposalIdInput.trim()}
+                  disabled={!faucet.address || !dao.ready || !dao.proposalIdInput.trim() || dao.isRefreshingProposal}
                 >
-                  Load
+                  {dao.isRefreshingProposal ? 'Loading...' : 'Load'}
                 </button>
               </div>
 
               {dao.proposal ? (
                 <>
+                  {dao.isRefreshingProposal && (
+                    <p className="mb-3 text-xs text-emerald-900/60">Refreshing proposal details...</p>
+                  )}
                   <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/50 p-4">
                     <p className="text-xs uppercase tracking-wide text-emerald-800/60">Active Record</p>
                     <h3 className="mt-1 text-xl font-semibold leading-tight">{dao.proposal.title || '-'}</h3>
@@ -470,7 +473,9 @@ export default function App() {
                 </>
               ) : (
                 <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 p-5 text-sm text-emerald-900/70">
-                  Load a proposal ID to display the governance board.
+                  {dao.isRefreshingProposal
+                    ? 'Loading proposal details...'
+                    : 'Load a proposal ID to display the governance board.'}
                 </div>
               )}
             </div>
