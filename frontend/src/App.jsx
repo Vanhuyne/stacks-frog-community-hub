@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ecosystemCategories, highlightedApps, tabs } from './data/ecosystemData';
 import { useFrogFaucet } from './hooks/useFrogFaucet';
 import { useFrogDaoNft } from './hooks/useFrogDaoNft';
@@ -17,6 +17,11 @@ const primaryButtonClass =
   'rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
   'rounded-full border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+const shortenAddress = (address) => {
+  if (!address) return '';
+  if (address.length <= 14) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
 
 export default function App() {
   const initialTab = (() => {
@@ -53,24 +58,74 @@ export default function App() {
     [faucet.address, faucet.owner]
   );
 
+  const visibleTabs = useMemo(
+    () => tabs.filter((tab) => tab.id !== 'admin' || (Boolean(faucet.address) && isOwner)),
+    [faucet.address, isOwner]
+  );
+
+  useEffect(() => {
+    if (activeTab === 'admin' && !(Boolean(faucet.address) && isOwner)) {
+      setActiveTab('faucet');
+    }
+  }, [activeTab, faucet.address, isOwner]);
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,#ffffff_0%,#eaf5ef_45%,#d9efe4_100%)] px-[6vw] pb-20 pt-10 text-emerald-950">
-      <nav className="mb-7 flex flex-wrap gap-3" aria-label="Frontend tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`rounded-full border px-4 py-2.5 text-sm font-bold capitalize transition ${
-              activeTab === tab.id
-                ? 'border-emerald-700 bg-emerald-700 text-white'
-                : 'border-emerald-700/25 bg-white text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
-            }`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,#ffffff_0%,#eaf5ef_45%,#d9efe4_100%)] text-emerald-950">
+      <header className="sticky top-0 z-40 border-b border-emerald-950/10 bg-white/85 backdrop-blur">
+        <div className="flex items-center gap-4 px-[6vw] py-3.5">
+          <div className="shrink-0 rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">
+            FROG Community Hub
+          </div>
+          <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto" aria-label="Frontend tabs">
+            {visibleTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`whitespace-nowrap rounded-full border px-3.5 py-2 text-xs font-bold capitalize transition ${
+                  activeTab === tab.id
+                    ? 'border-emerald-700 bg-emerald-700 text-white'
+                    : 'border-emerald-700/25 bg-white text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
+                }`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+          <div className="flex shrink-0 items-center gap-2">
+            {faucet.address ? (
+              <>
+                <span className="hidden rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-2 font-mono text-xs text-emerald-800 md:inline">
+                  {shortenAddress(faucet.address)}
+                </span>
+                <button
+                  className={ghostButtonClass}
+                  onClick={faucet.disconnectWallet}
+                  disabled={
+                    faucet.isClaiming ||
+                    faucet.isTransferring ||
+                    faucet.isUpdatingAdmin ||
+                    dao.isMinting ||
+                    dao.isRegistering ||
+                    dao.isCreatingProposal ||
+                    dao.isVoting ||
+                    dao.isExecutingProposal ||
+                    dao.isCancelingProposal
+                  }
+                >
+                  Disconnect
+                </button>
+              </>
+            ) : (
+              <button className={primaryButtonClass} onClick={faucet.connectWallet} disabled={!faucet.ready || faucet.isConnecting}>
+                {faucet.isConnecting ? 'Connecting...' : 'Connect Wallet'}
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="px-[6vw] pb-20 pt-8">
 
       {activeTab === 'faucet' ? (
         <>
@@ -640,6 +695,7 @@ export default function App() {
           </div>
         </section>
       )}
+      </main>
     </div>
   );
 }

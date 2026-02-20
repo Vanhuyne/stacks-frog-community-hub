@@ -11,6 +11,13 @@ const loadTransactionsModule = async () => {
   return transactionsModulePromise;
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRateLimitedError = (err) => {
+  const message = String(err?.message || err || '').toLowerCase();
+  return message.includes('429') || message.includes('too many requests') || message.includes('rate limit');
+};
+
 const unwrapResponse = (cv, cvToValue) => {
   const value = cvToValue(cv);
   if (value && typeof value === 'object' && 'type' in value) {
@@ -42,7 +49,17 @@ const normalizeClarityValue = (value) => {
 };
 
 export const createFrogContractService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
+  const BALANCE_CACHE_TTL_MS = 3000;
+  const NEXT_CLAIM_CACHE_TTL_MS = 3000;
+
   let tokenMetadataCache;
+  let faucetConfigCache;
+  let faucetConfigCacheExpiresAt = 0;
+  let faucetConfigInFlight;
+
+  const balanceCacheByAddress = new Map();
+  const nextClaimBlockCacheByAddress = new Map();
+  const readOnlyInFlightByKey = new Map();
 
   const getStoredAddress = async () => {
     const { getLocalStorage } = await loadConnectModule();
@@ -65,16 +82,89 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
     const { cvToValue, fetchCallReadOnlyFunction } = await loadTransactionsModule();
     const client = readOnlyBaseUrl ? { baseUrl: readOnlyBaseUrl } : undefined;
 
-    const result = await fetchCallReadOnlyFunction({
-      contractAddress,
-      contractName,
-      functionName,
-      functionArgs,
-      senderAddress,
-      network,
-      client
-    });
-    return unwrapResponse(result, cvToValue);
+    const maxAttempts = 4;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const result = await fetchCallReadOnlyFunction({
+          contractAddress,
+          contractName,
+          functionName,
+          functionArgs,
+          senderAddress,
+          network,
+          client
+        });
+        return unwrapResponse(result, cvToValue);
+      } catch (err) {
+        const isLastAttempt = attempt === maxAttempts - 1;
+        if (!isRateLimitedError(err) || isLastAttempt) throw err;
+        await sleep(1000 * (2 ** attempt));
+      }
+    }
+
+    throw new Error('Read-only request failed unexpectedly.');
+  };
+
+  const readOnlyWithAddressCache = async ({ addressKey, inFlightKey, cacheMap, ttlMs, loader }) => {
+    const now = Date.now();
+    const cached = cacheMap.get(addressKey);
+
+    if (cached && cached.expiresAt > now) {
+      return cached.value;
+    }
+
+    if (cached && cached.expiresAt <= now) {
+      cacheMap.delete(addressKey);
+    }
+
+    const inFlight = readOnlyInFlightByKey.get(inFlightKey);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const requestPromise = (async () => {
+      const value = await loader();
+      cacheMap.set(addressKey, {
+        value,
+        expiresAt: Date.now() + ttlMs
+      });
+      return value;
+    })();
+
+    readOnlyInFlightByKey.set(inFlightKey, requestPromise);
+
+    try {
+      return await requestPromise;
+    } finally {
+      readOnlyInFlightByKey.delete(inFlightKey);
+    }
+  };
+
+  const getFaucetConfigCached = async (address) => {
+    const now = Date.now();
+
+    if (faucetConfigCache && faucetConfigCacheExpiresAt > now) {
+      return faucetConfigCache;
+    }
+
+    if (faucetConfigInFlight) {
+      return faucetConfigInFlight;
+    }
+
+    faucetConfigInFlight = (async () => {
+      const config = await readOnly(address, 'get-faucet-config', []);
+      const parsedConfig = normalizeClarityValue(config) || {};
+      faucetConfigCache = parsedConfig;
+      faucetConfigCacheExpiresAt = Date.now() + 5000;
+      return parsedConfig;
+    })();
+
+    try {
+      return await faucetConfigInFlight;
+    } finally {
+      faucetConfigInFlight = undefined;
+    }
   };
 
   const fetchTokenMetadata = async (address) => {
@@ -106,24 +196,45 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
 
   const fetchFaucetSnapshot = async (address) => {
     const { principalCV } = await loadTransactionsModule();
-    const bal = await readOnly(address, 'get-balance', [principalCV(address)]);
-    const next = await readOnly(address, 'get-next-claim-block', [principalCV(address)]);
-    const can = await readOnly(address, 'can-claim?', [principalCV(address)]);
-    const config = await readOnly(address, 'get-faucet-config', []);
-    const parsedConfig = normalizeClarityValue(config) || {};
-    const metadata = await fetchTokenMetadata(address);
+    const targetPrincipal = principalCV(address);
+
+    const [balResult, nextResult, canResult, configResult, metadataResult] = await Promise.allSettled([
+      readOnlyWithAddressCache({
+        addressKey: address,
+        inFlightKey: `get-balance:${address}`,
+        cacheMap: balanceCacheByAddress,
+        ttlMs: BALANCE_CACHE_TTL_MS,
+        loader: () => readOnly(address, 'get-balance', [targetPrincipal])
+      }),
+      readOnlyWithAddressCache({
+        addressKey: address,
+        inFlightKey: `get-next-claim-block:${address}`,
+        cacheMap: nextClaimBlockCacheByAddress,
+        ttlMs: NEXT_CLAIM_CACHE_TTL_MS,
+        loader: () => readOnly(address, 'get-next-claim-block', [targetPrincipal])
+      }),
+      readOnly(address, 'can-claim?', [targetPrincipal]),
+      getFaucetConfigCached(address),
+      fetchTokenMetadata(address)
+    ]);
+
+    const parsedConfig = configResult.status === 'fulfilled'
+      ? (configResult.value || {})
+      : (faucetConfigCache || {});
+
+    const metadata = metadataResult.status === 'fulfilled' ? metadataResult.value : {};
 
     return {
-      balance: stringifyClarityValue(bal),
-      nextClaimBlock: stringifyClarityValue(next),
-      canClaim: Boolean(can),
+      balance: stringifyClarityValue(balResult.status === 'fulfilled' ? balResult.value : ''),
+      nextClaimBlock: stringifyClarityValue(nextResult.status === 'fulfilled' ? nextResult.value : ''),
+      canClaim: canResult.status === 'fulfilled' ? Boolean(canResult.value) : false,
       owner: stringifyClarityValue(parsedConfig.owner),
       faucetAmount: stringifyClarityValue(parsedConfig.amount),
       cooldownBlocks: stringifyClarityValue(parsedConfig.cooldown),
       faucetPaused: Boolean(parsedConfig.paused),
-      tokenImage: metadata.tokenImage || '',
-      tokenDisplayName: metadata.tokenDisplayName || '',
-      tokenUri: metadata.tokenUri || ''
+      tokenImage: metadata?.tokenImage || '',
+      tokenDisplayName: metadata?.tokenDisplayName || '',
+      tokenUri: metadata?.tokenUri || ''
     };
   };
 
