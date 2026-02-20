@@ -1,7 +1,6 @@
 export const tabs = [
   { id: 'faucet', label: 'frog stack faucet' },
   { id: 'dao-nft', label: 'frog dao pass' },
-  { id: 'governance', label: 'governance' },
   { id: 'social', label: 'social feed' },
   { id: 'admin', label: 'admin' },
   { id: 'ecosystem', label: 'stacks ecosystem' }
