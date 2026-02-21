@@ -85,6 +85,22 @@ app.post('/posts', (req, res) => {
   return res.json({ contentHash });
 });
 
+app.delete('/posts/:hash', (req, res) => {
+  const hash = String(req.params.hash || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(hash)) {
+    return res.status(400).json({ error: 'invalid hash' });
+  }
+
+  const store = readStore();
+  const existed = Boolean(store.postsByHash[hash]);
+  if (existed) {
+    delete store.postsByHash[hash];
+    writeStore(store);
+  }
+
+  return res.json({ ok: true, deleted: existed });
+});
+
 app.get('/posts/by-hash', (req, res) => {
   const raw = String(req.query.hashes || '').trim();
   if (!raw) {

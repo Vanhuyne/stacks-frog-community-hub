@@ -176,6 +176,18 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     return contentHash;
   }, [apiBaseUrl]);
 
+  const deleteOffchainPost = useCallback(async (contentHash) => {
+    if (!apiBaseUrl) return;
+    const hash = String(contentHash || '').toLowerCase();
+    if (hash.length !== 64) return;
+
+    try {
+      await fetch(`${apiBaseUrl.replace(/\/$/, '')}/posts/${encodeURIComponent(hash)}`, { method: 'DELETE' });
+    } catch (_) {
+      // Best-effort cleanup for failed on-chain publish.
+    }
+  }, [apiBaseUrl]);
+
   const publish = useCallback(async (content) => {
     const text = String(content || '').trim();
 
@@ -215,8 +227,10 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
 
     dispatch({ type: 'merge', payload: { isPublishing: true, status: `Preparing off-chain content and submitting publish (fee ${state.postFee} FROG)...` } });
 
+    let contentHash = '';
+
     try {
-      const contentHash = await createOffchainPost(text);
+      contentHash = await createOffchainPost(text);
       await service.publishPost(contentHash);
       dispatch({ type: 'merge', payload: { status: 'Publish submitted. Waiting for on-chain update...' } });
       const synced = await waitForFeedUpdate(expectedNextId);
@@ -230,12 +244,13 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
       });
       return true;
     } catch (err) {
+      if (contentHash) await deleteOffchainPost(contentHash);
       dispatch({ type: 'merge', payload: { status: `Publish failed: ${err?.message || err}` } });
       return false;
     } finally {
       dispatch({ type: 'merge', payload: { isPublishing: false } });
     }
-  }, [address, createOffchainPost, ready, service, state.lastPostId, state.postFee, state.viewerBalance, waitForFeedUpdate]);
+  }, [address, createOffchainPost, deleteOffchainPost, ready, service, state.lastPostId, state.postFee, state.viewerBalance, waitForFeedUpdate]);
 
   const like = useCallback(async (postId) => {
     if (!address) {
