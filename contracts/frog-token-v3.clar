@@ -20,7 +20,7 @@
 (define-constant token-symbol "FROG")
 (define-constant token-decimals u0)
 ;; Metadata hosted from this repository (raw GitHub URL).
-(define-constant token-uri u"https://raw.githubusercontent.com/Vanhuyne/stacks-frog-faucet/main/metadata/frog-token-v3.metadata.json")
+(define-constant token-uri u"https://raw.githubusercontent.com/Vanhuyne/stacks-frog-community-hub/main/metadata/frog-token-v3.metadata.json")
 
 ;; Owner la principal deploy contract.
 ;; Chi owner duoc phep cap nhat tham so faucet.

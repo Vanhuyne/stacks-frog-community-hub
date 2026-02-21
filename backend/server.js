@@ -127,5 +127,5 @@ app.get('/posts/by-hash', (req, res) => {
 
 ensureStore();
 app.listen(port, () => {
-  console.log(`offchain server running on http://localhost:${port}`);
+  console.log(`backend server running on http://localhost:${port}`);
 });

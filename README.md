@@ -1,42 +1,41 @@
 # FROG Community Hub
 
-FROG Community Hub is a Stacks dApp that combines faucet onboarding, DAO membership, governance actions, ecosystem links, and admin controls in one UI.
+FROG Community Hub is a Stacks dApp focused on onboarding and community activity around FROG token: faucet, DAO pass, social feed, ecosystem discovery, and owner admin controls.
 
-## Features
+## Current Features
 
 - FROG fungible token (`decimals = 0`) via `frog-token-v3`
-- Faucet claim with configurable cooldown and amount
-- DAO Pass flow via `frog-dao-nft-v5`
-  - register username (ASCII)
-  - mint one non-transferable DAO pass
-- Governance board
-  - create proposal
-  - vote (yes/no/abstain)
-  - execute/cancel proposal
-  - browse and load recent proposals
-- Ecosystem tab with curated Stacks app categories
-- Admin tab for owner-only faucet controls
+- Faucet with configurable amount/cooldown and transfer support
+- DAO Pass via `frog-dao-nft-v5`
+  - register username
+  - mint one non-transferable pass
+- Social Feed via `frog-social-v1`
+  - publish post fee: `50 FROG`
+  - like fee: `5 FROG`
+  - one-like-per-wallet
+  - no self-like
+  - hybrid data model:
+    - on-chain: author, content hash, likes, block
+    - backend: post text + links by content hash
+- Admin tab (owner only) for faucet controls
+- Ecosystem tab with curated Stacks apps
 
 ## Frontend Tabs
 
-- `Faucet`: connect wallet, claim FROG, transfer token, view faucet config
-- `DAO Pass`: register username and mint membership pass
-- `Governance`: proposal board and voting actions
-- `Ecosystem`: curated app directory
-- `Admin`: pause/unpause faucet, update claim amount/cooldown (owner only)
+- `Faucet`
+- `Frog DAO Pass`
+- `Social Feed`
+- `Admin` (only visible when connected wallet is owner)
+- `Stacks Ecosystem`
 
 ## Contracts
 
 Active contracts:
 - `contracts/frog-token-v3.clar`
 - `contracts/frog-dao-nft-v5.clar`
+- `contracts/frog-social-v1.clar`
 
-Legacy contracts (archived):
-- `contracts/archive/frog-token.clar`
-- `contracts/archive/frog-dao-nft.clar`
-- `contracts/archive/frog-dao-nft-v3.clar`
-
-Quick contract checks:
+Quick checks:
 
 ```bash
 clarinet check
@@ -44,8 +43,6 @@ clarinet console
 ```
 
 ## Local Setup
-
-Run once after clone:
 
 ```bash
 ./scripts/bootstrap-local-config.sh
@@ -57,11 +54,6 @@ This creates local config files (gitignored):
 - `settings/Mainnet.toml`
 - `frontend/.env`
 
-Templates tracked in git:
-- `settings/Testnet.toml.example`
-- `settings/Mainnet.toml.example`
-- `frontend/.env.example`
-
 ## Run Frontend
 
 ```bash
@@ -70,28 +62,30 @@ npm install
 npm run dev
 ```
 
-Build:
+## Run Backend (Social API)
 
 ```bash
-npm run build
+cd backend
+npm install
+npm run dev
 ```
 
-## Environment Variables (frontend/.env)
+Default API base URL:
+- `http://localhost:8787`
+
+## Frontend Environment (`frontend/.env`)
 
 - `VITE_STACKS_NETWORK=testnet|mainnet`
-- `VITE_CONTRACT_ADDRESS=<deployer address>`
+- `VITE_CONTRACT_ADDRESS=<deployer>`
 - `VITE_CONTRACT_NAME=frog-token-v3`
-- `VITE_DAO_CONTRACT_ADDRESS=<deployer address>`
+- `VITE_DAO_CONTRACT_ADDRESS=<deployer>`
 - `VITE_DAO_CONTRACT_NAME=frog-dao-nft-v5`
-- `VITE_HIRO_API_BASE_URL=<optional custom Hiro API URL>`
+- `VITE_SOCIAL_CONTRACT_ADDRESS=<deployer>`
+- `VITE_SOCIAL_CONTRACT_NAME=frog-social-v1`
+- `VITE_SOCIAL_API_BASE_URL=http://localhost:8787`
+- `VITE_HIRO_API_BASE_URL=<optional>`
 
-Notes:
-- In local dev, the app can use `/hiro` proxy via Vite config.
-- For production, point to Hiro API directly or your own API gateway.
-
-## Deploy
-
-### Testnet
+## Deploy (Testnet)
 
 1. Fill mnemonic in `settings/Testnet.toml`.
 2. Generate plan:
@@ -107,31 +101,7 @@ clarinet deployments generate --testnet --manual-cost
 clarinet deployments apply --testnet --no-dashboard --use-on-disk-deployment-plan
 ```
 
-### Mainnet
+## Notes
 
-1. Fill mnemonic in `settings/Mainnet.toml`.
-2. Generate plan:
-
-```bash
-clarinet deployments generate --mainnet --manual-cost
-```
-
-3. Review `deployments/default.mainnet-plan.yaml`.
-4. Apply plan:
-
-```bash
-clarinet deployments apply --mainnet --no-dashboard --use-on-disk-deployment-plan
-```
-
-5. Update frontend `.env` values to mainnet addresses/names.
-
-## Demo Screenshots
-
-- Faucet tab: `diagram/screenshots/faucet-tab.png`
-- DAO tab: `diagram/screenshots/dao-tab.png`
-- Ecosystem tab: `diagram/screenshots/ecosystem-tab.png`
-
-## Security Notes
-
-- Pre-commit hook uses `gitleaks` to scan staged changes.
-- A mnemonic was exposed in repository history previously; rotate old wallets and move funds to fresh keys.
+- Backend runtime data is stored at `backend/data/posts.json`.
+- `backend/data/posts.json` is ignored by git (local runtime data only).

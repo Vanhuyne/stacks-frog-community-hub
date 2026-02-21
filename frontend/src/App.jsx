@@ -8,7 +8,7 @@ const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || '';
 const contractName = import.meta.env.VITE_CONTRACT_NAME || 'frog-token-v3';
 
 const daoContractAddress = import.meta.env.VITE_DAO_CONTRACT_ADDRESS || contractAddress;
-const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-v4';
+const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-v5';
 const socialContractAddress = import.meta.env.VITE_SOCIAL_CONTRACT_ADDRESS || contractAddress;
 const socialContractName = import.meta.env.VITE_SOCIAL_CONTRACT_NAME || 'frog-social-v1';
 

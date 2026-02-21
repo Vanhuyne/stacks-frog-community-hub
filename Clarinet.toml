@@ -1,6 +1,6 @@
 [project]
 name = "frog-community-hub"
-description = "FROG FT + faucet with 24h cooldown"
+description = "FROG community hub: faucet, DAO pass, and social feed"
 authors = []
 telemetry = false
 
