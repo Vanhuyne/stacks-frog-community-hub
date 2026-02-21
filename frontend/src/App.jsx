@@ -621,7 +621,7 @@ export default function App() {
 
             <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Weekly Leaderboard (Last 7 Days)</p>
-              <h2 className="mt-1 text-xl font-semibold">Top Creators</h2>
+              <h2 className="mt-1 text-xl font-semibold">Top 5 Creators</h2>
               <div className="mt-4 space-y-2.5">
                 {topCreatorsWeekly.length > 0 ? topCreatorsWeekly.map((creator, index) => (
                   <div key={creator.author} className="flex items-center justify-between rounded-2xl border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
