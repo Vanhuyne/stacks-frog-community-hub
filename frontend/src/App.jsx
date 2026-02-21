@@ -17,9 +17,9 @@ const defaultHiroApiBaseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'h
 // In dev we can proxy via /hiro to avoid CORS; in production call Hiro API directly unless overridden.
 const readOnlyBaseUrl = import.meta.env.VITE_HIRO_API_BASE_URL || (import.meta.env.DEV ? '/hiro' : defaultHiroApiBaseUrl);
 const primaryButtonClass =
-  'rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
-  'rounded-full border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-xl border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -121,7 +121,7 @@ export default function App() {
   const initialTab = (() => {
     const candidate = new URLSearchParams(window.location.search).get('tab');
     if (candidate === 'dao-nft' || candidate === 'social' || candidate === 'ecosystem' || candidate === 'faucet' || candidate === 'admin') return candidate;
-    return 'faucet';
+    return 'social';
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [ecosystemCategory, setEcosystemCategory] = useState('Highlighted Apps');
@@ -275,7 +275,7 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
-                className={`whitespace-nowrap rounded-full border px-3.5 py-2 text-xs font-bold capitalize transition ${
+                className={`whitespace-nowrap rounded-xl border px-3.5 py-2 text-xs font-bold capitalize transition ${
                   activeTab === tab.id
                     ? 'border-emerald-700 bg-emerald-700 text-white'
                     : 'border-emerald-700/25 bg-white text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
@@ -577,11 +577,11 @@ export default function App() {
               />
 
               <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-900/15 bg-emerald-50/60 px-3 py-2">
-                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}>Bold</button>
-                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}>Italic</button>
-                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}>Code</button>
-                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}>H1</button>
-                  <button type="button" className="rounded-full border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}>List</button>
+                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}>Bold</button>
+                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}>Italic</button>
+                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}>Code</button>
+                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}>H1</button>
+                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}>List</button>
                 </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -812,7 +812,7 @@ export default function App() {
               <button
                 key={category}
                 type="button"
-                className={`rounded-full border px-3.5 py-2 text-xs font-bold transition ${
+                className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition ${
                   ecosystemCategory === category
                     ? 'border-emerald-900 bg-emerald-900 text-white'
                     : 'border-emerald-700/20 bg-white text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
