@@ -20,3 +20,6 @@ settings/*.local.toml
 
 # OS
 .DS_Store
+
+# Off-chain runtime data
+offchain/data/posts.json
