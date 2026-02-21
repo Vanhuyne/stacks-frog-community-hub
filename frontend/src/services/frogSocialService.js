@@ -144,6 +144,11 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     };
   };
 
+  const fetchLastPostId = async (senderAddress) => {
+    const config = await fetchConfig(senderAddress);
+    return String(config.lastPostId || '0');
+  };
+
   const fetchPost = async (senderAddress, postId) => {
     const { Cl } = await loadTransactionsModule();
     const postRaw = await readOnly(senderAddress, 'get-post', [Cl.uint(BigInt(postId))]);
@@ -241,6 +246,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
 
   return {
     fetchFeed,
+    fetchLastPostId,
     publishPost,
     likePost
   };

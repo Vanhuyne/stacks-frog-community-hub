@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { createFrogSocialService } from '../services/frogSocialService';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const asciiRegex = /^[\x20-\x7E\n\r\t]+$/;
 const linkRegex = /https?:\/\/[^\s)]+/gi;
 
 const initialState = {
@@ -127,39 +126,29 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
 
     const sender = address || contractAddress;
 
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    if (!nextExpectedLastId) {
+      await refresh(20);
+      return true;
+    }
+
+    for (let attempt = 0; attempt < 30; attempt += 1) {
       try {
-        const feed = await service.fetchFeed({ senderAddress: sender, viewerAddress: address, limit: 20 });
-        const currentLastId = feed.config.lastPostId || '0';
-
-        const shouldStop = nextExpectedLastId
-          ? currentLastId === nextExpectedLastId || Number(currentLastId) >= Number(nextExpectedLastId)
-          : true;
-
+        const currentLastId = await service.fetchLastPostId(sender);
+        const shouldStop = currentLastId === nextExpectedLastId || Number(currentLastId) >= Number(nextExpectedLastId);
         if (shouldStop) {
-          const hydrated = await hydrateFeedWithOffchain(feed);
-          dispatch({
-            type: 'merge',
-            payload: {
-              postFee: hydrated.config.postFee || '50',
-              likeFee: hydrated.config.likeFee || '5',
-              treasury: hydrated.config.treasury || '',
-              lastPostId: currentLastId,
-              viewerBalance: hydrated.viewerBalance || '',
-              posts: hydrated.posts
-            }
-          });
-          return;
+          await refresh(20);
+          return true;
         }
       } catch (_) {
-        // Keep polling.
+        // Keep polling the light read-only endpoint.
       }
 
-      await sleep(3000);
+      await sleep(5000);
     }
 
     await refresh(20);
-  }, [address, contractAddress, hydrateFeedWithOffchain, ready, refresh, service]);
+    return false;
+  }, [address, contractAddress, ready, refresh, service]);
 
   const createOffchainPost = useCallback(async (text) => {
     if (!apiBaseUrl) {
@@ -205,11 +194,6 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
       return false;
     }
 
-    if (!asciiRegex.test(text)) {
-      dispatch({ type: 'merge', payload: { status: 'Post content must use ASCII characters only.' } });
-      return false;
-    }
-
     if (text.length > 500) {
       dispatch({ type: 'merge', payload: { status: 'Post content is too long (max 500 chars).' } });
       return false;
@@ -235,8 +219,15 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
       const contentHash = await createOffchainPost(text);
       await service.publishPost(contentHash);
       dispatch({ type: 'merge', payload: { status: 'Publish submitted. Waiting for on-chain update...' } });
-      await waitForFeedUpdate(expectedNextId);
-      dispatch({ type: 'merge', payload: { status: 'Post published successfully.' } });
+      const synced = await waitForFeedUpdate(expectedNextId);
+      dispatch({
+        type: 'merge',
+        payload: {
+          status: synced
+            ? 'Post published successfully.'
+            : 'Transaction submitted. Testnet confirmation may take a few minutes. Use Refresh to sync.'
+        }
+      });
       return true;
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Publish failed: ${err?.message || err}` } });
@@ -263,6 +254,10 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     }
 
     const existing = state.posts.find((item) => item.id === String(postId));
+    if (existing && String(existing.author || '') === String(address)) {
+      dispatch({ type: 'merge', payload: { status: 'You cannot like your own post.' } });
+      return false;
+    }
     if (existing?.hasLikedByViewer) {
       dispatch({ type: 'merge', payload: { status: 'You already liked this post.' } });
       return false;
@@ -280,8 +275,15 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     try {
       await service.likePost(postId);
       dispatch({ type: 'merge', payload: { status: 'Like submitted. Refreshing feed...' } });
-      await waitForFeedUpdate();
-      dispatch({ type: 'merge', payload: { status: 'Like recorded successfully.' } });
+      const synced = await waitForFeedUpdate();
+      dispatch({
+        type: 'merge',
+        payload: {
+          status: synced
+            ? 'Like recorded successfully.'
+            : 'Like submitted. Testnet confirmation may take a few minutes. Use Refresh to sync.'
+        }
+      });
       return true;
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Like failed: ${err?.message || err}` } });

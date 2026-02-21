@@ -623,13 +623,19 @@ export default function App() {
                 <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Community Feed</p>
                 <h2 className="text-2xl font-semibold">Latest Posts</h2>
               </div>
-              <span className="rounded-full border border-emerald-700/20 bg-white px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full border border-emerald-700/20 bg-white px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
+                <button className={ghostButtonClass} onClick={() => social.refresh(20)} disabled={!social.ready || social.isRefreshing || social.isPublishing || Boolean(social.likingPostId)}>
+                  {social.isRefreshing ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
             </div>
 
             {socialFeed.length > 0 ? (
               <div className="mx-auto grid max-w-3xl gap-4">
                 {socialFeed.map((post) => {
                   const hasLiked = Boolean(post.hasLikedByViewer);
+                  const isOwnPost = Boolean(faucet.address && post.author === faucet.address);
                   return (
                     <article key={post.id} className="overflow-hidden rounded-3xl border border-emerald-900/15 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                       <div className="flex items-center justify-between border-b border-emerald-900/10 px-4 py-3">
@@ -664,9 +670,9 @@ export default function App() {
                           className={hasLiked ? ghostButtonClass : primaryButtonClass}
                           type="button"
                           onClick={() => likeSocialPost(post.id)}
-                          disabled={hasLiked || social.likingPostId === String(post.id) || !faucet.address}
+                          disabled={hasLiked || isOwnPost || social.likingPostId === String(post.id) || !faucet.address}
                         >
-                          {social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : `Like (${social.likeFee || '5'} FROG)`}
+                          {social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : isOwnPost ? 'Own post' : `Like (${social.likeFee || '5'} FROG)`}
                         </button>
                       </div>
                     </article>
