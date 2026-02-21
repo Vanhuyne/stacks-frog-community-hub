@@ -576,13 +576,20 @@ export default function App() {
                 maxLength={500}
               />
 
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-900/15 bg-emerald-50/60 px-3 py-2">
-                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}>Bold</button>
-                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}>Italic</button>
-                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}>Code</button>
-                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}>H1</button>
-                  <button type="button" className="rounded-xl border border-emerald-700/25 bg-white px-3 py-1 text-xs font-semibold text-emerald-800" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}>List</button>
-                </div>
+              <div className="mt-3 inline-flex flex-wrap overflow-hidden rounded-xl border border-emerald-700/20 bg-white">
+                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}>Bold</button>
+                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}>Italic</button>
+                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}>Code</button>
+                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}>H1</button>
+                <button type="button" className="px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}>List</button>
+              </div>
+
+              <div className="mt-3 rounded-2xl border border-emerald-900/15 bg-emerald-50/40 px-4 py-3">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">Live Preview</p>
+                {socialPostInput.trim()
+                  ? <div className="text-[15px] leading-relaxed text-emerald-950">{renderPostContent(socialPostInput)}</div>
+                  : <p className="text-sm text-emerald-900/55">Your formatted preview will appear here as you type.</p>}
+              </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs text-emerald-900/60">{socialPostInput.length}/500 characters</p>
