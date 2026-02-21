@@ -2,12 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ecosystemCategories, highlightedApps, tabs } from './data/ecosystemData';
 import { useFrogFaucet } from './hooks/useFrogFaucet';
 import { useFrogDaoNft } from './hooks/useFrogDaoNft';
+import { useFrogSocial } from './hooks/useFrogSocial';
 
 const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || '';
 const contractName = import.meta.env.VITE_CONTRACT_NAME || 'frog-token-v3';
 
 const daoContractAddress = import.meta.env.VITE_DAO_CONTRACT_ADDRESS || contractAddress;
 const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-v4';
+const socialContractAddress = import.meta.env.VITE_SOCIAL_CONTRACT_ADDRESS || contractAddress;
+const socialContractName = import.meta.env.VITE_SOCIAL_CONTRACT_NAME || 'frog-social-v1';
 
 const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
 const defaultHiroApiBaseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
@@ -17,7 +20,6 @@ const primaryButtonClass =
   'rounded-full bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
   'rounded-full border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
-const SOCIAL_POSTS_STORAGE_KEY = 'frog-community-social-posts-v1';
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -30,9 +32,12 @@ const socialHandleFromAddress = (address) => {
   return `frog-${raw.slice(2, 8).toLowerCase()}`;
 };
 
-const formatPostTime = (iso) => {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '-';
+const formatPostTime = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '-';
+  if (/^\d+$/.test(raw)) return `Block #${raw}`;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
@@ -123,19 +128,7 @@ export default function App() {
   const [socialPostInput, setSocialPostInput] = useState('');
   const [socialStatus, setSocialStatus] = useState('');
   const [socialSelection, setSocialSelection] = useState({ start: 0, end: 0 });
-  const [socialComposerFocused, setSocialComposerFocused] = useState(false);
   const socialComposerRef = useRef(null);
-  const [socialPosts, setSocialPosts] = useState(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const raw = window.localStorage.getItem(SOCIAL_POSTS_STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-      return [];
-    }
-  });
 
   const faucet = useFrogFaucet({
     contractAddress,
@@ -154,6 +147,15 @@ export default function App() {
     enabled: activeTab === 'dao-nft' || activeTab === 'admin'
   });
 
+  const social = useFrogSocial({
+    contractAddress: socialContractAddress,
+    contractName: socialContractName,
+    network,
+    readOnlyBaseUrl,
+    address: faucet.address,
+    enabled: activeTab === 'social'
+  });
+
   const ecosystemApps = useMemo(() => {
     if (ecosystemCategory === 'Highlighted Apps') return highlightedApps;
     return highlightedApps.filter((app) => app.tags.includes(ecosystemCategory));
@@ -168,25 +170,22 @@ export default function App() {
     [faucet.address, isOwner]
   );
 
+
+  useEffect(() => {
+    if (social.status) setSocialStatus(social.status);
+  }, [social.status]);
+
   useEffect(() => {
     if (activeTab === 'admin' && !(Boolean(faucet.address) && isOwner)) {
       setActiveTab('faucet');
     }
   }, [activeTab, faucet.address, isOwner]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(SOCIAL_POSTS_STORAGE_KEY, JSON.stringify(socialPosts));
-  }, [socialPosts]);
-
-  const socialFeed = useMemo(
-    () => [...socialPosts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [socialPosts]
-  );
+  const socialFeed = social.posts || [];
 
   const topSocialPosts = useMemo(
-    () => [...socialPosts].sort((a, b) => (b.likeCount - a.likeCount) || (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())).slice(0, 3),
-    [socialPosts]
+    () => [...socialFeed].sort((a, b) => Number(b.likeCount || '0') - Number(a.likeCount || '0')).slice(0, 3),
+    [socialFeed]
   );
 
   const updateSocialSelection = () => {
@@ -244,58 +243,24 @@ export default function App() {
     });
   };
 
-  const createSocialPost = () => {
-    if (!faucet.address) {
-      setSocialStatus('Connect wallet to create a post.');
-      return;
-    }
+  const createSocialPost = async () => {
     const content = socialPostInput.trim();
     if (!content) {
       setSocialStatus('Post content cannot be empty.');
       return;
     }
-    if (content.length > 500) {
-      setSocialStatus('Post is too long (max 500 characters).');
-      return;
+
+    const published = await social.publish(content);
+    if (published) {
+      setSocialPostInput('');
+      setSocialSelection({ start: 0, end: 0 });
     }
-
-    const nextPost = {
-      id: String(Date.now()),
-      author: faucet.address,
-      content,
-      createdAt: new Date().toISOString(),
-      likeCount: 0,
-      likedBy: []
-    };
-
-    setSocialPosts((prev) => [nextPost, ...prev]);
-    setSocialPostInput('');
-    setSocialSelection({ start: 0, end: 0 });
-    setSocialStatus('Post created. Share it with the community.');
   };
 
-  const likeSocialPost = (postId) => {
-    if (!faucet.address) {
-      setSocialStatus('Connect wallet to like posts.');
-      return;
-    }
-
-    let alreadyLiked = false;
-    setSocialPosts((prev) => prev.map((post) => {
-      if (post.id !== postId) return post;
-      if ((post.likedBy || []).includes(faucet.address)) {
-        alreadyLiked = true;
-        return post;
-      }
-      return {
-        ...post,
-        likeCount: Number(post.likeCount || 0) + 1,
-        likedBy: [...(post.likedBy || []), faucet.address]
-      };
-    }));
-
-    setSocialStatus(alreadyLiked ? 'You can only like each post once.' : 'Like recorded.');
+  const likeSocialPost = async (postId) => {
+    await social.like(postId);
   };
+
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,#ffffff_0%,#eaf5ef_45%,#d9efe4_100%)] text-emerald-950">
@@ -599,13 +564,6 @@ export default function App() {
                 ref={socialComposerRef}
                 className="mt-4 min-h-[150px] w-full resize-none rounded-2xl border border-emerald-900/15 bg-emerald-50/35 px-4 py-3 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
                 value={socialPostInput}
-                onFocus={() => setSocialComposerFocused(true)}
-                onBlur={() => {
-                  setTimeout(() => {
-                    setSocialComposerFocused(false);
-                    setSocialSelection({ start: 0, end: 0 });
-                  }, 80);
-                }}
                 onSelect={updateSocialSelection}
                 onKeyUp={updateSocialSelection}
                 onClick={updateSocialSelection}
@@ -627,9 +585,12 @@ export default function App() {
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs text-emerald-900/60">{socialPostInput.length}/500 characters</p>
-                <button className={primaryButtonClass} onClick={createSocialPost}>Publish</button>
+                <button className={primaryButtonClass} onClick={createSocialPost} disabled={!faucet.address || !social.ready || social.isPublishing}>
+                  {social.isPublishing ? 'Publishing...' : `Publish (${social.postFee || '50'} FROG)`}
+                </button>
               </div>
               {socialStatus && <p className="mt-3 text-sm text-emerald-900/65">{socialStatus}</p>}
+              <p className="mt-1 text-xs text-emerald-900/55">Your balance: {social.viewerBalance || faucet.balance || '0'} FROG</p>
             </div>
 
             <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
@@ -642,7 +603,7 @@ export default function App() {
                       <p className="text-xs text-emerald-900/60">Rank #{index + 1}</p>
                       <p className="text-sm font-semibold text-emerald-950">@{socialHandleFromAddress(post.author)}</p>
                     </div>
-                    <strong className="text-sm">{post.likeCount || 0} likes</strong>
+                    <strong className="text-sm">{post.likeCount || '0'} likes</strong>
                   </div>
                 )) : (
                   <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-2 text-sm text-emerald-900/70">
@@ -650,7 +611,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <p className="mt-4 text-xs text-emerald-900/60">Top liked posts can receive FROG rewards in next phase.</p>
+              <p className="mt-4 text-xs text-emerald-900/60">Fees: Publish {social.postFee || '50'} FROG, Like {social.likeFee || '5'} FROG. Treasury: {shortenAddress(social.treasury)}</p>
             </div>
           </header>
 
@@ -666,7 +627,7 @@ export default function App() {
             {socialFeed.length > 0 ? (
               <div className="mx-auto grid max-w-3xl gap-4">
                 {socialFeed.map((post) => {
-                  const hasLiked = faucet.address ? (post.likedBy || []).includes(faucet.address) : false;
+                  const hasLiked = Boolean(post.hasLikedByViewer);
                   return (
                     <article key={post.id} className="overflow-hidden rounded-3xl border border-emerald-900/15 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                       <div className="flex items-center justify-between border-b border-emerald-900/10 px-4 py-3">
@@ -679,7 +640,7 @@ export default function App() {
                             <p className="font-mono text-[11px] text-emerald-900/60">{shortenAddress(post.author)}</p>
                           </div>
                         </div>
-                        <p className="text-xs text-emerald-900/60">{formatPostTime(post.createdAt)}</p>
+                        <p className="text-xs text-emerald-900/60">{formatPostTime(post.createdAtBlock)}</p>
                       </div>
 
                       <div className="px-4 py-4">
@@ -687,14 +648,14 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center justify-between border-t border-emerald-900/10 bg-emerald-50/40 px-4 py-3">
-                        <span className="text-sm text-emerald-900/70">{post.likeCount || 0} likes</span>
+                        <span className="text-sm text-emerald-900/70">{post.likeCount || '0'} likes</span>
                         <button
                           className={hasLiked ? ghostButtonClass : primaryButtonClass}
                           type="button"
                           onClick={() => likeSocialPost(post.id)}
-                          disabled={hasLiked}
+                          disabled={hasLiked || social.likingPostId === String(post.id) || !faucet.address}
                         >
-                          {hasLiked ? 'Liked' : 'Like'}
+                          {social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : `Like (${social.likeFee || '5'} FROG)`}
                         </button>
                       </div>
                     </article>
