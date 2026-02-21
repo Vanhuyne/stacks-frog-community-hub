@@ -153,7 +153,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     return {
       id: String(postId),
       author: stringifyClarityValue(getTupleField(postTuple, ['author'])),
-      content: stringifyClarityValue(getTupleField(postTuple, ['content'])),
+      contentHash: stringifyClarityValue(getTupleField(postTuple, ['content-hash', 'content_hash', 'contentHash'])).toLowerCase(),
       createdAtBlock: stringifyClarityValue(getTupleField(postTuple, ['created-at', 'created_at', 'createdAt'])),
       likeCount: stringifyClarityValue(getTupleField(postTuple, ['like-count', 'like_count', 'likeCount']))
     };
@@ -215,13 +215,13 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     };
   };
 
-  const publishPost = async (content) => {
+  const publishPost = async (contentHash) => {
     const { request } = await loadConnectModule();
     const { Cl } = await loadTransactionsModule();
     return request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'publish-post',
-      functionArgs: [Cl.stringAscii(content)],
+      functionArgs: [Cl.stringAscii(contentHash)],
       postConditionMode: 'allow',
       network
     });

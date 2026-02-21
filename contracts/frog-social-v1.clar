@@ -1,7 +1,7 @@
-;; FROG Social Feed v1
+;; FROG Social Feed v1 (Hybrid)
 ;; - Publish post costs 50 FROG
 ;; - Like post costs 5 FROG
-;; - Fees are transferred to treasury in frog-token-v3
+;; - On-chain stores content-hash only
 
 (define-constant contract-owner tx-sender)
 
@@ -21,7 +21,7 @@
   {post-id: uint}
   {
     author: principal,
-    content: (string-ascii 500),
+    content-hash: (string-ascii 64),
     created-at: uint,
     like-count: uint
   }
@@ -55,18 +55,18 @@
 (define-read-only (get-frog-balance (who principal))
   (unwrap-panic (contract-call? .frog-token-v3 get-balance who)))
 
-(define-public (publish-post (content (string-ascii 500)))
+(define-public (publish-post (content-hash (string-ascii 64)))
   (let (
-      (trimmed-len (len content))
+      (hash-len (len content-hash))
       (next-id (+ (var-get last-post-id) u1))
     )
-    (asserts! (> trimmed-len u0) err-invalid-post)
+    (asserts! (> hash-len u0) err-invalid-post)
     (try! (charge-fee (var-get post-fee) tx-sender))
     (map-set posts
       {post-id: next-id}
       {
         author: tx-sender,
-        content: content,
+        content-hash: content-hash,
         created-at: stacks-block-height,
         like-count: u0
       })
@@ -87,7 +87,7 @@
           {post-id: post-id}
           {
             author: (get author post),
-            content: (get content post),
+            content-hash: (get content-hash post),
             created-at: (get created-at post),
             like-count: (+ (get like-count post) u1)
           })

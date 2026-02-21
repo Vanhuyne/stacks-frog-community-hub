@@ -153,7 +153,8 @@ export default function App() {
     network,
     readOnlyBaseUrl,
     address: faucet.address,
-    enabled: activeTab === 'social'
+    enabled: activeTab === 'social',
+    apiBaseUrl: import.meta.env.VITE_SOCIAL_API_BASE_URL || ''
   });
 
   const ecosystemApps = useMemo(() => {
@@ -591,6 +592,7 @@ export default function App() {
               </div>
               {socialStatus && <p className="mt-3 text-sm text-emerald-900/65">{socialStatus}</p>}
               <p className="mt-1 text-xs text-emerald-900/55">Your balance: {social.viewerBalance || faucet.balance || '0'} FROG</p>
+              {!social.ready && <p className="mt-1 text-xs text-emerald-900/55">Social contract is not configured.</p>}
             </div>
 
             <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
@@ -644,7 +646,16 @@ export default function App() {
                       </div>
 
                       <div className="px-4 py-4">
-                        {renderPostContent(post.content)}
+                        {renderPostContent(post.text || '')}
+                        {Array.isArray(post.links) && post.links.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {post.links.map((link) => (
+                              <a key={`${post.id}-${link}`} href={link} target="_blank" rel="noreferrer" className="rounded-full border border-emerald-700/20 bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:underline">
+                                {link}
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between border-t border-emerald-900/10 bg-emerald-50/40 px-4 py-3">

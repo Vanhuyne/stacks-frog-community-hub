@@ -3,6 +3,7 @@ import { createFrogSocialService } from '../services/frogSocialService';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const asciiRegex = /^[\x20-\x7E\n\r\t]+$/;
+const linkRegex = /https?:\/\/[^\s)]+/gi;
 
 const initialState = {
   postFee: '50',
@@ -26,7 +27,19 @@ const reducer = (state, action) => {
   }
 };
 
-export const useFrogSocial = ({ contractAddress, contractName, network, readOnlyBaseUrl, address, enabled }) => {
+const parseLinksFromText = (text) => {
+  const links = String(text || '').match(linkRegex) || [];
+  return [...new Set(links.map((item) => item.trim()))].slice(0, 10);
+};
+
+const joinHashesForQuery = (hashes) => {
+  return hashes
+    .map((item) => String(item || '').trim().toLowerCase())
+    .filter((item) => item.length === 64)
+    .join(',');
+};
+
+export const useFrogSocial = ({ contractAddress, contractName, network, readOnlyBaseUrl, address, enabled, apiBaseUrl }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const service = useMemo(
@@ -39,6 +52,49 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     [enabled, contractAddress, contractName]
   );
 
+  const fetchOffchainPostsByHashes = useCallback(async (hashes) => {
+    if (!apiBaseUrl) return {};
+
+    const hashesQuery = joinHashesForQuery(hashes);
+    if (!hashesQuery) return {};
+
+    const response = await fetch(`${apiBaseUrl.replace(/\/$/, '')}/posts/by-hash?hashes=${encodeURIComponent(hashesQuery)}`);
+    if (!response.ok) throw new Error(`Off-chain post lookup failed (${response.status})`);
+
+    const payload = await response.json();
+    if (!payload || typeof payload !== 'object' || !payload.posts || typeof payload.posts !== 'object') {
+      return {};
+    }
+    return payload.posts;
+  }, [apiBaseUrl]);
+
+  const hydrateFeedWithOffchain = useCallback(async (feed) => {
+    const hashes = (feed.posts || []).map((post) => post.contentHash);
+    const postsByHash = await fetchOffchainPostsByHashes(hashes);
+
+    const posts = (feed.posts || []).map((post) => {
+      const offchain = postsByHash[String(post.contentHash || '').toLowerCase()];
+      if (!offchain) {
+        return {
+          ...post,
+          text: '[Off-chain content unavailable]',
+          links: []
+        };
+      }
+
+      return {
+        ...post,
+        text: String(offchain.text || ''),
+        links: Array.isArray(offchain.links) ? offchain.links : []
+      };
+    });
+
+    return {
+      ...feed,
+      posts
+    };
+  }, [fetchOffchainPostsByHashes]);
+
   const refresh = useCallback(async (limit = 20) => {
     if (!ready) return;
 
@@ -47,15 +103,16 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
 
     try {
       const feed = await service.fetchFeed({ senderAddress: sender, viewerAddress: address, limit });
+      const hydrated = await hydrateFeedWithOffchain(feed);
       dispatch({
         type: 'merge',
         payload: {
-          postFee: feed.config.postFee || '50',
-          likeFee: feed.config.likeFee || '5',
-          treasury: feed.config.treasury || '',
-          lastPostId: feed.config.lastPostId || '0',
-          viewerBalance: feed.viewerBalance || '',
-          posts: feed.posts
+          postFee: hydrated.config.postFee || '50',
+          likeFee: hydrated.config.likeFee || '5',
+          treasury: hydrated.config.treasury || '',
+          lastPostId: hydrated.config.lastPostId || '0',
+          viewerBalance: hydrated.viewerBalance || '',
+          posts: hydrated.posts
         }
       });
     } catch (err) {
@@ -63,7 +120,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     } finally {
       dispatch({ type: 'merge', payload: { isRefreshing: false } });
     }
-  }, [address, contractAddress, ready, service]);
+  }, [address, contractAddress, hydrateFeedWithOffchain, ready, service]);
 
   const waitForFeedUpdate = useCallback(async (nextExpectedLastId = '') => {
     if (!ready) return;
@@ -80,15 +137,16 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
           : true;
 
         if (shouldStop) {
+          const hydrated = await hydrateFeedWithOffchain(feed);
           dispatch({
             type: 'merge',
             payload: {
-              postFee: feed.config.postFee || '50',
-              likeFee: feed.config.likeFee || '5',
-              treasury: feed.config.treasury || '',
+              postFee: hydrated.config.postFee || '50',
+              likeFee: hydrated.config.likeFee || '5',
+              treasury: hydrated.config.treasury || '',
               lastPostId: currentLastId,
-              viewerBalance: feed.viewerBalance || '',
-              posts: feed.posts
+              viewerBalance: hydrated.viewerBalance || '',
+              posts: hydrated.posts
             }
           });
           return;
@@ -101,7 +159,33 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     }
 
     await refresh(20);
-  }, [address, contractAddress, ready, refresh, service]);
+  }, [address, contractAddress, hydrateFeedWithOffchain, ready, refresh, service]);
+
+  const createOffchainPost = useCallback(async (text) => {
+    if (!apiBaseUrl) {
+      throw new Error('Missing VITE_SOCIAL_API_BASE_URL for off-chain post storage.');
+    }
+
+    const links = parseLinksFromText(text);
+    const response = await fetch(`${apiBaseUrl.replace(/\/$/, '')}/posts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, links })
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Off-chain post create failed (${response.status}): ${body || 'unknown error'}`);
+    }
+
+    const payload = await response.json();
+    const contentHash = String(payload?.contentHash || '').toLowerCase();
+    if (!contentHash || contentHash.length !== 64) {
+      throw new Error('Off-chain service returned invalid content hash.');
+    }
+
+    return contentHash;
+  }, [apiBaseUrl]);
 
   const publish = useCallback(async (content) => {
     const text = String(content || '').trim();
@@ -145,10 +229,11 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
       expectedNextId = '';
     }
 
-    dispatch({ type: 'merge', payload: { isPublishing: true, status: `Submitting publish transaction (fee ${state.postFee} FROG)...` } });
+    dispatch({ type: 'merge', payload: { isPublishing: true, status: `Preparing off-chain content and submitting publish (fee ${state.postFee} FROG)...` } });
 
     try {
-      await service.publishPost(text);
+      const contentHash = await createOffchainPost(text);
+      await service.publishPost(contentHash);
       dispatch({ type: 'merge', payload: { status: 'Publish submitted. Waiting for on-chain update...' } });
       await waitForFeedUpdate(expectedNextId);
       dispatch({ type: 'merge', payload: { status: 'Post published successfully.' } });
@@ -159,7 +244,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     } finally {
       dispatch({ type: 'merge', payload: { isPublishing: false } });
     }
-  }, [address, ready, service, state.lastPostId, state.postFee, state.viewerBalance, waitForFeedUpdate]);
+  }, [address, createOffchainPost, ready, service, state.lastPostId, state.postFee, state.viewerBalance, waitForFeedUpdate]);
 
   const like = useCallback(async (postId) => {
     if (!address) {
