@@ -184,10 +184,27 @@ export default function App() {
 
   const socialFeed = social.posts || [];
 
-  const topSocialPosts = useMemo(
-    () => [...socialFeed].sort((a, b) => Number(b.likeCount || '0') - Number(a.likeCount || '0')).slice(0, 3),
-    [socialFeed]
-  );
+  const topCreatorsWeekly = useMemo(() => {
+    const cutoffTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const creators = new Map();
+
+    for (const post of socialFeed) {
+      const publishedAt = Date.parse(String(post.createdAtIso || ''));
+      if (!Number.isFinite(publishedAt) || publishedAt < cutoffTime) continue;
+
+      const key = String(post.author || '').trim();
+      if (!key) continue;
+
+      const current = creators.get(key) || { author: key, totalLikes: 0, postCount: 0 };
+      current.totalLikes += Number(post.likeCount || '0');
+      current.postCount += 1;
+      creators.set(key, current);
+    }
+
+    return [...creators.values()]
+      .sort((a, b) => b.totalLikes - a.totalLikes)
+      .slice(0, 5);
+  }, [socialFeed]);
 
   const updateSocialSelection = () => {
     const node = socialComposerRef.current;
@@ -603,20 +620,20 @@ export default function App() {
             </div>
 
             <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Weekly Leaderboard</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Weekly Leaderboard (Last 7 Days)</p>
               <h2 className="mt-1 text-xl font-semibold">Top Creators</h2>
               <div className="mt-4 space-y-2.5">
-                {topSocialPosts.length > 0 ? topSocialPosts.map((post, index) => (
-                  <div key={post.id} className="flex items-center justify-between rounded-2xl border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
+                {topCreatorsWeekly.length > 0 ? topCreatorsWeekly.map((creator, index) => (
+                  <div key={creator.author} className="flex items-center justify-between rounded-2xl border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
                     <div>
                       <p className="text-xs text-emerald-900/60">Rank #{index + 1}</p>
-                      <p className="text-sm font-semibold text-emerald-950">@{socialHandleFromAddress(post.author)}</p>
+                      <p className="text-sm font-semibold text-emerald-950">@{socialHandleFromAddress(creator.author)}</p>
                     </div>
-                    <strong className="text-sm">{post.likeCount || '0'} likes</strong>
+                    <strong className="text-sm">{creator.totalLikes} likes</strong>
                   </div>
                 )) : (
                   <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-2 text-sm text-emerald-900/70">
-                    No rankings yet.
+                    No rankings this week.
                   </div>
                 )}
               </div>
@@ -830,6 +847,7 @@ export default function App() {
               </button>
             ))}
           </div>
+
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ecosystemApps.map((app) => (

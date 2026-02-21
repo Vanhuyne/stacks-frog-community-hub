@@ -77,14 +77,16 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
         return {
           ...post,
           text: '[Off-chain content unavailable]',
-          links: []
+          links: [],
+          createdAtIso: ''
         };
       }
 
       return {
         ...post,
         text: String(offchain.text || ''),
-        links: Array.isArray(offchain.links) ? offchain.links : []
+        links: Array.isArray(offchain.links) ? offchain.links : [],
+        createdAtIso: String(offchain.createdAt || '')
       };
     });
 
