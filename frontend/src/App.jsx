@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import EmojiPicker from 'emoji-picker-react';
 import { ecosystemCategories, highlightedApps, tabs } from './data/ecosystemData';
 import { useFrogFaucet } from './hooks/useFrogFaucet';
 import { useFrogDaoNft } from './hooks/useFrogDaoNft';
@@ -22,9 +23,8 @@ const ghostButtonClass =
   'rounded-xl border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const formatterButtonClass =
   'inline-flex items-center gap-1.5 border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50';
-const emojiButtonClass =
-  'grid h-7 w-7 place-items-center rounded-md border border-emerald-700/20 text-sm transition hover:bg-emerald-50';
-const composerEmojis = ['🐸', '🚀', '🔥', '💚', '🎉', '🙏'];
+const emojiTriggerButtonClass =
+  'inline-flex items-center rounded-xl border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50';
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -151,7 +151,9 @@ export default function App() {
   const [socialPostInput, setSocialPostInput] = useState('');
   const [socialStatus, setSocialStatus] = useState('');
   const [socialSelection, setSocialSelection] = useState({ start: 0, end: 0 });
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const socialComposerRef = useRef(null);
+  const emojiPickerRef = useRef(null);
 
   const faucet = useFrogFaucet({
     contractAddress,
@@ -204,6 +206,18 @@ export default function App() {
       setActiveTab('faucet');
     }
   }, [activeTab, faucet.address, isOwner]);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!isEmojiPickerOpen) return;
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setIsEmojiPickerOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [isEmojiPickerOpen]);
 
   const socialFeed = social.posts || [];
 
@@ -310,6 +324,7 @@ export default function App() {
     const next = `${socialPostInput.slice(0, start)}${emoji}${socialPostInput.slice(end)}`;
 
     setSocialPostInput(next);
+    setIsEmojiPickerOpen(false);
     requestAnimationFrame(() => {
       const nextCaret = start + emoji.length;
       node.focus();
@@ -663,11 +678,26 @@ export default function App() {
                   <button type="button" className="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}><span>List</span></button>
                 </div>
 
-                <div className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-700/20 bg-white px-2 py-1.5">
-                  <span className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-800/70">Emoji</span>
-                  {composerEmojis.map((emoji) => (
-                    <button key={emoji} type="button" className={emojiButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => insertEmoji(emoji)}>{emoji}</button>
-                  ))}
+                <div ref={emojiPickerRef} className="relative inline-block">
+                  <button
+                    type="button"
+                    className={emojiTriggerButtonClass}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+                  >
+                    Add emoji
+                  </button>
+                  {isEmojiPickerOpen && (
+                    <div className="absolute left-0 top-[calc(100%+8px)] z-20">
+                      <EmojiPicker
+                        onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)}
+                        lazyLoadEmojis
+                        previewConfig={{ showPreview: false }}
+                        width={320}
+                        height={380}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
