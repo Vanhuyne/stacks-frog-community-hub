@@ -100,6 +100,17 @@ const toSafeInt = (value) => {
 export const createFrogSocialService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
   const isLikelyPrincipal = (value) => /^S[PT][A-Z0-9]{39}$/.test(String(value || '').trim());
 
+  const minReadIntervalMs = 120;
+  let nextReadSlotAt = 0;
+
+  const waitForReadSlot = async () => {
+    const now = Date.now();
+    if (now < nextReadSlotAt) {
+      await sleep(nextReadSlotAt - now);
+    }
+    nextReadSlotAt = Date.now() + minReadIntervalMs;
+  };
+
   const readOnly = async (senderAddress, functionName, functionArgs = []) => {
     const { cvToValue, fetchCallReadOnlyFunction } = await loadTransactionsModule();
     const client = readOnlyBaseUrl ? { baseUrl: readOnlyBaseUrl } : undefined;
@@ -108,10 +119,12 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
       ? normalizedSender
       : String(contractAddress || '').trim();
 
-    const maxAttempts = 3;
+    const maxAttempts = 5;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       try {
+        await waitForReadSlot();
+
         const result = await fetchCallReadOnlyFunction({
           contractAddress,
           contractName,
@@ -125,7 +138,9 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
       } catch (err) {
         const isLastAttempt = attempt === maxAttempts - 1;
         if (!isRateLimitedError(err) || isLastAttempt) throw err;
-        await sleep(300 * (2 ** attempt));
+
+        const jitterMs = Math.floor(Math.random() * 120);
+        await sleep((500 * (2 ** attempt)) + jitterMs);
       }
     }
 
@@ -198,7 +213,11 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
 
         let hasLikedByViewer = false;
         if (viewerAddress && isLikelyPrincipal(viewerAddress)) {
-          hasLikedByViewer = await hasLiked(senderAddress, id, viewerAddress);
+          try {
+            hasLikedByViewer = await hasLiked(senderAddress, id, viewerAddress);
+          } catch (_) {
+            hasLikedByViewer = false;
+          }
         }
 
         posts.push({
