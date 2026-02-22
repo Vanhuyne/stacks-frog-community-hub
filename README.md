@@ -59,6 +59,7 @@ This creates local config files (gitignored):
 ```bash
 cd frontend
 npm install
+# optional: cp .env.example .env and edit values
 npm run dev
 ```
 
@@ -67,13 +68,19 @@ npm run dev
 ```bash
 cd backend
 npm install
+# optional: cp .env.example .env and edit values
 npm run dev
 ```
 
-Default API base URL:
-- `http://localhost:8787`
+Backend environment (`backend/.env`):
+- `BACKEND_PORT=8787`
+- `BACKEND_PUBLIC_BASE_URL=<optional, used for production uploaded-image URLs>`
 
 ## Frontend Environment (`frontend/.env`)
+
+Use env files by mode:
+- `frontend/.env.development` for local dev
+- `frontend/.env.production` for production
 
 - `VITE_STACKS_NETWORK=testnet|mainnet`
 - `VITE_CONTRACT_ADDRESS=<deployer>`
@@ -82,7 +89,7 @@ Default API base URL:
 - `VITE_DAO_CONTRACT_NAME=frog-dao-nft-v5`
 - `VITE_SOCIAL_CONTRACT_ADDRESS=<deployer>`
 - `VITE_SOCIAL_CONTRACT_NAME=frog-social-v1`
-- `VITE_SOCIAL_API_BASE_URL=http://localhost:8787`
+- `VITE_SOCIAL_API_BASE_URL=<your backend API base URL>`
 - `VITE_HIRO_API_BASE_URL=<optional>`
 
 ## Deploy (Testnet)

@@ -24,3 +24,7 @@ settings/*.local.toml
 
 # Off-chain runtime data
 backend/data/posts.json
+!backend/.env.example
+!frontend/.env.development
+!frontend/.env.production
+backend/uploads/

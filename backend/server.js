@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,7 +7,7 @@ import cors from 'cors';
 import multer from 'multer';
 
 const app = express();
-const port = Number(process.env.PORT || 8787);
+const port = Number(process.env.BACKEND_PORT || process.env.PORT || 8787);
 const dataDir = path.resolve(process.cwd(), 'data');
 const dataFile = path.join(dataDir, 'posts.json');
 const uploadsDir = path.resolve(process.cwd(), 'uploads');
@@ -87,6 +88,9 @@ const hashPayload = (payload) => {
 };
 
 const buildUploadedImageUrl = (req, file) => {
+  const explicitBaseUrl = String(process.env.BACKEND_PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
+  if (explicitBaseUrl) return `${explicitBaseUrl}/uploads/${file.filename}`;
+
   const host = String(req.get('host') || '').trim();
   const protocol = String(req.protocol || 'http').trim();
   return `${protocol}://${host}/uploads/${file.filename}`;
