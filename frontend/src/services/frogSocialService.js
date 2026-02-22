@@ -102,6 +102,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
   const cachedPostsById = new Map();
   const cachedHasLikedByKey = new Map();
   const hasLikedCacheTtlMs = 30_000;
+  const postCacheTtlMs = 8_000;
 
   const minReadIntervalMs = 120;
   let nextReadSlotAt = 0;
@@ -170,7 +171,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
   const fetchPost = async (senderAddress, postId) => {
     const cacheKey = String(postId);
     const cached = cachedPostsById.get(cacheKey);
-    if (cached) return cached;
+    if (cached && Date.now() < cached.expiresAt) return cached.value;
 
     const { Cl } = await loadTransactionsModule();
     const postRaw = await readOnly(senderAddress, 'get-post', [Cl.uint(BigInt(postId))]);
@@ -184,7 +185,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
       createdAtBlock: stringifyClarityValue(getTupleField(postTuple, ['created-at', 'created_at', 'createdAt'])),
       likeCount: stringifyClarityValue(getTupleField(postTuple, ['like-count', 'like_count', 'likeCount']))
     };
-    cachedPostsById.set(cacheKey, post);
+    cachedPostsById.set(cacheKey, { value: post, expiresAt: Date.now() + postCacheTtlMs });
     return post;
   };
 
@@ -259,13 +260,17 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
   const publishPost = async (contentHash) => {
     const { request } = await loadConnectModule();
     const { Cl } = await loadTransactionsModule();
-    return request('stx_callContract', {
+    const response = await request('stx_callContract', {
       contract: `${contractAddress}.${contractName}`,
       functionName: 'publish-post',
       functionArgs: [Cl.stringAscii(contentHash)],
       postConditionMode: 'allow',
       network
     });
+
+    cachedPostsById.clear();
+    cachedHasLikedByKey.clear();
+    return response;
   };
 
   const likePost = async (postId) => {
@@ -279,6 +284,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
       network
     });
 
+    cachedPostsById.delete(String(postId));
     cachedHasLikedByKey.clear();
     return response;
   };
