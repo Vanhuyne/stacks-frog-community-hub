@@ -25,6 +25,8 @@ const formatterButtonClass =
   'inline-flex items-center gap-1.5 border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50';
 const emojiTriggerButtonClass =
   'inline-flex items-center rounded-xl border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50';
+const mediaActionButtonClass =
+  'inline-flex items-center rounded-xl border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50';
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -152,7 +154,10 @@ export default function App() {
   const [socialStatus, setSocialStatus] = useState('');
   const [socialSelection, setSocialSelection] = useState({ start: 0, end: 0 });
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [socialImageFile, setSocialImageFile] = useState(null);
+  const [socialImagePreviewUrl, setSocialImagePreviewUrl] = useState('');
   const socialComposerRef = useRef(null);
+  const socialImageInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
 
   const faucet = useFrogFaucet({
@@ -218,6 +223,12 @@ export default function App() {
     document.addEventListener('mousedown', handlePointerDown);
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [isEmojiPickerOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (socialImagePreviewUrl) URL.revokeObjectURL(socialImagePreviewUrl);
+    };
+  }, [socialImagePreviewUrl]);
 
   const socialFeed = social.posts || [];
 
@@ -333,6 +344,37 @@ export default function App() {
     });
   };
 
+  const clearSocialImage = () => {
+    if (socialImagePreviewUrl) URL.revokeObjectURL(socialImagePreviewUrl);
+    setSocialImagePreviewUrl('');
+    setSocialImageFile(null);
+    if (socialImageInputRef.current) {
+      socialImageInputRef.current.value = '';
+    }
+  };
+
+  const onSelectSocialImage = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!String(file.type || '').toLowerCase().startsWith('image/')) {
+      setSocialStatus('Only image files are allowed.');
+      if (socialImageInputRef.current) socialImageInputRef.current.value = '';
+      return;
+    }
+
+    if (Number(file.size || 0) > 5 * 1024 * 1024) {
+      setSocialStatus('Image is too large (max 5MB).');
+      if (socialImageInputRef.current) socialImageInputRef.current.value = '';
+      return;
+    }
+
+    if (socialImagePreviewUrl) URL.revokeObjectURL(socialImagePreviewUrl);
+    setSocialStatus('');
+    setSocialImageFile(file);
+    setSocialImagePreviewUrl(URL.createObjectURL(file));
+  };
+
   const createSocialPost = async () => {
     const content = socialPostInput.trim();
     if (!content) {
@@ -340,9 +382,10 @@ export default function App() {
       return;
     }
 
-    const published = await social.publish(content);
+    const published = await social.publish(content, socialImageFile);
     if (published) {
       setSocialPostInput('');
+      clearSocialImage();
       setSocialSelection({ start: 0, end: 0 });
     }
   };
@@ -678,24 +721,53 @@ export default function App() {
                   <button type="button" className="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}><span>List</span></button>
                 </div>
 
-                <div ref={emojiPickerRef} className="relative inline-block">
+                <div className="flex flex-wrap items-start gap-2">
+                  <div ref={emojiPickerRef} className="relative inline-block">
+                    <button
+                      type="button"
+                      className={emojiTriggerButtonClass}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+                    >
+                      Add emoji
+                    </button>
+                    {isEmojiPickerOpen && (
+                      <div className="absolute left-0 top-[calc(100%+8px)] z-20">
+                        <EmojiPicker
+                          onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)}
+                          lazyLoadEmojis
+                          previewConfig={{ showPreview: false }}
+                          width={320}
+                          height={380}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <input
+                    ref={socialImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={onSelectSocialImage}
+                  />
                   <button
                     type="button"
-                    className={emojiTriggerButtonClass}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+                    className={mediaActionButtonClass}
+                    onClick={() => socialImageInputRef.current?.click()}
+                    disabled={Boolean(socialImageFile)}
                   >
-                    Add emoji
+                    Upload image
                   </button>
-                  {isEmojiPickerOpen && (
-                    <div className="absolute left-0 top-[calc(100%+8px)] z-20">
-                      <EmojiPicker
-                        onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)}
-                        lazyLoadEmojis
-                        previewConfig={{ showPreview: false }}
-                        width={320}
-                        height={380}
-                      />
+
+                  {socialImageFile && socialImagePreviewUrl && (
+                    <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-700/20 bg-white px-2 py-1.5">
+                      <img src={socialImagePreviewUrl} alt="Selected upload preview" className="h-9 w-9 rounded-md object-cover" />
+                      <div className="max-w-[150px]">
+                        <p className="truncate text-xs font-semibold text-emerald-900">{socialImageFile.name}</p>
+                        <p className="text-[11px] text-emerald-900/60">One image per post</p>
+                      </div>
+                      <button type="button" className="rounded-md border border-emerald-700/20 px-2 py-1 text-[11px] font-semibold text-emerald-800" onClick={clearSocialImage}>Remove</button>
                     </div>
                   )}
                 </div>
@@ -703,8 +775,15 @@ export default function App() {
 
               <div className="mt-3 rounded-2xl border border-emerald-900/15 bg-emerald-50/40 px-4 py-3">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">Live Preview</p>
-                {socialPostInput.trim()
-                  ? <div className="text-[15px] leading-relaxed text-emerald-950">{renderPostContent(socialPostInput)}</div>
+                {socialPostInput.trim() || socialImagePreviewUrl
+                  ? (
+                    <div className="space-y-3 text-[15px] leading-relaxed text-emerald-950">
+                      {socialPostInput.trim() ? renderPostContent(socialPostInput) : null}
+                      {socialImagePreviewUrl && (
+                        <img src={socialImagePreviewUrl} alt="Post image preview" className="max-h-72 w-full rounded-2xl border border-emerald-900/10 object-cover" />
+                      )}
+                    </div>
+                  )
                   : <p className="text-sm text-emerald-900/55">Your formatted preview will appear here as you type.</p>}
               </div>
 
@@ -777,6 +856,15 @@ export default function App() {
 
                       <div className="px-4 py-4">
                         {renderPostContent(post.text || '')}
+                        {Array.isArray(post.images) && post.images.length > 0 && (
+                          <div className="mt-3 grid gap-2">
+                            {post.images.map((imageUrl) => (
+                              <a key={`${post.id}-${imageUrl}`} href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border border-emerald-900/10">
+                                <img src={imageUrl} alt="Post attachment" className="max-h-96 w-full object-cover" loading="lazy" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
                         {Array.isArray(post.links) && post.links.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {post.links.map((link) => (

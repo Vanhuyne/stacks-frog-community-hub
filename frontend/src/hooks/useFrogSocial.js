@@ -3,6 +3,7 @@ import { createFrogSocialService } from '../services/frogSocialService';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const linkRegex = /https?:\/\/[^\s)]+/gi;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 const initialState = {
   postFee: '50',
@@ -29,6 +30,14 @@ const reducer = (state, action) => {
 const parseLinksFromText = (text) => {
   const links = String(text || '').match(linkRegex) || [];
   return [...new Set(links.map((item) => item.trim()))].slice(0, 10);
+};
+
+const normalizeOffchainImages = (images) => {
+  if (!Array.isArray(images)) return [];
+  return images
+    .map((item) => String(item || '').trim())
+    .filter((item) => item.length > 0)
+    .slice(0, 1);
 };
 
 const joinHashesForQuery = (hashes) => {
@@ -78,6 +87,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
           ...post,
           text: '[Off-chain content unavailable]',
           links: [],
+          images: [],
           createdAtIso: ''
         };
       }
@@ -86,6 +96,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
         ...post,
         text: String(offchain.text || ''),
         links: Array.isArray(offchain.links) ? offchain.links : [],
+        images: normalizeOffchainImages(offchain.images),
         createdAtIso: String(offchain.createdAt || '')
       };
     });
@@ -152,16 +163,32 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     return false;
   }, [address, contractAddress, ready, refresh, service]);
 
-  const createOffchainPost = useCallback(async (text) => {
+  const createOffchainPost = useCallback(async (text, imageFile = null) => {
     if (!apiBaseUrl) {
       throw new Error('Missing VITE_SOCIAL_API_BASE_URL for off-chain post storage.');
     }
 
+    if (imageFile) {
+      const mime = String(imageFile.type || '').toLowerCase();
+      if (!mime.startsWith('image/')) {
+        throw new Error('Only image files are allowed.');
+      }
+      if (Number(imageFile.size || 0) > MAX_IMAGE_SIZE) {
+        throw new Error('Image is too large (max 5MB).');
+      }
+    }
+
     const links = parseLinksFromText(text);
+    const formData = new FormData();
+    formData.append('text', text);
+    formData.append('links', JSON.stringify(links));
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
+
     const response = await fetch(`${apiBaseUrl.replace(/\/$/, '')}/posts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, links })
+      body: formData
     });
 
     if (!response.ok) {
@@ -190,7 +217,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     }
   }, [apiBaseUrl]);
 
-  const publish = useCallback(async (content) => {
+  const publish = useCallback(async (content, imageFile = null) => {
     const text = String(content || '').trim();
 
     if (!address) {
@@ -232,7 +259,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     let contentHash = '';
 
     try {
-      contentHash = await createOffchainPost(text);
+      contentHash = await createOffchainPost(text, imageFile);
       await service.publishPost(contentHash);
       dispatch({ type: 'merge', payload: { status: 'Publish submitted. Waiting for on-chain update...' } });
       const synced = await waitForFeedUpdate(expectedNextId);
