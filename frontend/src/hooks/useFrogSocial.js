@@ -298,7 +298,9 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     const postFeeNum = Number(state.postFee || '50');
     const balanceNum = Number(state.viewerBalance || '0');
     if (Number.isFinite(postFeeNum) && Number.isFinite(balanceNum) && balanceNum < postFeeNum) {
-      dispatch({ type: 'merge', payload: { status: `Not enough FROG. Publish requires ${state.postFee} FROG.` } });
+      const message = `Not enough FROG. Publish requires ${state.postFee} FROG. Go to the Faucet tab to claim more FROG.`;
+      dispatch({ type: 'merge', payload: { status: message } });
+      toast.error('Not enough FROG. Open Faucet tab to claim more.');
       return false;
     }
 
@@ -374,7 +376,9 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     const likeFeeNum = Number(state.likeFee || '5');
     const balanceNum = Number(state.viewerBalance || '0');
     if (Number.isFinite(likeFeeNum) && Number.isFinite(balanceNum) && balanceNum < likeFeeNum) {
-      dispatch({ type: 'merge', payload: { status: `Not enough FROG. Like requires ${state.likeFee} FROG.` } });
+      const message = `Not enough FROG. Like requires ${state.likeFee} FROG. Go to the Faucet tab to claim more FROG.`;
+      dispatch({ type: 'merge', payload: { status: message } });
+      toast.error('Not enough FROG. Open Faucet tab to claim more.');
       return false;
     }
 
