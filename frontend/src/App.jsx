@@ -789,14 +789,20 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center justify-between border-t border-emerald-900/10 bg-emerald-50/40 px-4 py-3">
-                        <span className="text-sm text-emerald-900/70">{post.likeCount || '0'} likes</span>
+                        <span className="inline-flex items-center gap-1.5 text-sm text-emerald-900/70">
+                          <span aria-hidden="true">❤️</span>
+                          <span>{post.likeCount || '0'} likes</span>
+                        </span>
                         <button
                           className={hasLiked ? ghostButtonClass : primaryButtonClass}
                           type="button"
                           onClick={() => likeSocialPost(post.id)}
                           disabled={hasLiked || isOwnPost || social.likingPostId === String(post.id) || !faucet.address}
                         >
-                          {social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : isOwnPost ? 'Own post' : `Like (${social.likeFee || '5'} FROG)`}
+                          <span className="inline-flex items-center gap-1.5">
+                            <span aria-hidden="true">❤️</span>
+                            <span>{social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : isOwnPost ? 'Own post' : `Like (${social.likeFee || '5'} FROG)`}</span>
+                          </span>
                         </button>
                       </div>
                     </article>
