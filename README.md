@@ -2,16 +2,16 @@
 
 FROG Community Hub is a Stacks dApp focused on onboarding and community activity around FROG token: faucet, DAO pass, social feed, ecosystem discovery, and owner admin controls.
 
-## Product Demo
+## Demo
 
-### Frog Social Overview
-![Frog Social Overview](screenshot/frog-social-overview.png)
+### Frog Social Demo 01
+![Frog Social Demo 01](screenshot/frog-social-demo-01.png)
 
-### Frog Social Post - Quote Image
-![Frog Social Post Quote Image](screenshot/frog-social-post-quote-image.jpeg)
+### Frog Social Demo 02
+![Frog Social Demo 02](screenshot/frog-social-demo-02.png)
 
-### Frog Social Post - Vibe Image
-![Frog Social Post Vibe Image](screenshot/frog-social-post-vibe-image.png)
+### Frog Social Demo 03
+![Frog Social Demo 03](screenshot/frog-social-demo-03.png)
 
 ## Current Features
 
