@@ -69,7 +69,7 @@ const joinHashesForQuery = (hashes) => {
     .join(',');
 };
 
-export const useFrogSocial = ({ contractAddress, contractName, network, readOnlyBaseUrl, address, enabled, apiBaseUrl }) => {
+export const useFrogSocial = ({ contractAddress, contractName, network, readOnlyBaseUrl, address, enabled, apiBaseUrl, hasDaoPass = false }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const service = useMemo(
@@ -290,6 +290,13 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
       return false;
     }
 
+    if (!hasDaoPass) {
+      const message = 'DAO Pass is required to publish posts. Go to the Frog DAO Pass tab to mint your pass first.';
+      dispatch({ type: 'merge', payload: { status: message } });
+      toast.error('DAO Pass required. Open Frog DAO Pass tab first.');
+      return false;
+    }
+
     if (text.length > 500) {
       dispatch({ type: 'merge', payload: { status: 'Post content is too long (max 500 chars).' } });
       return false;
@@ -345,7 +352,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     } finally {
       dispatch({ type: 'merge', payload: { isPublishing: false } });
     }
-  }, [address, createOffchainPost, deleteOffchainPost, ready, service, state.lastPostId, state.postFee, state.viewerBalance, waitForFeedUpdate]);
+  }, [address, createOffchainPost, deleteOffchainPost, hasDaoPass, ready, service, state.lastPostId, state.postFee, state.viewerBalance, waitForFeedUpdate]);
 
   const like = useCallback(async (postId) => {
     if (!address) {
@@ -360,6 +367,13 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
 
     if (!postId) {
       dispatch({ type: 'merge', payload: { status: 'Invalid post ID.' } });
+      return false;
+    }
+
+    if (!hasDaoPass) {
+      const message = 'DAO Pass is required to like posts. Go to the Frog DAO Pass tab to mint your pass first.';
+      dispatch({ type: 'merge', payload: { status: message } });
+      toast.error('DAO Pass required. Open Frog DAO Pass tab first.');
       return false;
     }
 
@@ -403,7 +417,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     } finally {
       dispatch({ type: 'merge', payload: { likingPostId: '' } });
     }
-  }, [address, ready, service, state.likeFee, state.posts, state.viewerBalance, waitForFeedUpdate]);
+  }, [address, hasDaoPass, ready, service, state.likeFee, state.posts, state.viewerBalance, waitForFeedUpdate]);
 
   useEffect(() => {
     refresh(10);

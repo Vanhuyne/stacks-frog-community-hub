@@ -185,7 +185,8 @@ export default function App() {
     readOnlyBaseUrl,
     address: faucet.address,
     enabled: activeTab === 'social',
-    apiBaseUrl: import.meta.env.VITE_SOCIAL_API_BASE_URL || ''
+    apiBaseUrl: import.meta.env.VITE_SOCIAL_API_BASE_URL || '',
+    hasDaoPass: dao.hasPass
   });
 
   const ecosystemApps = useMemo(() => {
