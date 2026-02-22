@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { toast } from 'react-hot-toast';
 import { createFrogSocialService } from '../services/frogSocialService';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -273,18 +274,27 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
       await service.publishPost(contentHash);
       dispatch({ type: 'merge', payload: { status: 'Publish submitted. Waiting for on-chain update...' } });
       const synced = await waitForFeedUpdate(expectedNextId);
+      const nextStatus = synced
+        ? 'Post published successfully.'
+        : 'Transaction submitted. Testnet confirmation may take a few minutes. Use Refresh to sync.';
+
       dispatch({
         type: 'merge',
-        payload: {
-          status: synced
-            ? 'Post published successfully.'
-            : 'Transaction submitted. Testnet confirmation may take a few minutes. Use Refresh to sync.'
-        }
+        payload: { status: nextStatus }
       });
+
+      if (synced) {
+        toast.success('Post published successfully.');
+      } else {
+        toast('Transaction submitted. Confirmation may take a few minutes.');
+      }
+
       return true;
     } catch (err) {
       if (contentHash) await deleteOffchainPost(contentHash);
-      dispatch({ type: 'merge', payload: { status: `Publish failed: ${err?.message || err}` } });
+      const errorMessage = String(err?.message || err || 'Unknown error');
+      dispatch({ type: 'merge', payload: { status: `Publish failed: ${errorMessage}` } });
+      toast.error('Post publish failed. Please try again.');
       return false;
     } finally {
       dispatch({ type: 'merge', payload: { isPublishing: false } });

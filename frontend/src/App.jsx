@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import EmojiPicker from 'emoji-picker-react';
+import { Toaster } from 'react-hot-toast';
 import { ecosystemCategories, highlightedApps, tabs } from './data/ecosystemData';
 import { useFrogFaucet } from './hooks/useFrogFaucet';
 import { useFrogDaoNft } from './hooks/useFrogDaoNft';
@@ -397,6 +398,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,#ffffff_0%,#eaf5ef_45%,#d9efe4_100%)] text-emerald-950">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            border: '1px solid rgba(6, 78, 59, 0.15)',
+            color: '#064e3b'
+          }
+        }}
+      />
       <header className="sticky top-0 z-40 border-b border-emerald-950/10 bg-white/85 backdrop-blur">
         <div className="flex items-center gap-4 px-[6vw] py-3.5">
           <div className="shrink-0 rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">
