@@ -799,10 +799,7 @@ export default function App() {
                           onClick={() => likeSocialPost(post.id)}
                           disabled={hasLiked || isOwnPost || social.likingPostId === String(post.id) || !faucet.address}
                         >
-                          <span className="inline-flex items-center gap-1.5">
-                            <span aria-hidden="true">❤️</span>
-                            <span>{social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : isOwnPost ? 'Own post' : `Like (${social.likeFee || '5'} FROG)`}</span>
-                          </span>
+                          {social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : isOwnPost ? 'Own post' : `Like (${social.likeFee || '5'} FROG)`}
                         </button>
                       </div>
                     </article>
