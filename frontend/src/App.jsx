@@ -20,6 +20,11 @@ const primaryButtonClass =
   'rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
   'rounded-xl border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+const formatterButtonClass =
+  'inline-flex items-center gap-1.5 border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50';
+const emojiButtonClass =
+  'grid h-7 w-7 place-items-center rounded-md border border-emerald-700/20 text-sm transition hover:bg-emerald-50';
+const composerEmojis = ['🐸', '🚀', '🔥', '💚', '🎉', '🙏'];
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -292,6 +297,23 @@ export default function App() {
     requestAnimationFrame(() => {
       node.focus();
       node.setSelectionRange(lineStart, lineStart + nextBlock.length);
+      updateSocialSelection();
+    });
+  };
+
+  const insertEmoji = (emoji) => {
+    const node = socialComposerRef.current;
+    if (!node) return;
+
+    const start = node.selectionStart || 0;
+    const end = node.selectionEnd || 0;
+    const next = `${socialPostInput.slice(0, start)}${emoji}${socialPostInput.slice(end)}`;
+
+    setSocialPostInput(next);
+    requestAnimationFrame(() => {
+      const nextCaret = start + emoji.length;
+      node.focus();
+      node.setSelectionRange(nextCaret, nextCaret);
       updateSocialSelection();
     });
   };
@@ -628,16 +650,25 @@ export default function App() {
                 maxLength={500}
               />
 
-              <div className="mt-3 inline-flex flex-wrap overflow-hidden rounded-xl border border-emerald-700/20 bg-white">
-                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}>Bold</button>
-                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}>Italic</button>
-                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}>Code</button>
-                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('~~')}>Strike</button>
-                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('[', '](https://)')}>Link</button>
-                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}>H1</button>
-                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('## ')}>H2</button>
-                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('> ')}>Quote</button>
-                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}>List</button>
+              <div className="mt-3 space-y-2">
+                <div className="inline-flex flex-wrap overflow-hidden rounded-xl border border-emerald-700/20 bg-white">
+                  <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}><span>Bold</span></button>
+                  <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}><span>Italic</span></button>
+                  <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}><span>Code</span></button>
+                  <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('~~')}><span>Strike</span></button>
+                  <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('[', '](https://)')}><span>Link</span></button>
+                  <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}><span>H1</span></button>
+                  <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('## ')}><span>H2</span></button>
+                  <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('> ')}><span>Quote</span></button>
+                  <button type="button" className="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}><span>List</span></button>
+                </div>
+
+                <div className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-700/20 bg-white px-2 py-1.5">
+                  <span className="px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-800/70">Emoji</span>
+                  {composerEmojis.map((emoji) => (
+                    <button key={emoji} type="button" className={emojiButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => insertEmoji(emoji)}>{emoji}</button>
+                  ))}
+                </div>
               </div>
 
               <div className="mt-3 rounded-2xl border border-emerald-900/15 bg-emerald-50/40 px-4 py-3">
