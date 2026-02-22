@@ -32,10 +32,20 @@ const parseLinksFromText = (text) => {
   return [...new Set(links.map((item) => item.trim()))].slice(0, 10);
 };
 
-const normalizeOffchainImages = (images) => {
+const resolveOffchainImageUrl = (value, apiBaseUrl) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (!raw.startsWith('/')) return '';
+
+  const baseUrl = String(apiBaseUrl || '').trim().replace(/\/$/, '');
+  return baseUrl ? `${baseUrl}${raw}` : raw;
+};
+
+const normalizeOffchainImages = (images, apiBaseUrl) => {
   if (!Array.isArray(images)) return [];
   return images
-    .map((item) => String(item || '').trim())
+    .map((item) => resolveOffchainImageUrl(item, apiBaseUrl))
     .filter((item) => item.length > 0)
     .slice(0, 1);
 };
@@ -96,7 +106,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
         ...post,
         text: String(offchain.text || ''),
         links: Array.isArray(offchain.links) ? offchain.links : [],
-        images: normalizeOffchainImages(offchain.images),
+        images: normalizeOffchainImages(offchain.images, apiBaseUrl),
         createdAtIso: String(offchain.createdAt || '')
       };
     });

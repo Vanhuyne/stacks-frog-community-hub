@@ -87,13 +87,11 @@ const hashPayload = (payload) => {
   return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 };
 
-const buildUploadedImageUrl = (req, file) => {
+const buildUploadedImageUrl = (_req, file) => {
   const explicitBaseUrl = String(process.env.BACKEND_PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
   if (explicitBaseUrl) return `${explicitBaseUrl}/uploads/${file.filename}`;
 
-  const host = String(req.get('host') || '').trim();
-  const protocol = String(req.protocol || 'http').trim();
-  return `${protocol}://${host}/uploads/${file.filename}`;
+  return `/uploads/${file.filename}`;
 };
 
 const removeUploadedImage = (imageUrl) => {
