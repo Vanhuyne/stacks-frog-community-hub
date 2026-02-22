@@ -3,6 +3,17 @@ import { toast } from 'react-hot-toast';
 import { createFrogSocialService } from '../services/frogSocialService';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const isRateLimitedError = (err) => {
+  const message = String(err?.message || err || '').toLowerCase();
+  return message.includes('429') || message.includes('too many requests') || message.includes('rate limit');
+};
+const parseRateLimitWaitMs = (err) => {
+  const message = String(err?.message || err || '');
+  const match = message.match(/try again in\s+(\d+)\s+seconds?/i);
+  const seconds = Number.parseInt(match?.[1] || '', 10);
+  if (Number.isFinite(seconds) && seconds > 0) return Math.min(30_000, seconds * 1000);
+  return 10_000;
+};
 const linkRegex = /https?:\/\/[^\s)]+/gi;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -125,21 +136,54 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     dispatch({ type: 'merge', payload: { isRefreshing: true } });
 
     try {
-      const feed = await service.fetchFeed({ senderAddress: sender, viewerAddress: address, limit });
-      const hydrated = await hydrateFeedWithOffchain(feed);
-      dispatch({
-        type: 'merge',
-        payload: {
-          postFee: hydrated.config.postFee || '50',
-          likeFee: hydrated.config.likeFee || '5',
-          treasury: hydrated.config.treasury || '',
-          lastPostId: hydrated.config.lastPostId || '0',
-          viewerBalance: hydrated.viewerBalance || '',
-          posts: hydrated.posts
+      let attempt = 0;
+      const maxAttempts = 2;
+
+      while (attempt < maxAttempts) {
+        try {
+          const feedLimit = attempt === 0 ? limit : Math.min(limit, 10);
+          const feed = await service.fetchFeed({ senderAddress: sender, viewerAddress: address, limit: feedLimit });
+          const hydrated = await hydrateFeedWithOffchain(feed);
+          dispatch({
+            type: 'merge',
+            payload: {
+              postFee: hydrated.config.postFee || '50',
+              likeFee: hydrated.config.likeFee || '5',
+              treasury: hydrated.config.treasury || '',
+              lastPostId: hydrated.config.lastPostId || '0',
+              viewerBalance: hydrated.viewerBalance || '',
+              posts: hydrated.posts,
+              status: attempt > 0 ? 'Social feed synced after rate-limit cooldown.' : ''
+            }
+          });
+          return;
+        } catch (err) {
+          const isLastAttempt = attempt === maxAttempts - 1;
+          if (!isRateLimitedError(err) || isLastAttempt) {
+            if (isRateLimitedError(err)) {
+              const waitMs = parseRateLimitWaitMs(err);
+              const waitSec = Math.max(1, Math.round(waitMs / 1000));
+              dispatch({
+                type: 'merge',
+                payload: { status: `Hiro API đang quá tải (429). Vui lòng thử lại sau khoảng ${waitSec} giây.` }
+              });
+            } else {
+              dispatch({ type: 'merge', payload: { status: `Social feed read failed: ${err?.message || err}` } });
+            }
+            return;
+          }
+
+          const waitMs = parseRateLimitWaitMs(err);
+          const waitSec = Math.max(1, Math.round(waitMs / 1000));
+          dispatch({
+            type: 'merge',
+            payload: { status: `Hiro API đang giới hạn request. Tự động thử lại sau ${waitSec} giây...` }
+          });
+          await sleep(waitMs);
         }
-      });
-    } catch (err) {
-      dispatch({ type: 'merge', payload: { status: `Social feed read failed: ${err?.message || err}` } });
+
+        attempt += 1;
+      }
     } finally {
       dispatch({ type: 'merge', payload: { isRefreshing: false } });
     }

@@ -18,6 +18,14 @@ const isRateLimitedError = (err) => {
   return message.includes('429') || message.includes('too many requests') || message.includes('rate limit');
 };
 
+const parseRateLimitWaitMs = (err) => {
+  const message = String(err?.message || err || '');
+  const match = message.match(/try again in\s+(\d+)\s+seconds?/i);
+  const seconds = Number.parseInt(match?.[1] || '', 10);
+  if (Number.isFinite(seconds) && seconds > 0) return Math.min(30_000, seconds * 1000);
+  return 1_500;
+};
+
 const unwrapResponse = (cv, cvToValue) => {
   const value = cvToValue(cv);
   if (value && typeof value === 'object' && 'type' in value) {
@@ -123,7 +131,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
       ? normalizedSender
       : String(contractAddress || '').trim();
 
-    const maxAttempts = 5;
+    const maxAttempts = 3;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       try {
@@ -144,7 +152,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
         if (!isRateLimitedError(err) || isLastAttempt) throw err;
 
         const jitterMs = Math.floor(Math.random() * 120);
-        await sleep((500 * (2 ** attempt)) + jitterMs);
+        await sleep(parseRateLimitWaitMs(err) + jitterMs);
       }
     }
 
