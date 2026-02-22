@@ -129,7 +129,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     };
   }, [fetchOffchainPostsByHashes]);
 
-  const refresh = useCallback(async (limit = 20) => {
+  const refresh = useCallback(async (limit = 10) => {
     if (!ready) return;
 
     const sender = address || contractAddress;
@@ -141,7 +141,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
 
       while (attempt < maxAttempts) {
         try {
-          const feedLimit = attempt === 0 ? limit : Math.min(limit, 10);
+          const feedLimit = attempt === 0 ? limit : Math.min(limit, 6);
           const feed = await service.fetchFeed({ senderAddress: sender, viewerAddress: address, limit: feedLimit });
           const hydrated = await hydrateFeedWithOffchain(feed);
           dispatch({
@@ -195,7 +195,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     const sender = address || contractAddress;
 
     if (!nextExpectedLastId) {
-      await refresh(20);
+      await refresh(10);
       return true;
     }
 
@@ -204,7 +204,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
         const currentLastId = await service.fetchLastPostId(sender);
         const shouldStop = currentLastId === nextExpectedLastId || Number(currentLastId) >= Number(nextExpectedLastId);
         if (shouldStop) {
-          await refresh(20);
+          await refresh(10);
           return true;
         }
       } catch (_) {
@@ -214,7 +214,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
       await sleep(5000);
     }
 
-    await refresh(20);
+    await refresh(10);
     return false;
   }, [address, contractAddress, ready, refresh, service]);
 
@@ -402,7 +402,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
   }, [address, ready, service, state.likeFee, state.posts, state.viewerBalance, waitForFeedUpdate]);
 
   useEffect(() => {
-    refresh(20);
+    refresh(10);
   }, [refresh]);
 
   return {

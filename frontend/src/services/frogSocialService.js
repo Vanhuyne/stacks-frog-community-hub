@@ -109,6 +109,8 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
   const isLikelyPrincipal = (value) => /^S[PT][A-Z0-9]{39}$/.test(String(value || '').trim());
   const cachedPostsById = new Map();
   const cachedHasLikedByKey = new Map();
+  const inFlightPostById = new Map();
+  const inFlightHasLikedByKey = new Map();
   const hasLikedCacheTtlMs = 30_000;
   const postCacheTtlMs = 8_000;
 
@@ -181,20 +183,32 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     const cached = cachedPostsById.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) return cached.value;
 
-    const { Cl } = await loadTransactionsModule();
-    const postRaw = await readOnly(senderAddress, 'get-post', [Cl.uint(BigInt(postId))]);
-    const postTuple = normalizeObject(unwrapOptional(postRaw));
-    if (!postTuple) return null;
+    const inFlight = inFlightPostById.get(cacheKey);
+    if (inFlight) return inFlight;
 
-    const post = {
-      id: String(postId),
-      author: stringifyClarityValue(getTupleField(postTuple, ['author'])),
-      contentHash: stringifyClarityValue(getTupleField(postTuple, ['content-hash', 'content_hash', 'contentHash'])).toLowerCase(),
-      createdAtBlock: stringifyClarityValue(getTupleField(postTuple, ['created-at', 'created_at', 'createdAt'])),
-      likeCount: stringifyClarityValue(getTupleField(postTuple, ['like-count', 'like_count', 'likeCount']))
-    };
-    cachedPostsById.set(cacheKey, { value: post, expiresAt: Date.now() + postCacheTtlMs });
-    return post;
+    const requestPromise = (async () => {
+      const { Cl } = await loadTransactionsModule();
+      const postRaw = await readOnly(senderAddress, 'get-post', [Cl.uint(BigInt(postId))]);
+      const postTuple = normalizeObject(unwrapOptional(postRaw));
+      if (!postTuple) return null;
+
+      const post = {
+        id: String(postId),
+        author: stringifyClarityValue(getTupleField(postTuple, ['author'])),
+        contentHash: stringifyClarityValue(getTupleField(postTuple, ['content-hash', 'content_hash', 'contentHash'])).toLowerCase(),
+        createdAtBlock: stringifyClarityValue(getTupleField(postTuple, ['created-at', 'created_at', 'createdAt'])),
+        likeCount: stringifyClarityValue(getTupleField(postTuple, ['like-count', 'like_count', 'likeCount']))
+      };
+      cachedPostsById.set(cacheKey, { value: post, expiresAt: Date.now() + postCacheTtlMs });
+      return post;
+    })();
+
+    inFlightPostById.set(cacheKey, requestPromise);
+    try {
+      return await requestPromise;
+    } finally {
+      inFlightPostById.delete(cacheKey);
+    }
   };
 
   const hasLiked = async (senderAddress, postId, who) => {
@@ -204,11 +218,23 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     const cached = cachedHasLikedByKey.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) return cached.value;
 
-    const { Cl } = await loadTransactionsModule();
-    const liked = await readOnly(senderAddress, 'has-liked', [Cl.uint(BigInt(postId)), Cl.standardPrincipal(who)]);
-    const value = Boolean(liked);
-    cachedHasLikedByKey.set(cacheKey, { value, expiresAt: Date.now() + hasLikedCacheTtlMs });
-    return value;
+    const inFlight = inFlightHasLikedByKey.get(cacheKey);
+    if (inFlight) return inFlight;
+
+    const requestPromise = (async () => {
+      const { Cl } = await loadTransactionsModule();
+      const liked = await readOnly(senderAddress, 'has-liked', [Cl.uint(BigInt(postId)), Cl.standardPrincipal(who)]);
+      const value = Boolean(liked);
+      cachedHasLikedByKey.set(cacheKey, { value, expiresAt: Date.now() + hasLikedCacheTtlMs });
+      return value;
+    })();
+
+    inFlightHasLikedByKey.set(cacheKey, requestPromise);
+    try {
+      return await requestPromise;
+    } finally {
+      inFlightHasLikedByKey.delete(cacheKey);
+    }
   };
 
   const fetchUserBalance = async (senderAddress, who) => {
@@ -218,7 +244,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     return stringifyClarityValue(value);
   };
 
-  const fetchFeed = async ({ senderAddress, viewerAddress, limit = 20 }) => {
+  const fetchFeed = async ({ senderAddress, viewerAddress, limit = 10 }) => {
     const config = await fetchConfig(senderAddress);
     const lastId = toSafeInt(config.lastPostId);
 
@@ -227,7 +253,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
       return { config, viewerBalance, posts: [] };
     }
 
-    const safeLimit = Math.min(30, Math.max(1, limit));
+    const safeLimit = Math.min(15, Math.max(1, limit));
     const fromId = Math.max(1, lastId - safeLimit + 1);
     const posts = [];
 
@@ -278,6 +304,8 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
 
     cachedPostsById.clear();
     cachedHasLikedByKey.clear();
+    inFlightPostById.clear();
+    inFlightHasLikedByKey.clear();
     return response;
   };
 
@@ -294,6 +322,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
 
     cachedPostsById.delete(String(postId));
     cachedHasLikedByKey.clear();
+    inFlightHasLikedByKey.clear();
     return response;
   };
 
