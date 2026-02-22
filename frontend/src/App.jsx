@@ -48,11 +48,20 @@ const formatPostTime = (value) => {
 
 
 const renderInlineFormatting = (text, keyPrefix = 'part') => {
-  const chunks = String(text || '').split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g);
+  const chunks = String(text || '').split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|\[[^\]]+\]\([^\)]+\))/g);
   return chunks.map((chunk, index) => {
     const key = `${keyPrefix}-${index}`;
     if (/^`[^`]+`$/.test(chunk)) {
       return <code key={key} className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[12px] text-emerald-900">{chunk.slice(1, -1)}</code>;
+    }
+    if (/^\[[^\]]+\]\([^\)]+\)$/.test(chunk)) {
+      const match = chunk.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
+      if (!match) return <span key={key}>{chunk}</span>;
+      const [, label, href] = match;
+      return <a key={key} href={href} target="_blank" rel="noreferrer" className="font-semibold text-emerald-800 underline underline-offset-2">{label}</a>;
+    }
+    if (/^~~[^~]+~~$/.test(chunk)) {
+      return <s key={key}>{chunk.slice(2, -2)}</s>;
     }
     if (/^\*\*[^*]+\*\*$/.test(chunk)) {
       return <strong key={key}>{chunk.slice(2, -2)}</strong>;
@@ -81,6 +90,15 @@ const renderPostContent = (content) => {
         <p key={lineKey} className={`${className} mt-1 text-emerald-950`}>
           {renderInlineFormatting(text, `${lineKey}-h`) }
         </p>
+      );
+    }
+
+    if (/^>\s+/.test(line)) {
+      const text = line.replace(/^>\s+/, '');
+      return (
+        <blockquote key={lineKey} className="mt-1 border-l-2 border-emerald-700/35 pl-3 text-[15px] italic leading-relaxed text-emerald-900/90">
+          {renderInlineFormatting(text, `${lineKey}-q`) }
+        </blockquote>
       );
     }
 
@@ -224,12 +242,23 @@ export default function App() {
     if (start === end) return;
 
     const selected = socialPostInput.slice(start, end);
-    const next = `${socialPostInput.slice(0, start)}${prefix}${selected}${suffix}${socialPostInput.slice(end)}`;
+    const hasWrappedSelection = start >= prefix.length
+      && end + suffix.length <= socialPostInput.length
+      && socialPostInput.slice(start - prefix.length, start) === prefix
+      && socialPostInput.slice(end, end + suffix.length) === suffix;
+
+    const next = hasWrappedSelection
+      ? `${socialPostInput.slice(0, start - prefix.length)}${selected}${socialPostInput.slice(end + suffix.length)}`
+      : `${socialPostInput.slice(0, start)}${prefix}${selected}${suffix}${socialPostInput.slice(end)}`;
 
     setSocialPostInput(next);
     requestAnimationFrame(() => {
       node.focus();
-      node.setSelectionRange(start + prefix.length, end + prefix.length);
+      if (hasWrappedSelection) {
+        node.setSelectionRange(start - prefix.length, end - prefix.length);
+      } else {
+        node.setSelectionRange(start + prefix.length, end + prefix.length);
+      }
       updateSocialSelection();
     });
   };
@@ -246,9 +275,15 @@ export default function App() {
     const lineEndSearch = socialPostInput.indexOf('\n', end);
     const lineEnd = lineEndSearch === -1 ? socialPostInput.length : lineEndSearch;
     const block = socialPostInput.slice(lineStart, lineEnd);
-    const nextBlock = block
-      .split('\n')
-      .map((line) => (line.trim() ? `${prefix}${line}` : line))
+    const lines = block.split('\n');
+    const nonEmptyLines = lines.filter((line) => line.trim().length > 0);
+    const isFullyPrefixed = nonEmptyLines.length > 0
+      && nonEmptyLines.every((line) => line.startsWith(prefix));
+    const nextBlock = lines
+      .map((line) => {
+        if (!line.trim()) return line;
+        return isFullyPrefixed && line.startsWith(prefix) ? line.slice(prefix.length) : `${prefix}${line}`;
+      })
       .join('\n');
 
     const next = `${socialPostInput.slice(0, lineStart)}${nextBlock}${socialPostInput.slice(lineEnd)}`;
@@ -597,8 +632,12 @@ export default function App() {
                 <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}>Bold</button>
                 <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}>Italic</button>
                 <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}>Code</button>
+                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('~~')}>Strike</button>
+                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('[', '](https://)')}>Link</button>
                 <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}>H1</button>
-                <button type="button" className="px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}>List</button>
+                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('## ')}>H2</button>
+                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('> ')}>Quote</button>
+                <button type="button" className="border-r border-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}>List</button>
               </div>
 
               <div className="mt-3 rounded-2xl border border-emerald-900/15 bg-emerald-50/40 px-4 py-3">
