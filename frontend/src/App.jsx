@@ -780,7 +780,7 @@ export default function App() {
                     <div className="space-y-3 text-[15px] leading-relaxed text-emerald-950">
                       {socialPostInput.trim() ? renderPostContent(socialPostInput) : null}
                       {socialImagePreviewUrl && (
-                        <img src={socialImagePreviewUrl} alt="Post image preview" className="max-h-72 w-full rounded-2xl border border-emerald-900/10 object-cover" />
+                        <img src={socialImagePreviewUrl} alt="Post image preview" className="max-h-72 w-full rounded-2xl border border-emerald-900/10 bg-emerald-100/40 object-contain" />
                       )}
                     </div>
                   )
@@ -860,7 +860,7 @@ export default function App() {
                           <div className="mt-3 grid gap-2">
                             {post.images.map((imageUrl) => (
                               <a key={`${post.id}-${imageUrl}`} href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border border-emerald-900/10">
-                                <img src={imageUrl} alt="Post attachment" className="max-h-96 w-full object-cover" loading="lazy" />
+                                <img src={imageUrl} alt="Post attachment" className="max-h-[70vh] w-full bg-emerald-100/40 object-contain" loading="lazy" />
                               </a>
                             ))}
                           </div>
