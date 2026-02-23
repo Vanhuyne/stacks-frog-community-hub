@@ -195,7 +195,7 @@ export default function App() {
     network,
     readOnlyBaseUrl,
     address: faucet.address,
-    enabled: activeTab === 'dao-nft' || activeTab === 'admin' || activeTab === 'social'
+    enabled: activeTab === 'dao-nft' || activeTab === 'admin' || (activeTab === 'social' && Boolean(faucet.address))
   });
 
   const social = useFrogSocial({

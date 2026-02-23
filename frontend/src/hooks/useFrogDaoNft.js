@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { createFrogDaoNftService } from '../services/frogDaoNftService';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,6 +30,7 @@ const reducer = (state, action) => {
 
 export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnlyBaseUrl, address, enabled }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const refreshInFlightRef = useRef(null);
 
   const service = useMemo(
     () => createFrogDaoNftService({ contractAddress, contractName, network, readOnlyBaseUrl }),
@@ -41,26 +42,52 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
     [enabled, contractAddress, contractName]
   );
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async ({ force = false } = {}) => {
     if (!ready) return;
+    if (refreshInFlightRef.current) return refreshInFlightRef.current;
 
     const readSender = address || contractAddress;
 
-    try {
-      const [snapshot, treasury] = await Promise.all([
-        service.fetchDaoSnapshot(readSender),
-        service.fetchTreasurySnapshot(readSender)
-      ]);
-
-      dispatch({
-        type: 'merge',
-        payload: {
-          ...snapshot,
-          ...treasury
+    const runRefresh = (async () => {
+      try {
+        if (!address) {
+          const treasury = await service.fetchTreasurySnapshot(readSender, { force });
+          dispatch({
+            type: 'merge',
+            payload: {
+              frogBalance: '',
+              username: '',
+              hasPass: false,
+              passId: '',
+              eligible: false,
+              ...treasury
+            }
+          });
+          return;
         }
-      });
-    } catch (err) {
-      dispatch({ type: 'merge', payload: { status: `Read data failed: ${err?.message || err}` } });
+
+        const [snapshot, treasury] = await Promise.all([
+          service.fetchDaoSnapshot(readSender, { force }),
+          service.fetchTreasurySnapshot(readSender, { force })
+        ]);
+
+        dispatch({
+          type: 'merge',
+          payload: {
+            ...snapshot,
+            ...treasury
+          }
+        });
+      } catch (err) {
+        dispatch({ type: 'merge', payload: { status: `Read data failed: ${err?.message || err}` } });
+      }
+    })();
+
+    refreshInFlightRef.current = runRefresh;
+    try {
+      return await runRefresh;
+    } finally {
+      refreshInFlightRef.current = null;
     }
   }, [address, contractAddress, ready, service]);
 
@@ -70,7 +97,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
 
       for (let attempt = 0; attempt < 8; attempt += 1) {
         try {
-          const snapshot = await service.fetchDaoSnapshot(address);
+          const snapshot = await service.fetchDaoSnapshot(address, { force: true });
           dispatch({ type: 'merge', payload: snapshot });
           if (predicate(snapshot)) return true;
         } catch (_) {
@@ -132,7 +159,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
       }
       if (owner && owner === address) {
         dispatch({ type: 'merge', payload: { status: `Username "${name}" is already owned by this wallet.` } });
-        await refresh();
+        await refresh({ force: true });
         return;
       }
     } catch (err) {
@@ -152,7 +179,7 @@ export const useFrogDaoNft = ({ contractAddress, contractName, network, readOnly
           status: synced ? 'Username registered.' : 'Username submitted. On-chain data is still syncing.'
         }
       });
-      await refresh();
+      await refresh({ force: true });
     } catch (err) {
       dispatch({ type: 'merge', payload: { status: `Register username failed: ${err?.message || err}` } });
     } finally {

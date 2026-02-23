@@ -90,6 +90,12 @@ const stringifyClarityValue = (value) => {
 
 export const createFrogDaoNftService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
   const isLikelyPrincipal = (value) => /^S[PT][A-Z0-9]{39}$/.test(String(value || '').trim());
+  const daoSnapshotCacheTtlMs = 12_000;
+  const treasurySnapshotCacheTtlMs = 20_000;
+  const cachedDaoSnapshotByAddress = new Map();
+  const cachedTreasurySnapshotBySender = new Map();
+  const inFlightDaoSnapshotByAddress = new Map();
+  const inFlightTreasurySnapshotBySender = new Map();
 
   const readOnly = async (senderAddress, functionName, functionArgs = []) => {
     const { cvToValue, fetchCallReadOnlyFunction } = await loadTransactionsModule();
@@ -131,7 +137,17 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
     return principalCV(safeAddress);
   };
 
-  const fetchDaoSnapshot = async (address) => {
+  const fetchDaoSnapshot = async (address, { force = false } = {}) => {
+    const cacheKey = String(address || '').trim() || String(contractAddress || '').trim();
+    if (!force) {
+      const cached = cachedDaoSnapshotByAddress.get(cacheKey);
+      if (cached && Date.now() < cached.expiresAt) return cached.value;
+
+      const inFlight = inFlightDaoSnapshotByAddress.get(cacheKey);
+      if (inFlight) return inFlight;
+    }
+
+    const requestPromise = (async () => {
     const targetPrincipal = await toSafePrincipal(address);
 
     const [frogBalanceResult, usernameResult, passResult, eligibleResult] = await Promise.allSettled([
@@ -155,16 +171,40 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
     const username = stringifyClarityValue(usernameField ?? usernameTuple);
     const passId = stringifyClarityValue(passIdField ?? passTuple);
 
-    return {
+    const value = {
       frogBalance: stringifyClarityValue(frogBalanceRaw),
       username,
       hasPass: passTuple !== null && passTuple !== undefined,
       passId,
       eligible: Boolean(eligibleRaw)
     };
+
+    cachedDaoSnapshotByAddress.set(cacheKey, {
+      value,
+      expiresAt: Date.now() + daoSnapshotCacheTtlMs
+    });
+    return value;
+    })();
+
+    inFlightDaoSnapshotByAddress.set(cacheKey, requestPromise);
+    try {
+      return await requestPromise;
+    } finally {
+      inFlightDaoSnapshotByAddress.delete(cacheKey);
+    }
   };
 
-  const fetchTreasurySnapshot = async (senderAddress) => {
+  const fetchTreasurySnapshot = async (senderAddress, { force = false } = {}) => {
+    const cacheKey = String(senderAddress || '').trim() || String(contractAddress || '').trim();
+    if (!force) {
+      const cached = cachedTreasurySnapshotBySender.get(cacheKey);
+      if (cached && Date.now() < cached.expiresAt) return cached.value;
+
+      const inFlight = inFlightTreasurySnapshotBySender.get(cacheKey);
+      if (inFlight) return inFlight;
+    }
+
+    const requestPromise = (async () => {
     const [treasuryResult, mintFeeResult] = await Promise.allSettled([
       readOnly(senderAddress, 'get-dao-treasury', []),
       readOnly(senderAddress, 'get-pass-mint-fee', [])
@@ -178,11 +218,16 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
       : '';
 
     if (!treasuryAddress) {
-      return {
+      const value = {
         treasuryAddress: '',
         treasuryBalance: '',
         mintFee
       };
+      cachedTreasurySnapshotBySender.set(cacheKey, {
+        value,
+        expiresAt: Date.now() + treasurySnapshotCacheTtlMs
+      });
+      return value;
     }
 
     const treasuryPrincipal = await toSafePrincipal(treasuryAddress);
@@ -194,11 +239,24 @@ export const createFrogDaoNftService = ({ contractAddress, contractName, network
       ? stringifyClarityValue(treasuryBalanceResult[0].value)
       : '';
 
-    return {
+    const value = {
       treasuryAddress,
       treasuryBalance,
       mintFee
     };
+    cachedTreasurySnapshotBySender.set(cacheKey, {
+      value,
+      expiresAt: Date.now() + treasurySnapshotCacheTtlMs
+    });
+    return value;
+    })();
+
+    inFlightTreasurySnapshotBySender.set(cacheKey, requestPromise);
+    try {
+      return await requestPromise;
+    } finally {
+      inFlightTreasurySnapshotBySender.delete(cacheKey);
+    }
   };
 
   const getOwnerByUsername = async (senderAddress, name) => {
