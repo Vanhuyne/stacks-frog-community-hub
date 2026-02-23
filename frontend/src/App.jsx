@@ -55,6 +55,23 @@ const formatPostTime = (value) => {
   }).format(date);
 };
 
+const formatTipAmountFromMicroStx = (value) => {
+  const raw = String(value || '0').trim();
+  if (!/^\d+$/.test(raw)) return '0';
+
+  try {
+    const micro = BigInt(raw);
+    const whole = micro / 1000000n;
+    const frac = micro % 1000000n;
+    if (frac === 0n) return whole.toString();
+
+    const fracText = frac.toString().padStart(6, '0').replace(/0+$/, '');
+    return `${whole.toString()}.${fracText}`;
+  } catch (_) {
+    return '0';
+  }
+};
+
 
 const renderInlineFormatting = (text, keyPrefix = 'part') => {
   const chunks = String(text || '').split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|\[[^\]]+\]\([^\)]+\))/g);
@@ -398,8 +415,8 @@ export default function App() {
     await social.like(postId);
   };
 
-  const tipSocialPost = async (postId, recipient) => {
-    await social.tipPost(postId, recipient);
+  const tipSocialPost = async (postId, recipient, contentHash) => {
+    await social.tipPost(postId, recipient, contentHash);
   };
 
 
@@ -899,12 +916,14 @@ export default function App() {
                         <span className="inline-flex items-center gap-1.5 text-sm text-emerald-900/70">
                           <span aria-hidden="true">❤️</span>
                           <span>{post.likeCount || '0'} likes</span>
+                          <span className="text-emerald-900/45">•</span>
+                          <span>{formatTipAmountFromMicroStx(post.totalTipMicroStx || '0')} STX tipped</span>
                         </span>
                         <div className="flex items-center gap-2">
                           <button
                             className={ghostButtonClass}
                             type="button"
-                            onClick={() => tipSocialPost(post.id, post.author)}
+                            onClick={() => tipSocialPost(post.id, post.author, post.contentHash)}
                             disabled={isOwnPost || isTippingThisPost || !faucet.address || social.isPublishing || social.likingPostId === String(post.id)}
                           >
                             {isTippingThisPost ? 'Tipping...' : isOwnPost ? 'Own post' : `Tip ${socialTipAmountStx} STX`}

@@ -83,6 +83,14 @@ const buildPayload = (text, links, images) => ({
   images
 });
 
+const normalizeTipMicroStx = (value) => {
+  const raw = String(value || '').trim();
+  if (!/^\d+$/.test(raw)) return '0';
+  const amount = BigInt(raw);
+  if (amount <= 0n) return '0';
+  return amount.toString();
+};
+
 const hashPayload = (payload) => {
   return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 };
@@ -167,7 +175,9 @@ app.post('/posts', upload.single('image'), (req, res) => {
     store.postsByHash[contentHash] = {
       ...payload,
       contentHash,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      totalTipMicroStx: '0',
+      tipCount: 0
     };
     writeStore(store);
   } else if (req.file) {
@@ -199,6 +209,44 @@ app.delete('/posts/:hash', (req, res) => {
   return res.json({ ok: true, deleted: existed });
 });
 
+app.post('/tips', (req, res) => {
+  const contentHash = String(req.body?.contentHash || '').trim().toLowerCase();
+  const amountMicroStx = normalizeTipMicroStx(req.body?.amountMicroStx);
+
+  if (!/^[0-9a-f]{64}$/.test(contentHash)) {
+    return res.status(400).json({ error: 'invalid contentHash' });
+  }
+
+  if (amountMicroStx === '0') {
+    return res.status(400).json({ error: 'invalid amountMicroStx' });
+  }
+
+  const store = readStore();
+  const existing = store.postsByHash[contentHash];
+  if (!existing) {
+    return res.status(404).json({ error: 'post not found for contentHash' });
+  }
+
+  const currentTotal = normalizeTipMicroStx(existing.totalTipMicroStx || '0');
+  const nextTotal = (BigInt(currentTotal) + BigInt(amountMicroStx)).toString();
+  const currentCount = Number.parseInt(String(existing.tipCount || 0), 10);
+  const nextCount = Number.isFinite(currentCount) && currentCount >= 0 ? currentCount + 1 : 1;
+
+  store.postsByHash[contentHash] = {
+    ...existing,
+    totalTipMicroStx: nextTotal,
+    tipCount: nextCount
+  };
+  writeStore(store);
+
+  return res.json({
+    ok: true,
+    contentHash,
+    totalTipMicroStx: nextTotal,
+    tipCount: nextCount
+  });
+});
+
 app.get('/posts/by-hash', (req, res) => {
   const raw = String(req.query.hashes || '').trim();
   if (!raw) {
@@ -216,7 +264,12 @@ app.get('/posts/by-hash', (req, res) => {
 
   for (const hash of hashes) {
     if (store.postsByHash[hash]) {
-      posts[hash] = store.postsByHash[hash];
+      const item = store.postsByHash[hash];
+      posts[hash] = {
+        ...item,
+        totalTipMicroStx: normalizeTipMicroStx(item.totalTipMicroStx || '0'),
+        tipCount: Number.parseInt(String(item.tipCount || 0), 10) || 0
+      };
     }
   }
 

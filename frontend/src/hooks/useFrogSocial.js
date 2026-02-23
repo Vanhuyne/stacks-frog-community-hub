@@ -122,7 +122,9 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
           text: '[Off-chain content unavailable]',
           links: [],
           images: [],
-          createdAtIso: ''
+          createdAtIso: '',
+          totalTipMicroStx: '0',
+          tipCount: 0
         };
       }
 
@@ -131,7 +133,9 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
         text: String(offchain.text || ''),
         links: Array.isArray(offchain.links) ? offchain.links : [],
         images: normalizeOffchainImages(offchain.images, apiBaseUrl),
-        createdAtIso: String(offchain.createdAt || '')
+        createdAtIso: String(offchain.createdAt || ''),
+        totalTipMicroStx: String(offchain.totalTipMicroStx || '0'),
+        tipCount: Number.parseInt(String(offchain.tipCount || 0), 10) || 0
       };
     });
 
@@ -270,6 +274,28 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     }
 
     return contentHash;
+  }, [apiBaseUrl]);
+
+  const recordTipOffchain = useCallback(async ({ contentHash, amountMicroStx }) => {
+    if (!apiBaseUrl) return null;
+
+    const hash = String(contentHash || '').toLowerCase();
+    if (hash.length !== 64) return null;
+
+    const amount = String(amountMicroStx || '').trim();
+    if (!/^\d+$/.test(amount)) return null;
+
+    try {
+      const response = await fetch(`${apiBaseUrl.replace(/\/$/, '')}/tips`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contentHash: hash, amountMicroStx: amount })
+      });
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (_) {
+      return null;
+    }
   }, [apiBaseUrl]);
 
   const deleteOffchainPost = useCallback(async (contentHash) => {
@@ -431,7 +457,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     }
   }, [address, hasDaoPass, ready, service, state.likeFee, state.posts, state.viewerBalance, waitForFeedUpdate]);
 
-  const tipPost = useCallback(async (postId, recipient) => {
+  const tipPost = useCallback(async (postId, recipient, contentHash = '') => {
     if (!address) {
       dispatch({ type: 'merge', payload: { status: 'Connect wallet to tip a post.' } });
       return false;
@@ -477,6 +503,24 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     try {
       const memo = `frog-tip-${String(postId)}`;
       await service.tipPostStx({ recipient, amountMicroStx: microAmount, memo });
+
+      const tipSnapshot = await recordTipOffchain({ contentHash, amountMicroStx: microAmount });
+      if (tipSnapshot && typeof tipSnapshot === 'object') {
+        dispatch({
+          type: 'merge',
+          payload: {
+            posts: state.posts.map((item) => {
+              if (String(item.contentHash || '').toLowerCase() !== String(contentHash || '').toLowerCase()) return item;
+              return {
+                ...item,
+                totalTipMicroStx: String(tipSnapshot.totalTipMicroStx || item.totalTipMicroStx || '0'),
+                tipCount: Number.parseInt(String(tipSnapshot.tipCount || item.tipCount || 0), 10) || 0
+              };
+            })
+          }
+        });
+      }
+
       dispatch({ type: 'merge', payload: { status: `Tip submitted (${tipAmountStx} STX).` } });
       toast.success(`Tip sent: ${tipAmountStx} STX`);
       return true;
@@ -488,7 +532,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     } finally {
       dispatch({ type: 'merge', payload: { tippingPostId: '' } });
     }
-  }, [address, hasDaoPass, ready, service, tipAmountStx]);
+  }, [address, hasDaoPass, ready, recordTipOffchain, service, state.posts, tipAmountStx]);
 
   useEffect(() => {
     refresh(10);
