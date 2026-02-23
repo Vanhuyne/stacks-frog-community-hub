@@ -92,6 +92,30 @@ const addMicroStx = (left, right) => {
   }
 };
 
+const normalizeTxId = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  return /^[0-9a-f]{64}$/.test(raw) ? raw : '';
+};
+
+const extractTxId = (result) => {
+  const candidates = [
+    result?.txid,
+    result?.txId,
+    result?.tx_id,
+    result?.result?.txid,
+    result?.result?.txId,
+    result?.result?.tx_id,
+    result
+  ];
+
+  for (const value of candidates) {
+    const txid = normalizeTxId(value);
+    if (txid) return txid;
+  }
+
+  return '';
+};
+
 export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddress, tipsContractName, network, readOnlyBaseUrl, address, enabled, apiBaseUrl, hasDaoPass = false, tipAmountStx = '0.1' }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const refreshInFlightRef = useRef(null);
@@ -316,6 +340,34 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     }
   }, [apiBaseUrl]);
 
+  const createOffchainTipReceipt = useCallback(async ({ contentHash, postId, amountMicroStx, txid }) => {
+    if (!apiBaseUrl) {
+      throw new Error('Missing VITE_SOCIAL_API_BASE_URL for off-chain tip sync.');
+    }
+
+    const baseUrl = apiBaseUrl.replace(/\/$/, '');
+    const response = await fetch(baseUrl + '/tips', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contentHash: String(contentHash || '').toLowerCase(),
+        postId: String(postId || ''),
+        amountMicroStx: String(amountMicroStx || ''),
+        txid: String(txid || '').toLowerCase()
+      })
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error('Off-chain tip sync failed (' + response.status + '): ' + (body || 'unknown error'));
+    }
+
+    return response.json();
+  }, [apiBaseUrl]);
+
+
   const publish = useCallback(async (content, imageFile = null) => {
     const text = String(content || '').trim();
 
@@ -491,6 +543,13 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
       return false;
     }
 
+    const targetPost = state.posts.find((item) => String(item.id) === String(postId));
+    const contentHash = String(targetPost?.contentHash || '').toLowerCase();
+    if (!targetPost || !/^[0-9a-f]{64}$/.test(contentHash)) {
+      dispatch({ type: 'merge', payload: { status: 'Post data unavailable for tip sync. Please refresh and try again.' } });
+      return false;
+    }
+
     const microAmount = toMicroStx(tipAmountStx);
     if (!microAmount) {
       dispatch({ type: 'merge', payload: { status: 'Invalid tip amount configuration.' } });
@@ -502,37 +561,72 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
       type: 'merge',
       payload: {
         tippingPostId: String(postId),
-        status: `Submitting ${tipAmountStx} STX tip transaction...`
+        status: 'Submitting ' + tipAmountStx + ' STX tip transaction...'
       }
     });
 
     try {
-      await service.tipPostStx({ postId, amountMicroStx: microAmount });
+      const onchainResult = await service.tipPostStx({ postId, amountMicroStx: microAmount });
+      const txid = extractTxId(onchainResult);
+      if (!txid) {
+        throw new Error('Tip tx submitted but frontend could not extract txid for /tips sync.');
+      }
+
+      let offchainReceipt = null;
+      let offchainSyncError = '';
+      try {
+        offchainReceipt = await createOffchainTipReceipt({
+          contentHash,
+          postId: String(postId),
+          amountMicroStx: microAmount,
+          txid
+        });
+      } catch (err) {
+        offchainSyncError = String(err?.message || err || 'Unknown off-chain sync error');
+      }
+
       dispatch({
         type: 'merge',
         payload: {
           posts: state.posts.map((item) => {
             if (String(item.id) !== String(postId)) return item;
+
+            if (offchainReceipt && offchainReceipt.totalTipMicroStx !== undefined) {
+              return {
+                ...item,
+                totalTipMicroStx: String(offchainReceipt.totalTipMicroStx || '0'),
+                tipCount: String(offchainReceipt.tipCount || '0')
+              };
+            }
+
             return {
               ...item,
               totalTipMicroStx: addMicroStx(item.totalTipMicroStx || '0', microAmount),
               tipCount: String((Number.parseInt(String(item.tipCount || '0'), 10) || 0) + 1)
             };
           }),
-          status: `Tip submitted (${tipAmountStx} STX).`
+          status: offchainSyncError
+            ? 'Tip sent (' + tipAmountStx + ' STX). On-chain success, but off-chain sync failed: ' + offchainSyncError
+            : 'Tip submitted (' + tipAmountStx + ' STX) and synced.'
         }
       });
-      toast.success(`Tip sent: ${tipAmountStx} STX`);
+
+      if (offchainSyncError) {
+        toast.success('Tip sent: ' + tipAmountStx + ' STX');
+      } else {
+        toast.success('Tip sent and synced: ' + tipAmountStx + ' STX');
+      }
+
       return true;
     } catch (err) {
       const message = String(err?.message || err || 'Unknown error');
-      dispatch({ type: 'merge', payload: { status: `Tip failed: ${message}` } });
+      dispatch({ type: 'merge', payload: { status: 'Tip failed: ' + message } });
       toast.error('Tip transaction failed.');
       return false;
     } finally {
       dispatch({ type: 'merge', payload: { tippingPostId: '' } });
     }
-  }, [address, hasDaoPass, ready, service, state.posts, tipAmountStx]);
+  }, [address, createOffchainTipReceipt, hasDaoPass, ready, service, state.posts, tipAmountStx]);
 
   useEffect(() => {
     if (isDocumentHidden()) return;
