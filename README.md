@@ -4,13 +4,10 @@ FROG Community Hub is a Stacks dApp focused on onboarding and community activity
 
 ## Demo
 
-### Frog Social Demo 01
 ![Frog Social Demo 01](screenshot/frog-social-demo-01.png)
 
-### Frog Social Demo 02
 ![Frog Social Demo 02](screenshot/frog-social-demo-02.png)
 
-### Frog Social Demo 03
 ![Frog Social Demo 03](screenshot/frog-social-demo-03.png)
 
 ## Current Features
