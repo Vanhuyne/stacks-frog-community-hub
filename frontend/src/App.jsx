@@ -256,6 +256,7 @@ export default function App() {
   }, [socialImagePreviewUrl]);
 
   const socialFeed = social.posts || [];
+  const isSocialFeedLoading = social.isRefreshing && socialFeed.length === 0;
 
   const topCreatorsWeekly = useMemo(() => {
     const cutoffTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
@@ -873,7 +874,19 @@ export default function App() {
               </div>
             </div>
 
-            {socialFeed.length > 0 ? (
+            {isSocialFeedLoading ? (
+              <div className="mx-auto grid max-w-3xl gap-4">
+                <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                  <div className="h-4 w-32 animate-pulse rounded bg-emerald-100" />
+                  <div className="mt-4 space-y-2">
+                    <div className="h-3 w-full animate-pulse rounded bg-emerald-100" />
+                    <div className="h-3 w-5/6 animate-pulse rounded bg-emerald-100" />
+                    <div className="h-3 w-4/6 animate-pulse rounded bg-emerald-100" />
+                  </div>
+                  <p className="mt-4 text-sm text-emerald-900/65">Loading posts from chain...</p>
+                </div>
+              </div>
+            ) : socialFeed.length > 0 ? (
               <div className="mx-auto grid max-w-3xl gap-4">
                 {socialFeed.map((post) => {
                   const hasLiked = Boolean(post.hasLikedByViewer);
