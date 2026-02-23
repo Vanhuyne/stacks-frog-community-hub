@@ -12,32 +12,56 @@ const dataDir = path.resolve(process.cwd(), 'data');
 const dataFile = path.join(dataDir, 'posts.json');
 const uploadsDir = path.resolve(process.cwd(), 'uploads');
 
+const backendNetwork = String(process.env.BACKEND_STACKS_NETWORK || process.env.STACKS_NETWORK || 'mainnet').toLowerCase();
+const defaultHiroApiBaseUrl = backendNetwork === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
+const hiroApiBaseUrl = String(process.env.HIRO_API_BASE_URL || defaultHiroApiBaseUrl).trim().replace(/\/$/, '');
+const tipsContractId = String(process.env.TIPS_CONTRACT_ID || '').trim();
+
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const urlRegex = /^https?:\/\//i;
+const txIdRegex = /^[0-9a-f]{64}$/i;
 
 const ensureStore = () => {
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   if (!fs.existsSync(dataFile)) {
-    fs.writeFileSync(dataFile, JSON.stringify({ postsByHash: {} }, null, 2));
+    fs.writeFileSync(dataFile, JSON.stringify({ postsByHash: {}, tipReceiptsByTxId: {} }, null, 2));
   }
+};
+
+const normalizeStore = (input) => {
+  if (!input || typeof input !== 'object') {
+    return { postsByHash: {}, tipReceiptsByTxId: {} };
+  }
+
+  const postsByHash = input.postsByHash && typeof input.postsByHash === 'object'
+    ? input.postsByHash
+    : {};
+
+  const tipReceiptsByTxId = input.tipReceiptsByTxId && typeof input.tipReceiptsByTxId === 'object'
+    ? input.tipReceiptsByTxId
+    : {};
+
+  return {
+    ...input,
+    postsByHash,
+    tipReceiptsByTxId
+  };
 };
 
 const readStore = () => {
   ensureStore();
   try {
     const parsed = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
-    if (!parsed || typeof parsed !== 'object') return { postsByHash: {} };
-    if (!parsed.postsByHash || typeof parsed.postsByHash !== 'object') return { postsByHash: {} };
-    return parsed;
+    return normalizeStore(parsed);
   } catch (_) {
-    return { postsByHash: {} };
+    return { postsByHash: {}, tipReceiptsByTxId: {} };
   }
 };
 
 const writeStore = (store) => {
   ensureStore();
-  fs.writeFileSync(dataFile, JSON.stringify(store, null, 2));
+  fs.writeFileSync(dataFile, JSON.stringify(normalizeStore(store), null, 2));
 };
 
 const safeJsonParse = (value, fallback) => {
@@ -91,6 +115,12 @@ const normalizeTipMicroStx = (value) => {
   return amount.toString();
 };
 
+const normalizePostId = (value) => {
+  const raw = String(value || '').trim();
+  if (!/^\d+$/.test(raw)) return '0';
+  return raw;
+};
+
 const hashPayload = (payload) => {
   return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 };
@@ -114,6 +144,114 @@ const removeUploadedImage = (imageUrl) => {
   } catch (_) {
     // Skip invalid/non-local URLs.
   }
+};
+
+const extractUintFromFunctionArg = (arg) => {
+  const repr = String(arg?.repr || '').trim();
+  const reprMatch = repr.match(/^u(\d+)$/);
+  if (reprMatch) return reprMatch[1];
+
+  const hex = String(arg?.hex || '').trim().toLowerCase();
+  if (!/^0x[0-9a-f]+$/.test(hex)) return null;
+
+  const body = hex.slice(2);
+  if (body.length < 4 || !body.startsWith('01')) return null;
+
+  try {
+    const uintHex = body.slice(2);
+    if (!uintHex) return null;
+    return BigInt(`0x${uintHex}`).toString();
+  } catch (_) {
+    return null;
+  }
+};
+
+const fetchJsonWithTimeout = async (url, timeoutMs = 10000) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json'
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      return { ok: false, error: `hiro request failed (${response.status})` };
+    }
+
+    const payload = await response.json();
+    return { ok: true, payload };
+  } catch (err) {
+    const message = String(err?.message || err || 'unknown hiro error');
+    return { ok: false, error: `hiro request failed (${message})` };
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const verifyTipTxViaHiro = async ({ txid, expectedPostId, expectedAmountMicroStx }) => {
+  if (!tipsContractId) {
+    return { ok: false, error: 'server is missing TIPS_CONTRACT_ID for tip verification' };
+  }
+
+  const txLookup = await fetchJsonWithTimeout(`${hiroApiBaseUrl}/extended/v1/tx/${txid}`);
+  if (!txLookup.ok) return txLookup;
+
+  const payload = txLookup.payload || {};
+  const txStatus = String(payload.tx_status || '').toLowerCase();
+  if (txStatus !== 'success') {
+    return { ok: false, error: `transaction not successful (tx_status=${txStatus || 'unknown'})` };
+  }
+
+  const txType = String(payload.tx_type || '').toLowerCase();
+  if (txType !== 'contract_call') {
+    return { ok: false, error: `invalid transaction type (${txType || 'unknown'})` };
+  }
+
+  const contractCall = payload.contract_call;
+  if (!contractCall || typeof contractCall !== 'object') {
+    return { ok: false, error: 'missing contract_call payload in transaction' };
+  }
+
+  const contractId = String(contractCall.contract_id || '').trim();
+  if (contractId !== tipsContractId) {
+    return { ok: false, error: `tx contract mismatch (expected ${tipsContractId}, got ${contractId || 'unknown'})` };
+  }
+
+  const functionName = String(contractCall.function_name || '').trim();
+  if (functionName !== 'tip-post') {
+    return { ok: false, error: `tx function mismatch (expected tip-post, got ${functionName || 'unknown'})` };
+  }
+
+  const functionArgs = Array.isArray(contractCall.function_args) ? contractCall.function_args : [];
+  if (functionArgs.length < 2) {
+    return { ok: false, error: 'tip-post tx is missing function args' };
+  }
+
+  const txPostId = extractUintFromFunctionArg(functionArgs[0]);
+  const txAmountMicroStx = extractUintFromFunctionArg(functionArgs[1]);
+
+  if (!txPostId || txPostId !== expectedPostId) {
+    return { ok: false, error: `postId mismatch (expected ${expectedPostId}, got ${txPostId || 'unknown'})` };
+  }
+
+  if (!txAmountMicroStx || txAmountMicroStx !== expectedAmountMicroStx) {
+    return {
+      ok: false,
+      error: `amount mismatch (expected ${expectedAmountMicroStx}, got ${txAmountMicroStx || 'unknown'})`
+    };
+  }
+
+  return {
+    ok: true,
+    txStatus,
+    blockHeight: Number(payload.block_height || 0) || 0,
+    txId: String(payload.tx_id || txid).toLowerCase()
+  };
 };
 
 const storage = multer.diskStorage({
@@ -209,22 +347,62 @@ app.delete('/posts/:hash', (req, res) => {
   return res.json({ ok: true, deleted: existed });
 });
 
-app.post('/tips', (req, res) => {
+app.post('/tips', async (req, res) => {
   const contentHash = String(req.body?.contentHash || '').trim().toLowerCase();
+  const postId = normalizePostId(req.body?.postId);
   const amountMicroStx = normalizeTipMicroStx(req.body?.amountMicroStx);
+  const txid = String(req.body?.txid || '').trim().toLowerCase();
 
   if (!/^[0-9a-f]{64}$/.test(contentHash)) {
     return res.status(400).json({ error: 'invalid contentHash' });
+  }
+
+  if (postId === '0') {
+    return res.status(400).json({ error: 'invalid postId' });
   }
 
   if (amountMicroStx === '0') {
     return res.status(400).json({ error: 'invalid amountMicroStx' });
   }
 
+  if (!txIdRegex.test(txid)) {
+    return res.status(400).json({ error: 'invalid txid' });
+  }
+
   const store = readStore();
   const existing = store.postsByHash[contentHash];
   if (!existing) {
     return res.status(404).json({ error: 'post not found for contentHash' });
+  }
+
+  const existingReceipt = store.tipReceiptsByTxId[txid];
+  if (existingReceipt) {
+    const samePayload = String(existingReceipt.contentHash) === contentHash
+      && String(existingReceipt.postId) === postId
+      && String(existingReceipt.amountMicroStx) === amountMicroStx;
+
+    if (!samePayload) {
+      return res.status(409).json({ error: 'txid already processed for another tip payload' });
+    }
+
+    return res.json({
+      ok: true,
+      duplicate: true,
+      txid,
+      contentHash,
+      totalTipMicroStx: normalizeTipMicroStx(existing.totalTipMicroStx || '0'),
+      tipCount: Number.parseInt(String(existing.tipCount || 0), 10) || 0
+    });
+  }
+
+  const verification = await verifyTipTxViaHiro({
+    txid,
+    expectedPostId: postId,
+    expectedAmountMicroStx: amountMicroStx
+  });
+
+  if (!verification.ok) {
+    return res.status(400).json({ error: `tip tx verification failed: ${verification.error}` });
   }
 
   const currentTotal = normalizeTipMicroStx(existing.totalTipMicroStx || '0');
@@ -237,10 +415,20 @@ app.post('/tips', (req, res) => {
     totalTipMicroStx: nextTotal,
     tipCount: nextCount
   };
+
+  store.tipReceiptsByTxId[txid] = {
+    contentHash,
+    postId,
+    amountMicroStx,
+    verifiedAt: new Date().toISOString(),
+    blockHeight: verification.blockHeight || 0
+  };
+
   writeStore(store);
 
   return res.json({
     ok: true,
+    txid,
     contentHash,
     totalTipMicroStx: nextTotal,
     tipCount: nextCount

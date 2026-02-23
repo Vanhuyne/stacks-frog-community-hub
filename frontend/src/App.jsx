@@ -13,8 +13,17 @@ const daoContractAddress = import.meta.env.VITE_DAO_CONTRACT_ADDRESS || contract
 const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-v5';
 const socialContractAddress = import.meta.env.VITE_SOCIAL_CONTRACT_ADDRESS || contractAddress;
 const socialContractName = import.meta.env.VITE_SOCIAL_CONTRACT_NAME || 'frog-social-v1';
-const socialTipsContractAddress = import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_ADDRESS || socialContractAddress;
-const socialTipsContractName = import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_NAME || 'frog-social-tips-v1';
+
+const socialTipsContractId = String(import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_ID || '').trim();
+const socialTipsContractIdParts = socialTipsContractId.split('.');
+const socialTipsContractAddress =
+  socialTipsContractIdParts.length === 2 && socialTipsContractIdParts[0]
+    ? socialTipsContractIdParts[0]
+    : (import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_ADDRESS || socialContractAddress);
+const socialTipsContractName =
+  socialTipsContractIdParts.length === 2 && socialTipsContractIdParts[1]
+    ? socialTipsContractIdParts[1]
+    : (import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_NAME || 'frog-social-tips-v1');
 const socialTipAmountStx = import.meta.env.VITE_SOCIAL_TIP_STX || '0.1';
 
 const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
