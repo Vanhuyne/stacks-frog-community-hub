@@ -193,7 +193,7 @@ export default function App() {
     network,
     readOnlyBaseUrl,
     address: faucet.address,
-    enabled: activeTab === 'dao-nft' || activeTab === 'admin'
+    enabled: activeTab === 'dao-nft' || activeTab === 'admin' || activeTab === 'social'
   });
 
   const social = useFrogSocial({
