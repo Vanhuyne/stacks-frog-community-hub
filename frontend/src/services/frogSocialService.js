@@ -325,11 +325,23 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     inFlightHasLikedByKey.clear();
     return response;
   };
+  const tipPostStx = async ({ recipient, amountMicroStx, memo = '' }) => {
+    const { request } = await loadConnectModule();
+
+    return request('stx_transferStx', {
+      recipient: String(recipient || '').trim(),
+      amount: String(amountMicroStx || '0'),
+      memo: String(memo || '').slice(0, 34),
+      network
+    });
+  };
+
 
   return {
     fetchFeed,
     fetchLastPostId,
     publishPost,
-    likePost
+    likePost,
+    tipPostStx
   };
 };

@@ -27,7 +27,8 @@ const initialState = {
   status: '',
   isRefreshing: false,
   isPublishing: false,
-  likingPostId: ''
+  likingPostId: '',
+  tippingPostId: ''
 };
 
 const reducer = (state, action) => {
@@ -69,7 +70,18 @@ const joinHashesForQuery = (hashes) => {
     .join(',');
 };
 
-export const useFrogSocial = ({ contractAddress, contractName, network, readOnlyBaseUrl, address, enabled, apiBaseUrl, hasDaoPass = false }) => {
+const toMicroStx = (amountStx) => {
+  const raw = String(amountStx || '').trim();
+  if (!/^\d+(\.\d{1,6})?$/.test(raw)) return null;
+
+  const [whole, frac = ''] = raw.split('.');
+  const wholePart = BigInt(whole || '0') * 1000000n;
+  const fracPart = BigInt((frac + '000000').slice(0, 6));
+  const micro = wholePart + fracPart;
+  return micro > 0n ? micro.toString() : null;
+};
+
+export const useFrogSocial = ({ contractAddress, contractName, network, readOnlyBaseUrl, address, enabled, apiBaseUrl, hasDaoPass = false, tipAmountStx = '0.1' }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const service = useMemo(
@@ -419,6 +431,65 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     }
   }, [address, hasDaoPass, ready, service, state.likeFee, state.posts, state.viewerBalance, waitForFeedUpdate]);
 
+  const tipPost = useCallback(async (postId, recipient) => {
+    if (!address) {
+      dispatch({ type: 'merge', payload: { status: 'Connect wallet to tip a post.' } });
+      return false;
+    }
+
+    if (!ready) {
+      dispatch({ type: 'merge', payload: { status: 'Missing social contract configuration.' } });
+      return false;
+    }
+
+    if (!postId || !recipient) {
+      dispatch({ type: 'merge', payload: { status: 'Invalid tip target.' } });
+      return false;
+    }
+
+    if (!hasDaoPass) {
+      const message = 'DAO Pass is required to tip posts. Go to the Frog DAO Pass tab to mint your pass first.';
+      dispatch({ type: 'merge', payload: { status: message } });
+      toast.error('DAO Pass required. Open Frog DAO Pass tab first.');
+      return false;
+    }
+
+    if (String(recipient) === String(address)) {
+      dispatch({ type: 'merge', payload: { status: 'You cannot tip your own post.' } });
+      return false;
+    }
+
+    const microAmount = toMicroStx(tipAmountStx);
+    if (!microAmount) {
+      dispatch({ type: 'merge', payload: { status: 'Invalid tip amount configuration.' } });
+      toast.error('Invalid tip amount configuration.');
+      return false;
+    }
+
+    dispatch({
+      type: 'merge',
+      payload: {
+        tippingPostId: String(postId),
+        status: `Submitting ${tipAmountStx} STX tip transaction...`
+      }
+    });
+
+    try {
+      const memo = `frog-tip-${String(postId)}`;
+      await service.tipPostStx({ recipient, amountMicroStx: microAmount, memo });
+      dispatch({ type: 'merge', payload: { status: `Tip submitted (${tipAmountStx} STX).` } });
+      toast.success(`Tip sent: ${tipAmountStx} STX`);
+      return true;
+    } catch (err) {
+      const message = String(err?.message || err || 'Unknown error');
+      dispatch({ type: 'merge', payload: { status: `Tip failed: ${message}` } });
+      toast.error('Tip transaction failed.');
+      return false;
+    } finally {
+      dispatch({ type: 'merge', payload: { tippingPostId: '' } });
+    }
+  }, [address, hasDaoPass, ready, service, tipAmountStx]);
+
   useEffect(() => {
     refresh(10);
   }, [refresh]);
@@ -428,6 +499,7 @@ export const useFrogSocial = ({ contractAddress, contractName, network, readOnly
     ready,
     refresh,
     publish,
-    like
+    like,
+    tipPost
   };
 };

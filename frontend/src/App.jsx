@@ -13,6 +13,7 @@ const daoContractAddress = import.meta.env.VITE_DAO_CONTRACT_ADDRESS || contract
 const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-v5';
 const socialContractAddress = import.meta.env.VITE_SOCIAL_CONTRACT_ADDRESS || contractAddress;
 const socialContractName = import.meta.env.VITE_SOCIAL_CONTRACT_NAME || 'frog-social-v1';
+const socialTipAmountStx = import.meta.env.VITE_SOCIAL_TIP_STX || '0.1';
 
 const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
 const defaultHiroApiBaseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
@@ -186,7 +187,8 @@ export default function App() {
     address: faucet.address,
     enabled: activeTab === 'social',
     apiBaseUrl: import.meta.env.VITE_SOCIAL_API_BASE_URL || '',
-    hasDaoPass: dao.hasPass
+    hasDaoPass: dao.hasPass,
+    tipAmountStx: socialTipAmountStx
   });
 
   const ecosystemApps = useMemo(() => {
@@ -394,6 +396,10 @@ export default function App() {
 
   const likeSocialPost = async (postId) => {
     await social.like(postId);
+  };
+
+  const tipSocialPost = async (postId, recipient) => {
+    await social.tipPost(postId, recipient);
   };
 
 
@@ -828,7 +834,7 @@ export default function App() {
                   </div>
                 )}
               </div>
-              <p className="mt-4 text-xs text-emerald-900/60">Fees: Publish {social.postFee || '50'} FROG, Like {social.likeFee || '5'} FROG. Treasury: {shortenAddress(social.treasury)}</p>
+              <p className="mt-4 text-xs text-emerald-900/60">Fees: Publish {social.postFee || '50'} FROG, Like {social.likeFee || '5'} FROG. Tip: {socialTipAmountStx} STX. Treasury: {shortenAddress(social.treasury)}</p>
             </div>
           </header>
 
@@ -840,7 +846,7 @@ export default function App() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-full border border-emerald-700/20 bg-white px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
-                <button className={ghostButtonClass} onClick={() => social.refresh(20)} disabled={!social.ready || social.isRefreshing || social.isPublishing || Boolean(social.likingPostId)}>
+                <button className={ghostButtonClass} onClick={() => social.refresh(20)} disabled={!social.ready || social.isRefreshing || social.isPublishing || Boolean(social.likingPostId) || Boolean(social.tippingPostId)}>
                   {social.isRefreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
               </div>
@@ -851,6 +857,7 @@ export default function App() {
                 {socialFeed.map((post) => {
                   const hasLiked = Boolean(post.hasLikedByViewer);
                   const isOwnPost = Boolean(faucet.address && post.author === faucet.address);
+                  const isTippingThisPost = social.tippingPostId === String(post.id);
                   return (
                     <article key={post.id} className="overflow-hidden rounded-3xl border border-emerald-900/15 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                       <div className="flex items-center justify-between border-b border-emerald-900/10 px-4 py-3">
@@ -893,14 +900,24 @@ export default function App() {
                           <span aria-hidden="true">❤️</span>
                           <span>{post.likeCount || '0'} likes</span>
                         </span>
-                        <button
-                          className={hasLiked ? ghostButtonClass : primaryButtonClass}
-                          type="button"
-                          onClick={() => likeSocialPost(post.id)}
-                          disabled={hasLiked || isOwnPost || social.likingPostId === String(post.id) || !faucet.address}
-                        >
-                          {social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : isOwnPost ? 'Own post' : `Like (${social.likeFee || '5'} FROG)`}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className={ghostButtonClass}
+                            type="button"
+                            onClick={() => tipSocialPost(post.id, post.author)}
+                            disabled={isOwnPost || isTippingThisPost || !faucet.address || social.isPublishing || social.likingPostId === String(post.id)}
+                          >
+                            {isTippingThisPost ? 'Tipping...' : isOwnPost ? 'Own post' : `Tip ${socialTipAmountStx} STX`}
+                          </button>
+                          <button
+                            className={hasLiked ? ghostButtonClass : primaryButtonClass}
+                            type="button"
+                            onClick={() => likeSocialPost(post.id)}
+                            disabled={hasLiked || isOwnPost || social.likingPostId === String(post.id) || !faucet.address || isTippingThisPost}
+                          >
+                            {social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : isOwnPost ? 'Own post' : `Like (${social.likeFee || '5'} FROG)`}
+                          </button>
+                        </div>
                       </div>
                     </article>
                   );
