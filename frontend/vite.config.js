@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const hiroTarget =
     env.VITE_HIRO_PROXY_TARGET ||
     (stacksNetwork === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so');
+  const hiroApiKey = String(env.HIRO_API_KEY || '').trim();
 
   return {
     plugins: [react()],
@@ -17,6 +18,7 @@ export default defineConfig(({ mode }) => {
           target: hiroTarget,
           changeOrigin: true,
           secure: true,
+          headers: hiroApiKey ? { 'x-api-key': hiroApiKey } : undefined,
           rewrite: (path) => path.replace(/^\/hiro/, '')
         }
       }

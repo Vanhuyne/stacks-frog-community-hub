@@ -122,13 +122,19 @@ export const createFrogSocialService = ({
   const cachedPostsById = new Map();
   const cachedHasLikedByKey = new Map();
   const cachedTipStatsByPostId = new Map();
+  const cachedFrogBalanceByAddress = new Map();
   const inFlightPostById = new Map();
   const inFlightHasLikedByKey = new Map();
   const inFlightTipStatsByPostId = new Map();
+  const inFlightFrogBalanceByAddress = new Map();
   const hasLikedCacheTtlMs = 30_000;
   const postCacheTtlMs = 8_000;
   const tipStatsCacheTtlMs = 6_000;
+  const frogBalanceCacheTtlMs = 12_000;
+  const configCacheTtlMs = 12_000;
   let tipsUnavailable = false;
+  let cachedConfigEntry = null;
+  let inFlightConfigPromise = null;
 
   const minReadIntervalMs = 120;
   let nextReadSlotAt = 0;
@@ -197,20 +203,40 @@ export const createFrogSocialService = ({
     });
   };
 
-  const fetchConfig = async (senderAddress) => {
-    const configRaw = await readOnly(senderAddress, 'get-social-config', []);
-    const configTuple = normalizeObject(configRaw);
+  const fetchConfig = async (senderAddress, { force = false } = {}) => {
+    if (!force && cachedConfigEntry && Date.now() < cachedConfigEntry.expiresAt) {
+      return cachedConfigEntry.value;
+    }
 
-    return {
-      treasury: stringifyClarityValue(getTupleField(configTuple, ['treasury'])),
-      postFee: stringifyClarityValue(getTupleField(configTuple, ['post-fee', 'post_fee', 'postFee'])),
-      likeFee: stringifyClarityValue(getTupleField(configTuple, ['like-fee', 'like_fee', 'likeFee'])),
-      lastPostId: stringifyClarityValue(getTupleField(configTuple, ['last-post-id', 'last_post_id', 'lastPostId']))
-    };
+    if (!force && inFlightConfigPromise) {
+      return inFlightConfigPromise;
+    }
+
+    const requestPromise = (async () => {
+      const configRaw = await readOnly(senderAddress, 'get-social-config', []);
+      const configTuple = normalizeObject(configRaw);
+
+      const value = {
+        treasury: stringifyClarityValue(getTupleField(configTuple, ['treasury'])),
+        postFee: stringifyClarityValue(getTupleField(configTuple, ['post-fee', 'post_fee', 'postFee'])),
+        likeFee: stringifyClarityValue(getTupleField(configTuple, ['like-fee', 'like_fee', 'likeFee'])),
+        lastPostId: stringifyClarityValue(getTupleField(configTuple, ['last-post-id', 'last_post_id', 'lastPostId']))
+      };
+
+      cachedConfigEntry = { value, expiresAt: Date.now() + configCacheTtlMs };
+      return value;
+    })();
+
+    inFlightConfigPromise = requestPromise;
+    try {
+      return await requestPromise;
+    } finally {
+      inFlightConfigPromise = null;
+    }
   };
 
-  const fetchLastPostId = async (senderAddress) => {
-    const config = await fetchConfig(senderAddress);
+  const fetchLastPostId = async (senderAddress, options = {}) => {
+    const config = await fetchConfig(senderAddress, options);
     return String(config.lastPostId || '0');
   };
 
@@ -316,9 +342,27 @@ export const createFrogSocialService = ({
 
   const fetchUserBalance = async (senderAddress, who) => {
     if (!isLikelyPrincipal(who)) return '';
-    const { Cl } = await loadTransactionsModule();
-    const value = await readOnly(senderAddress, 'get-frog-balance', [Cl.standardPrincipal(who)]);
-    return stringifyClarityValue(value);
+    const cacheKey = String(who).trim();
+    const cached = cachedFrogBalanceByAddress.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) return cached.value;
+
+    const inFlight = inFlightFrogBalanceByAddress.get(cacheKey);
+    if (inFlight) return inFlight;
+
+    const requestPromise = (async () => {
+      const { Cl } = await loadTransactionsModule();
+      const value = await readOnly(senderAddress, 'get-frog-balance', [Cl.standardPrincipal(who)]);
+      const parsed = stringifyClarityValue(value);
+      cachedFrogBalanceByAddress.set(cacheKey, { value: parsed, expiresAt: Date.now() + frogBalanceCacheTtlMs });
+      return parsed;
+    })();
+
+    inFlightFrogBalanceByAddress.set(cacheKey, requestPromise);
+    try {
+      return await requestPromise;
+    } finally {
+      inFlightFrogBalanceByAddress.delete(cacheKey);
+    }
   };
 
   const fetchFeed = async ({ senderAddress, viewerAddress, limit = 10 }) => {
@@ -391,9 +435,13 @@ export const createFrogSocialService = ({
     cachedPostsById.clear();
     cachedHasLikedByKey.clear();
     cachedTipStatsByPostId.clear();
+    cachedFrogBalanceByAddress.clear();
+    cachedConfigEntry = null;
+    inFlightConfigPromise = null;
     inFlightPostById.clear();
     inFlightHasLikedByKey.clear();
     inFlightTipStatsByPostId.clear();
+    inFlightFrogBalanceByAddress.clear();
     return response;
   };
 
@@ -410,7 +458,10 @@ export const createFrogSocialService = ({
 
     cachedPostsById.delete(String(postId));
     cachedHasLikedByKey.clear();
+    cachedFrogBalanceByAddress.clear();
+    cachedConfigEntry = null;
     inFlightHasLikedByKey.clear();
+    inFlightFrogBalanceByAddress.clear();
     return response;
   };
 

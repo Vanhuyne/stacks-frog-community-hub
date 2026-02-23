@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { createFrogSocialService } from '../services/frogSocialService';
 
@@ -16,6 +16,7 @@ const parseRateLimitWaitMs = (err) => {
 };
 const linkRegex = /https?:\/\/[^\s)]+/gi;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const isDocumentHidden = () => typeof document !== 'undefined' && Boolean(document.hidden);
 
 const initialState = {
   postFee: '50',
@@ -93,6 +94,7 @@ const addMicroStx = (left, right) => {
 
 export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddress, tipsContractName, network, readOnlyBaseUrl, address, enabled, apiBaseUrl, hasDaoPass = false, tipAmountStx = '0.1' }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const refreshInFlightRef = useRef(null);
 
   const service = useMemo(
     () => createFrogSocialService({ contractAddress, contractName, tipsContractAddress, tipsContractName, network, readOnlyBaseUrl }),
@@ -157,61 +159,72 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
 
   const refresh = useCallback(async (limit = 10) => {
     if (!ready) return;
+    if (refreshInFlightRef.current) return refreshInFlightRef.current;
 
     const sender = address || contractAddress;
-    dispatch({ type: 'merge', payload: { isRefreshing: true } });
 
-    try {
-      let attempt = 0;
-      const maxAttempts = 2;
+    const runRefresh = (async () => {
+      dispatch({ type: 'merge', payload: { isRefreshing: true } });
 
-      while (attempt < maxAttempts) {
-        try {
-          const feedLimit = attempt === 0 ? limit : Math.min(limit, 6);
-          const feed = await service.fetchFeed({ senderAddress: sender, viewerAddress: address, limit: feedLimit });
-          const hydrated = await hydrateFeedWithOffchain(feed);
-          dispatch({
-            type: 'merge',
-            payload: {
-              postFee: hydrated.config.postFee || '50',
-              likeFee: hydrated.config.likeFee || '5',
-              treasury: hydrated.config.treasury || '',
-              lastPostId: hydrated.config.lastPostId || '0',
-              viewerBalance: hydrated.viewerBalance || '',
-              posts: hydrated.posts,
-              status: attempt > 0 ? 'Social feed synced after rate-limit cooldown.' : ''
-            }
-          });
-          return;
-        } catch (err) {
-          const isLastAttempt = attempt === maxAttempts - 1;
-          if (!isRateLimitedError(err) || isLastAttempt) {
-            if (isRateLimitedError(err)) {
-              const waitMs = parseRateLimitWaitMs(err);
-              const waitSec = Math.max(1, Math.round(waitMs / 1000));
-              dispatch({
-                type: 'merge',
-                payload: { status: `Hiro API đang quá tải (429). Vui lòng thử lại sau khoảng ${waitSec} giây.` }
-              });
-            } else {
-              dispatch({ type: 'merge', payload: { status: `Social feed read failed: ${err?.message || err}` } });
-            }
+      try {
+        let attempt = 0;
+        const maxAttempts = 2;
+
+        while (attempt < maxAttempts) {
+          try {
+            const feedLimit = attempt === 0 ? limit : Math.min(limit, 6);
+            const feed = await service.fetchFeed({ senderAddress: sender, viewerAddress: address, limit: feedLimit });
+            const hydrated = await hydrateFeedWithOffchain(feed);
+            dispatch({
+              type: 'merge',
+              payload: {
+                postFee: hydrated.config.postFee || '50',
+                likeFee: hydrated.config.likeFee || '5',
+                treasury: hydrated.config.treasury || '',
+                lastPostId: hydrated.config.lastPostId || '0',
+                viewerBalance: hydrated.viewerBalance || '',
+                posts: hydrated.posts,
+                status: attempt > 0 ? 'Social feed synced after rate-limit cooldown.' : ''
+              }
+            });
             return;
+          } catch (err) {
+            const isLastAttempt = attempt === maxAttempts - 1;
+            if (!isRateLimitedError(err) || isLastAttempt) {
+              if (isRateLimitedError(err)) {
+                const waitMs = parseRateLimitWaitMs(err);
+                const waitSec = Math.max(1, Math.round(waitMs / 1000));
+                dispatch({
+                  type: 'merge',
+                  payload: { status: `Hiro API đang quá tải (429). Vui lòng thử lại sau khoảng ${waitSec} giây.` }
+                });
+              } else {
+                dispatch({ type: 'merge', payload: { status: `Social feed read failed: ${err?.message || err}` } });
+              }
+              return;
+            }
+
+            const waitMs = parseRateLimitWaitMs(err);
+            const waitSec = Math.max(1, Math.round(waitMs / 1000));
+            dispatch({
+              type: 'merge',
+              payload: { status: `Hiro API đang giới hạn request. Tự động thử lại sau ${waitSec} giây...` }
+            });
+            await sleep(waitMs);
           }
 
-          const waitMs = parseRateLimitWaitMs(err);
-          const waitSec = Math.max(1, Math.round(waitMs / 1000));
-          dispatch({
-            type: 'merge',
-            payload: { status: `Hiro API đang giới hạn request. Tự động thử lại sau ${waitSec} giây...` }
-          });
-          await sleep(waitMs);
+          attempt += 1;
         }
-
-        attempt += 1;
+      } finally {
+        dispatch({ type: 'merge', payload: { isRefreshing: false } });
       }
+    })();
+
+    refreshInFlightRef.current = runRefresh;
+    try {
+      return await runRefresh;
     } finally {
-      dispatch({ type: 'merge', payload: { isRefreshing: false } });
+      refreshInFlightRef.current = null;
     }
   }, [address, contractAddress, hydrateFeedWithOffchain, ready, service]);
 
@@ -226,6 +239,11 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     }
 
     for (let attempt = 0; attempt < 30; attempt += 1) {
+      if (isDocumentHidden()) {
+        await sleep(3000);
+        continue;
+      }
+
       try {
         const currentLastId = await service.fetchLastPostId(sender);
         const shouldStop = currentLastId === nextExpectedLastId || Number(currentLastId) >= Number(nextExpectedLastId);
@@ -517,7 +535,23 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
   }, [address, hasDaoPass, ready, service, state.posts, tipAmountStx]);
 
   useEffect(() => {
+    if (isDocumentHidden()) return;
     refresh(10);
+  }, [refresh]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refresh(10);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [refresh]);
 
   return {

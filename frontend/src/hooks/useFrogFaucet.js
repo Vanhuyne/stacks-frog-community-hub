@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { createFrogContractService } from '../services/frogContractService';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const LAST_CONNECTED_WALLET_KEY = 'frog:last-connected-wallet';
 
 const initialState = {
   address: '',
@@ -116,6 +117,12 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
         return;
       }
 
+      try {
+        localStorage.setItem(LAST_CONNECTED_WALLET_KEY, address);
+      } catch (_) {
+        // Ignore storage write errors (private mode, disabled storage, etc.).
+      }
+
       dispatch({ type: 'merge', payload: { address, status: 'Wallet connected.' } });
       await refreshData(address);
     } catch (err) {
@@ -127,6 +134,11 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
 
   const disconnectWallet = useCallback(() => {
     service.disconnectWallet();
+    try {
+      localStorage.removeItem(LAST_CONNECTED_WALLET_KEY);
+    } catch (_) {
+      // Ignore storage remove errors.
+    }
     dispatch({ type: 'resetWallet' });
     dispatch({ type: 'merge', payload: { status: 'Disconnected.' } });
   }, [service]);
@@ -280,8 +292,23 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
 
     const restoreAddress = async () => {
       try {
+        const localAddress = localStorage.getItem(LAST_CONNECTED_WALLET_KEY) || '';
+        if (mounted && localAddress) {
+          dispatch({ type: 'merge', payload: { address: localAddress } });
+          return;
+        }
+      } catch (_) {
+        // skip local fallback and continue with connector storage
+      }
+
+      try {
         const storedAddress = await service.getStoredAddress();
         if (mounted && storedAddress) {
+          try {
+            localStorage.setItem(LAST_CONNECTED_WALLET_KEY, storedAddress);
+          } catch (_) {
+            // Ignore storage write errors.
+          }
           dispatch({ type: 'merge', payload: { address: storedAddress } });
         }
       } catch (_) {
