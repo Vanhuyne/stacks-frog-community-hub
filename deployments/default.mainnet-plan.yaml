@@ -22,4 +22,11 @@ plan:
             path: contracts/frog-social-v1.clar
             anchor-block-only: true
             clarity-version: 3
+        - contract-publish:
+            contract-name: frog-social-tips-v1
+            expected-sender: SP18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4EFYJMNW
+            cost: 49800
+            path: contracts/frog-social-tips-v1.clar
+            anchor-block-only: true
+            clarity-version: 3
       epoch: "3.3"

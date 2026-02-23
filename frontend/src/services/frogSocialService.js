@@ -105,14 +105,30 @@ const toSafeInt = (value) => {
   }
 };
 
-export const createFrogSocialService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
+export const createFrogSocialService = ({
+  contractAddress,
+  contractName,
+  tipsContractAddress,
+  tipsContractName,
+  network,
+  readOnlyBaseUrl
+}) => {
   const isLikelyPrincipal = (value) => /^S[PT][A-Z0-9]{39}$/.test(String(value || '').trim());
+  const socialAddress = String(contractAddress || '').trim();
+  const socialName = String(contractName || '').trim();
+  const tipsAddress = String(tipsContractAddress || contractAddress || '').trim();
+  const tipsName = String(tipsContractName || 'frog-social-tips-v1').trim();
+
   const cachedPostsById = new Map();
   const cachedHasLikedByKey = new Map();
+  const cachedTipStatsByPostId = new Map();
   const inFlightPostById = new Map();
   const inFlightHasLikedByKey = new Map();
+  const inFlightTipStatsByPostId = new Map();
   const hasLikedCacheTtlMs = 30_000;
   const postCacheTtlMs = 8_000;
+  const tipStatsCacheTtlMs = 6_000;
+  let tipsUnavailable = false;
 
   const minReadIntervalMs = 120;
   let nextReadSlotAt = 0;
@@ -125,13 +141,13 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     nextReadSlotAt = Date.now() + minReadIntervalMs;
   };
 
-  const readOnly = async (senderAddress, functionName, functionArgs = []) => {
+  const readOnlyCall = async ({ targetAddress, targetName, senderAddress, functionName, functionArgs = [] }) => {
     const { cvToValue, fetchCallReadOnlyFunction } = await loadTransactionsModule();
     const client = readOnlyBaseUrl ? { baseUrl: readOnlyBaseUrl } : undefined;
     const normalizedSender = String(senderAddress || '').trim();
     const safeSender = isLikelyPrincipal(normalizedSender)
       ? normalizedSender
-      : String(contractAddress || '').trim();
+      : String(targetAddress || '').trim();
 
     const maxAttempts = 3;
 
@@ -140,8 +156,8 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
         await waitForReadSlot();
 
         const result = await fetchCallReadOnlyFunction({
-          contractAddress,
-          contractName,
+          contractAddress: targetAddress,
+          contractName: targetName,
           functionName,
           functionArgs,
           senderAddress: safeSender,
@@ -159,6 +175,26 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     }
 
     throw new Error('Read-only request failed unexpectedly.');
+  };
+
+  const readOnly = async (senderAddress, functionName, functionArgs = []) => {
+    return readOnlyCall({
+      targetAddress: socialAddress,
+      targetName: socialName,
+      senderAddress,
+      functionName,
+      functionArgs
+    });
+  };
+
+  const tipReadOnly = async (senderAddress, functionName, functionArgs = []) => {
+    return readOnlyCall({
+      targetAddress: tipsAddress,
+      targetName: tipsName,
+      senderAddress,
+      functionName,
+      functionArgs
+    });
   };
 
   const fetchConfig = async (senderAddress) => {
@@ -237,6 +273,47 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     }
   };
 
+  const fetchPostTipStats = async (senderAddress, postId) => {
+    if (tipsUnavailable) return { totalTipMicroStx: '0', tipCount: '0' };
+
+    const cacheKey = String(postId);
+    const cached = cachedTipStatsByPostId.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) return cached.value;
+
+    const inFlight = inFlightTipStatsByPostId.get(cacheKey);
+    if (inFlight) return inFlight;
+
+    const requestPromise = (async () => {
+      const { Cl } = await loadTransactionsModule();
+      let statsRaw;
+      try {
+        statsRaw = await tipReadOnly(senderAddress, 'get-post-tip-stats', [Cl.uint(BigInt(postId))]);
+      } catch (err) {
+        const message = String(err?.message || err || '').toLowerCase();
+        if (message.includes('contract') && message.includes('not')) {
+          tipsUnavailable = true;
+          return { totalTipMicroStx: '0', tipCount: '0' };
+        }
+        throw err;
+      }
+
+      const tuple = normalizeObject(statsRaw);
+      const value = {
+        totalTipMicroStx: stringifyClarityValue(getTupleField(tuple, ['total-tip-ustx', 'total_tip_ustx', 'totalTipUstx'])),
+        tipCount: stringifyClarityValue(getTupleField(tuple, ['tip-count', 'tip_count', 'tipCount']))
+      };
+      cachedTipStatsByPostId.set(cacheKey, { value, expiresAt: Date.now() + tipStatsCacheTtlMs });
+      return value;
+    })();
+
+    inFlightTipStatsByPostId.set(cacheKey, requestPromise);
+    try {
+      return await requestPromise;
+    } finally {
+      inFlightTipStatsByPostId.delete(cacheKey);
+    }
+  };
+
   const fetchUserBalance = async (senderAddress, who) => {
     if (!isLikelyPrincipal(who)) return '';
     const { Cl } = await loadTransactionsModule();
@@ -271,10 +348,19 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
           }
         }
 
+        let tipStats = { totalTipMicroStx: '0', tipCount: '0' };
+        try {
+          tipStats = await fetchPostTipStats(senderAddress, id);
+        } catch (_) {
+          tipStats = { totalTipMicroStx: '0', tipCount: '0' };
+        }
+
         posts.push({
           ...post,
           likeCount: String(post.likeCount || '0'),
-          hasLikedByViewer
+          hasLikedByViewer,
+          totalTipMicroStx: String(tipStats.totalTipMicroStx || '0'),
+          tipCount: String(tipStats.tipCount || '0')
         });
       } catch (err) {
         if (isRateLimitedError(err)) break;
@@ -295,7 +381,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     const { request } = await loadConnectModule();
     const { Cl } = await loadTransactionsModule();
     const response = await request('stx_callContract', {
-      contract: `${contractAddress}.${contractName}`,
+      contract: `${socialAddress}.${socialName}`,
       functionName: 'publish-post',
       functionArgs: [Cl.stringAscii(contentHash)],
       postConditionMode: 'allow',
@@ -304,8 +390,10 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
 
     cachedPostsById.clear();
     cachedHasLikedByKey.clear();
+    cachedTipStatsByPostId.clear();
     inFlightPostById.clear();
     inFlightHasLikedByKey.clear();
+    inFlightTipStatsByPostId.clear();
     return response;
   };
 
@@ -313,7 +401,7 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     const { request } = await loadConnectModule();
     const { Cl } = await loadTransactionsModule();
     const response = await request('stx_callContract', {
-      contract: `${contractAddress}.${contractName}`,
+      contract: `${socialAddress}.${socialName}`,
       functionName: 'like-post',
       functionArgs: [Cl.uint(BigInt(postId))],
       postConditionMode: 'allow',
@@ -325,17 +413,22 @@ export const createFrogSocialService = ({ contractAddress, contractName, network
     inFlightHasLikedByKey.clear();
     return response;
   };
-  const tipPostStx = async ({ recipient, amountMicroStx, memo = '' }) => {
-    const { request } = await loadConnectModule();
 
-    return request('stx_transferStx', {
-      recipient: String(recipient || '').trim(),
-      amount: String(amountMicroStx || '0'),
-      memo: String(memo || '').slice(0, 34),
+  const tipPostStx = async ({ postId, amountMicroStx }) => {
+    const { request } = await loadConnectModule();
+    const { Cl } = await loadTransactionsModule();
+    const response = await request('stx_callContract', {
+      contract: `${tipsAddress}.${tipsName}`,
+      functionName: 'tip-post',
+      functionArgs: [Cl.uint(BigInt(postId)), Cl.uint(BigInt(amountMicroStx))],
+      postConditionMode: 'allow',
       network
     });
-  };
 
+    cachedTipStatsByPostId.delete(String(postId));
+    inFlightTipStatsByPostId.delete(String(postId));
+    return response;
+  };
 
   return {
     fetchFeed,

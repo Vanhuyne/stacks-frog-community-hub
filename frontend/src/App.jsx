@@ -13,6 +13,8 @@ const daoContractAddress = import.meta.env.VITE_DAO_CONTRACT_ADDRESS || contract
 const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-v5';
 const socialContractAddress = import.meta.env.VITE_SOCIAL_CONTRACT_ADDRESS || contractAddress;
 const socialContractName = import.meta.env.VITE_SOCIAL_CONTRACT_NAME || 'frog-social-v1';
+const socialTipsContractAddress = import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_ADDRESS || socialContractAddress;
+const socialTipsContractName = import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_NAME || 'frog-social-tips-v1';
 const socialTipAmountStx = import.meta.env.VITE_SOCIAL_TIP_STX || '0.1';
 
 const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
@@ -199,6 +201,8 @@ export default function App() {
   const social = useFrogSocial({
     contractAddress: socialContractAddress,
     contractName: socialContractName,
+    tipsContractAddress: socialTipsContractAddress,
+    tipsContractName: socialTipsContractName,
     network,
     readOnlyBaseUrl,
     address: faucet.address,
@@ -415,8 +419,8 @@ export default function App() {
     await social.like(postId);
   };
 
-  const tipSocialPost = async (postId, recipient, contentHash) => {
-    await social.tipPost(postId, recipient, contentHash);
+  const tipSocialPost = async (postId, recipient) => {
+    await social.tipPost(postId, recipient);
   };
 
 
@@ -923,7 +927,7 @@ export default function App() {
                           <button
                             className={ghostButtonClass}
                             type="button"
-                            onClick={() => tipSocialPost(post.id, post.author, post.contentHash)}
+                            onClick={() => tipSocialPost(post.id, post.author)}
                             disabled={isOwnPost || isTippingThisPost || !faucet.address || social.isPublishing || social.likingPostId === String(post.id)}
                           >
                             {isTippingThisPost ? 'Tipping...' : isOwnPost ? 'Own post' : `Tip ${socialTipAmountStx} STX`}
