@@ -257,6 +257,7 @@ export default function App() {
 
   const socialFeed = social.posts || [];
   const isSocialFeedLoading = social.isRefreshing && socialFeed.length === 0;
+  const isSocialActionLocked = social.isRefreshing || social.isPublishing || Boolean(social.likingPostId) || Boolean(social.tippingPostId);
 
   const topCreatorsWeekly = useMemo(() => {
     const cutoffTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
@@ -829,7 +830,7 @@ export default function App() {
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs text-emerald-900/60">{socialPostInput.length}/500 characters</p>
-                <button className={primaryButtonClass} onClick={createSocialPost} disabled={!faucet.address || !social.ready || social.isPublishing}>
+                <button className={primaryButtonClass} onClick={createSocialPost} disabled={!faucet.address || !social.ready || isSocialActionLocked}>
                   {social.isPublishing ? 'Publishing...' : `Publish (${social.postFee || '50'} FROG)`}
                 </button>
               </div>
@@ -868,7 +869,7 @@ export default function App() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-full border border-emerald-700/20 bg-white px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
-                <button className={ghostButtonClass} onClick={() => social.refresh(20)} disabled={!social.ready || social.isRefreshing || social.isPublishing || Boolean(social.likingPostId) || Boolean(social.tippingPostId)}>
+                <button className={ghostButtonClass} onClick={() => social.refresh(20)} disabled={!social.ready || isSocialActionLocked}>
                   {social.isRefreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
               </div>
@@ -887,7 +888,8 @@ export default function App() {
                 </div>
               </div>
             ) : socialFeed.length > 0 ? (
-              <div className="mx-auto grid max-w-3xl gap-4">
+              <div className="relative mx-auto max-w-3xl">
+                <div className="grid gap-4">
                 {socialFeed.map((post) => {
                   const hasLiked = Boolean(post.hasLikedByViewer);
                   const isOwnPost = Boolean(faucet.address && post.author === faucet.address);
@@ -941,7 +943,7 @@ export default function App() {
                             className={ghostButtonClass}
                             type="button"
                             onClick={() => tipSocialPost(post.id, post.author)}
-                            disabled={isOwnPost || isTippingThisPost || !faucet.address || social.isPublishing || social.likingPostId === String(post.id)}
+                            disabled={isOwnPost || isTippingThisPost || !faucet.address || isSocialActionLocked || social.likingPostId === String(post.id)}
                           >
                             {isTippingThisPost ? 'Tipping...' : isOwnPost ? 'Own post' : `Tip ${socialTipAmountStx} STX`}
                           </button>
@@ -949,7 +951,7 @@ export default function App() {
                             className={hasLiked ? ghostButtonClass : primaryButtonClass}
                             type="button"
                             onClick={() => likeSocialPost(post.id)}
-                            disabled={hasLiked || isOwnPost || social.likingPostId === String(post.id) || !faucet.address || isTippingThisPost}
+                            disabled={hasLiked || isOwnPost || social.likingPostId === String(post.id) || !faucet.address || isTippingThisPost || isSocialActionLocked}
                           >
                             {social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : isOwnPost ? 'Own post' : `Like (${social.likeFee || '5'} FROG)`}
                           </button>
@@ -958,6 +960,15 @@ export default function App() {
                     </article>
                   );
                 })}
+                </div>
+                {social.isRefreshing && (
+                  <div className="absolute inset-0 z-10 grid place-items-center rounded-3xl border border-emerald-900/10 bg-white/70 backdrop-blur-[1px]">
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 text-sm text-emerald-900/80 shadow">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-700/30 border-t-emerald-700" />
+                      <span>Syncing latest on-chain data...</span>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="rounded-3xl border border-dashed border-emerald-900/25 bg-emerald-50/40 p-6 text-sm text-emerald-900/70">
