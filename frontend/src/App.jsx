@@ -598,9 +598,6 @@ export default function App() {
                 )}
               </div>
               {faucet.status && <p className="mt-3 text-sm text-emerald-900/60">{faucet.status}</p>}
-              {!faucet.faucetPaused && !faucet.canClaim && (
-                <p className="mt-3 text-sm text-emerald-900/60">Faucet cooldown in effect. Wait until block {faucet.nextClaimBlock} to claim again. Estimated reclaim in {formatCooldownEta(faucet.cooldownEtaSeconds)}.</p>
-              )}
               {faucet.faucetPaused && (
                 <p className="mt-3 text-sm text-emerald-900/60">Claims are temporarily paused by contract admin.</p>
               )}
