@@ -15,7 +15,13 @@ const uploadsDir = path.resolve(process.cwd(), 'uploads');
 const backendNetwork = String(process.env.BACKEND_STACKS_NETWORK || process.env.STACKS_NETWORK || 'mainnet').toLowerCase();
 const defaultHiroApiBaseUrl = backendNetwork === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
 const hiroApiBaseUrl = String(process.env.HIRO_API_BASE_URL || defaultHiroApiBaseUrl).trim().replace(/\/$/, '');
-const tipsContractId = String(process.env.TIPS_CONTRACT_ID || '').trim();
+const tipsContractId = [
+  process.env.TIPS_CONTRACT_ID,
+  process.env.SOCIAL_TIPS_CONTRACT_ID,
+  process.env.VITE_SOCIAL_TIPS_CONTRACT_ID
+]
+  .map((value) => String(value || '').trim())
+  .find((value) => value.length > 0) || '';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const urlRegex = /^https?:\/\//i;
