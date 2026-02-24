@@ -105,6 +105,17 @@ const toSafeInt = (value) => {
   }
 };
 
+const parseClarityBool = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value.toLowerCase() === 'true';
+  if (value && typeof value === 'object') {
+    if (value.type === 'true') return true;
+    if (value.type === 'false') return false;
+    if ('value' in value) return parseClarityBool(value.value);
+  }
+  return Boolean(value);
+};
+
 export const createFrogSocialService = ({
   contractAddress,
   contractName,
@@ -286,7 +297,7 @@ export const createFrogSocialService = ({
     const requestPromise = (async () => {
       const { Cl } = await loadTransactionsModule();
       const liked = await readOnly(senderAddress, 'has-liked', [Cl.uint(BigInt(postId)), Cl.standardPrincipal(who)]);
-      const value = Boolean(liked);
+      const value = parseClarityBool(liked);
       cachedHasLikedByKey.set(cacheKey, { value, expiresAt: Date.now() + hasLikedCacheTtlMs });
       return value;
     })();

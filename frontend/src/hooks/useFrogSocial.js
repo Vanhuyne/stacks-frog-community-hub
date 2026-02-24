@@ -211,7 +211,7 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
                 status: attempt > 0 ? 'Social feed synced after rate-limit cooldown.' : ''
               }
             });
-            return;
+            return hydrated;
           } catch (err) {
             const isLastAttempt = attempt === maxAttempts - 1;
             if (!isRateLimitedError(err) || isLastAttempt) {
@@ -225,7 +225,7 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
               } else {
                 dispatch({ type: 'merge', payload: { status: `Social feed read failed: ${err?.message || err}` } });
               }
-              return;
+              return null;
             }
 
             const waitMs = parseRateLimitWaitMs(err);
@@ -496,14 +496,49 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
 
     try {
       await service.likePost(postId);
-      dispatch({ type: 'merge', payload: { status: 'Like submitted. Refreshing feed...' } });
-      const synced = await waitForFeedUpdate();
+
+      const optimisticPosts = state.posts.map((item) => {
+        if (String(item.id) !== String(postId)) return item;
+        const currentLike = Number.parseInt(String(item.likeCount || '0'), 10) || 0;
+        return {
+          ...item,
+          hasLikedByViewer: true,
+          likeCount: String(item.hasLikedByViewer ? currentLike : currentLike + 1)
+        };
+      });
+
+      const likeFeeNumForBalance = Number(state.likeFee || '0');
+      const viewerBalanceNum = Number(state.viewerBalance || '0');
+      const optimisticViewerBalance = (Number.isFinite(likeFeeNumForBalance) && Number.isFinite(viewerBalanceNum))
+        ? String(Math.max(0, viewerBalanceNum - likeFeeNumForBalance))
+        : state.viewerBalance;
+
+      dispatch({
+        type: 'merge',
+        payload: {
+          posts: optimisticPosts,
+          viewerBalance: optimisticViewerBalance,
+          status: 'Like submitted. Syncing feed...'
+        }
+      });
+
+      let synced = false;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const feed = await refresh(10);
+        const target = (feed?.posts || []).find((item) => String(item.id) === String(postId));
+        if (target?.hasLikedByViewer) {
+          synced = true;
+          break;
+        }
+        await sleep(3000);
+      }
+
       dispatch({
         type: 'merge',
         payload: {
           status: synced
             ? 'Like recorded successfully.'
-            : 'Like submitted. Testnet confirmation may take a few minutes. Use Refresh to sync.'
+            : 'Like submitted. Indexer sync may take a bit; pull-to-refresh if needed.'
         }
       });
       return true;
@@ -513,7 +548,7 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     } finally {
       dispatch({ type: 'merge', payload: { likingPostId: '' } });
     }
-  }, [address, hasDaoPass, ready, service, state.likeFee, state.posts, state.viewerBalance, waitForFeedUpdate]);
+  }, [address, hasDaoPass, ready, refresh, service, state.likeFee, state.posts, state.viewerBalance]);
 
   const tipPost = useCallback(async (postId, recipient) => {
     if (!address) {
