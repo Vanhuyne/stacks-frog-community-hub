@@ -82,7 +82,11 @@ npm run dev
 
 Backend environment (`backend/.env`):
 - `BACKEND_PORT=8787`
-- `BACKEND_PUBLIC_BASE_URL=<optional, used for production uploaded-image URLs>`
+- `BACKEND_STACKS_NETWORK=mainnet|testnet`
+- `TIPS_CONTRACT_ID=<your tips contract id>`
+- `SUPABASE_URL=<https://your-project.supabase.co>`
+- `SUPABASE_SERVICE_ROLE_KEY=<service role key>`
+- `SUPABASE_STORAGE_BUCKET=frog-uploads`
 
 ## Frontend Environment (`frontend/.env`)
 
