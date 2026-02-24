@@ -1117,9 +1117,43 @@ export default function App() {
         </>
       ) : (
         <section className="flex flex-col gap-6">
+          <section className="relative overflow-hidden rounded-3xl border border-emerald-950/10 bg-[radial-gradient(circle_at_15%_20%,rgba(52,211,153,0.28),transparent_40%),radial-gradient(circle_at_85%_15%,rgba(16,185,129,0.22),transparent_45%),linear-gradient(135deg,#f0fdf4,#dcfce7_45%,#bbf7d0)] p-6 shadow-[0_24px_60px_rgba(14,35,24,0.16)] md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-900/70">Community Home</p>
+            <h1 className="mt-3 text-4xl leading-tight text-emerald-950 md:text-5xl">Frog Social for Stacks Community</h1>
+            <p className="mt-4 max-w-3xl text-base text-emerald-950/70">
+              A lightweight social hub where Stacks builders and holders can post updates, like community signals, and tip quality content. Start with the Social tab, then discover the wider ecosystem below.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button className={primaryButtonClass} onClick={() => setActiveTab('social')}>
+                Open Social Feed
+              </button>
+              <button className={ghostButtonClass} onClick={() => setActiveTab('dao-nft')}>
+                Get DAO Pass
+              </button>
+              <button className={ghostButtonClass} onClick={() => setActiveTab('faucet')}>
+                Claim FROG
+              </button>
+            </div>
+
+            <div className="mt-7 grid gap-3 sm:grid-cols-3">
+              <article className="rounded-2xl border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800/70">Publish</p>
+                <p className="mt-2 text-sm text-emerald-900/75">Share quick updates and links from your Stacks journey.</p>
+              </article>
+              <article className="rounded-2xl border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800/70">Like</p>
+                <p className="mt-2 text-sm text-emerald-900/75">Signal useful content on-chain with FROG-backed likes.</p>
+              </article>
+              <article className="rounded-2xl border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800/70">Tip</p>
+                <p className="mt-2 text-sm text-emerald-900/75">Reward creators directly using STX tips from the same feed.</p>
+              </article>
+            </div>
+          </section>
+
           <header className="max-w-3xl">
             <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">EXPLORE ECOSYSTEM</p>
-            <h1 className="text-4xl leading-tight md:text-5xl">Featured Stacks ecosystem</h1>
+            <h2 className="text-3xl leading-tight md:text-4xl">Featured Stacks ecosystem</h2>
             <p className="mt-3 text-base text-emerald-900/60">
               Featured apps in a Stacks-style ecosystem layout for quick exploration.
             </p>
