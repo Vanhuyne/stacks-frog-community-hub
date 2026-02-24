@@ -84,6 +84,23 @@ const formatTipAmountFromMicroStx = (value) => {
 };
 
 
+const formatCooldownEta = (seconds) => {
+  const total = Number(seconds);
+  if (!Number.isFinite(total) || total <= 0) return 'Ready now';
+
+  const safe = Math.max(0, Math.floor(total));
+  const days = Math.floor(safe / 86400);
+  const hours = Math.floor((safe % 86400) / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const secs = safe % 60;
+
+  const hh = String(hours).padStart(2, '0');
+  const mm = String(minutes).padStart(2, '0');
+  const ss = String(secs).padStart(2, '0');
+  if (days > 0) return `${days}d ${hh}:${mm}:${ss}`;
+  return `${hh}:${mm}:${ss}`;
+};
+
 const renderInlineFormatting = (text, keyPrefix = 'part') => {
   const chunks = String(text || '').split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|\[[^\]]+\]\([^\)]+\))/g);
   return chunks.map((chunk, index) => {
@@ -550,9 +567,13 @@ export default function App() {
                 <span>Faucet status</span>
                 <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Next claim (block)</span>
                 <strong>{faucet.nextClaimBlock || '-'}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3 py-2">
+                <span>Reclaim in</span>
+                <strong>{faucet.address ? (faucet.canClaim ? 'Ready now' : formatCooldownEta(faucet.cooldownEtaSeconds)) : '-'}</strong>
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
                 {!faucet.address ? (
@@ -578,7 +599,7 @@ export default function App() {
               </div>
               {faucet.status && <p className="mt-3 text-sm text-emerald-900/60">{faucet.status}</p>}
               {!faucet.faucetPaused && !faucet.canClaim && (
-                <p className="mt-3 text-sm text-emerald-900/60">Faucet cooldown in effect. Wait until block {faucet.nextClaimBlock} to claim again.</p>
+                <p className="mt-3 text-sm text-emerald-900/60">Faucet cooldown in effect. Wait until block {faucet.nextClaimBlock} to claim again. Estimated reclaim in {formatCooldownEta(faucet.cooldownEtaSeconds)}.</p>
               )}
               {faucet.faucetPaused && (
                 <p className="mt-3 text-sm text-emerald-900/60">Claims are temporarily paused by contract admin.</p>

@@ -48,6 +48,42 @@ const normalizeClarityValue = (value) => {
   return value;
 };
 
+const resolveReadOnlySenderAddress = (senderAddress, network, fallbackAddress) => {
+  const candidate = typeof senderAddress === 'string' ? senderAddress.trim() : '';
+  const fallback = typeof fallbackAddress === 'string' ? fallbackAddress.trim() : '';
+  if (!candidate) return fallback || candidate;
+
+  const normalizedNetwork = String(network || '').toLowerCase();
+  if (normalizedNetwork === 'mainnet') {
+    return /^(SP|SM)/.test(candidate) ? candidate : (fallback || candidate);
+  }
+  if (normalizedNetwork === 'testnet') {
+    return /^(ST|SN)/.test(candidate) ? candidate : (fallback || candidate);
+  }
+
+  return candidate;
+};
+
+const parseClarityBool = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value.toLowerCase() === 'true';
+  if (value && typeof value === 'object' && 'value' in value) return parseClarityBool(value.value);
+  return Boolean(value);
+};
+
+const getDefaultHiroBaseUrl = (network) => String(network || '').toLowerCase() === 'mainnet'
+  ? 'https://api.hiro.so'
+  : 'https://api.testnet.hiro.so';
+
+const buildLatestBlockApiUrl = (baseUrl) => `${String(baseUrl || '').replace(/\/+$/, '')}/extended/v1/block?limit=1`;
+
+const parseLatestBlockHeight = (payload) => {
+  const first = payload && typeof payload === 'object' && Array.isArray(payload.results) ? payload.results[0] : undefined;
+  const candidate = first?.height;
+  const asNumber = Number(candidate);
+  return Number.isFinite(asNumber) && asNumber >= 0 ? Math.trunc(asNumber) : null;
+};
+
 export const createFrogContractService = ({ contractAddress, contractName, network, readOnlyBaseUrl }) => {
   const BALANCE_CACHE_TTL_MS = 3000;
   const NEXT_CLAIM_CACHE_TTL_MS = 3000;
@@ -56,6 +92,9 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
   let faucetConfigCache;
   let faucetConfigCacheExpiresAt = 0;
   let faucetConfigInFlight;
+  let chainTipCache;
+  let chainTipCacheExpiresAt = 0;
+  let chainTipInFlight;
 
   const balanceCacheByAddress = new Map();
   const nextClaimBlockCacheByAddress = new Map();
@@ -81,6 +120,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
   const readOnly = async (senderAddress, functionName, functionArgs = []) => {
     const { cvToValue, fetchCallReadOnlyFunction } = await loadTransactionsModule();
     const client = readOnlyBaseUrl ? { baseUrl: readOnlyBaseUrl } : undefined;
+    const resolvedSenderAddress = resolveReadOnlySenderAddress(senderAddress, network, contractAddress);
 
     const maxAttempts = 4;
 
@@ -91,7 +131,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
           contractName,
           functionName,
           functionArgs,
-          senderAddress,
+          senderAddress: resolvedSenderAddress,
           network,
           client
         });
@@ -167,6 +207,30 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
     }
   };
 
+  const fetchCurrentBlockHeight = async () => {
+    const now = Date.now();
+    if (chainTipCache !== undefined && chainTipCacheExpiresAt > now) return chainTipCache;
+    if (chainTipInFlight) return chainTipInFlight;
+
+    chainTipInFlight = (async () => {
+      const fallbackBaseUrl = getDefaultHiroBaseUrl(network);
+      const response = await fetch(buildLatestBlockApiUrl(readOnlyBaseUrl || fallbackBaseUrl));
+      if (!response.ok) throw new Error(`Fetch latest block failed: ${response.status}`);
+      const payload = await response.json();
+      const height = parseLatestBlockHeight(payload);
+      if (height === null) throw new Error('Invalid latest block payload.');
+      chainTipCache = String(height);
+      chainTipCacheExpiresAt = Date.now() + 8000;
+      return chainTipCache;
+    })();
+
+    try {
+      return await chainTipInFlight;
+    } finally {
+      chainTipInFlight = undefined;
+    }
+  };
+
   const fetchTokenMetadata = async (address) => {
     if (tokenMetadataCache !== undefined) return tokenMetadataCache;
 
@@ -198,7 +262,7 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
     const { principalCV } = await loadTransactionsModule();
     const targetPrincipal = principalCV(address);
 
-    const [balResult, nextResult, canResult, configResult, metadataResult] = await Promise.allSettled([
+    const [balResult, nextResult, canResult, configResult, metadataResult, chainTipResult] = await Promise.allSettled([
       readOnlyWithAddressCache({
         addressKey: address,
         inFlightKey: `get-balance:${address}`,
@@ -215,7 +279,8 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
       }),
       readOnly(address, 'can-claim?', [targetPrincipal]),
       getFaucetConfigCached(address),
-      fetchTokenMetadata(address)
+      fetchTokenMetadata(address),
+      fetchCurrentBlockHeight()
     ]);
 
     const parsedConfig = configResult.status === 'fulfilled'
@@ -227,14 +292,15 @@ export const createFrogContractService = ({ contractAddress, contractName, netwo
     return {
       balance: stringifyClarityValue(balResult.status === 'fulfilled' ? balResult.value : ''),
       nextClaimBlock: stringifyClarityValue(nextResult.status === 'fulfilled' ? nextResult.value : ''),
-      canClaim: canResult.status === 'fulfilled' ? Boolean(canResult.value) : false,
+      canClaim: canResult.status === 'fulfilled' ? parseClarityBool(canResult.value) : false,
       owner: stringifyClarityValue(parsedConfig.owner),
       faucetAmount: stringifyClarityValue(parsedConfig.amount),
       cooldownBlocks: stringifyClarityValue(parsedConfig.cooldown),
-      faucetPaused: Boolean(parsedConfig.paused),
+      faucetPaused: parseClarityBool(parsedConfig.paused),
       tokenImage: metadata?.tokenImage || '',
       tokenDisplayName: metadata?.tokenDisplayName || '',
-      tokenUri: metadata?.tokenUri || ''
+      tokenUri: metadata?.tokenUri || '',
+      currentBlockHeight: chainTipResult.status === 'fulfilled' ? String(chainTipResult.value || '') : ''
     };
   };
 

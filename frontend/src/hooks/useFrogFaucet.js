@@ -4,10 +4,56 @@ import { createFrogContractService } from '../services/frogContractService';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const LAST_CONNECTED_WALLET_KEY = 'frog:last-connected-wallet';
 
+const isAddressCompatibleWithNetwork = (address, network) => {
+  const value = String(address || '').trim();
+  if (!value) return false;
+
+  const normalizedNetwork = String(network || '').toLowerCase();
+  if (normalizedNetwork === 'mainnet') return value.startsWith('SP') || value.startsWith('SM');
+  if (normalizedNetwork === 'testnet') return value.startsWith('ST') || value.startsWith('SN');
+  return true;
+};
+
+const ESTIMATED_SECONDS_PER_STACKS_BLOCK = 600;
+
+const parseNonNegativeInt = (value) => {
+  const raw = String(value || '').trim();
+  if (!/^\d+$/.test(raw)) return null;
+  try {
+    return BigInt(raw);
+  } catch (_) {
+    return null;
+  }
+};
+
+const withCooldownEta = (snapshot) => {
+  const canClaim = Boolean(snapshot?.canClaim);
+  if (canClaim) {
+    return { ...snapshot, cooldownEtaSeconds: 0 };
+  }
+
+  const nextClaimBlock = parseNonNegativeInt(snapshot?.nextClaimBlock);
+  const currentBlockHeight = parseNonNegativeInt(snapshot?.currentBlockHeight);
+  if (nextClaimBlock === null || currentBlockHeight === null || nextClaimBlock <= currentBlockHeight) {
+    return { ...snapshot, cooldownEtaSeconds: 0 };
+  }
+
+  const remainingBlocks = nextClaimBlock - currentBlockHeight;
+  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+  const safeRemainingBlocks = remainingBlocks > maxSafe ? Number.MAX_SAFE_INTEGER : Number(remainingBlocks);
+
+  return {
+    ...snapshot,
+    cooldownEtaSeconds: safeRemainingBlocks * ESTIMATED_SECONDS_PER_STACKS_BLOCK
+  };
+};
+
 const initialState = {
   address: '',
   balance: '',
   nextClaimBlock: '',
+  currentBlockHeight: '',
+  cooldownEtaSeconds: 0,
   canClaim: true,
   owner: '',
   faucetAmount: '1000',
@@ -31,12 +77,19 @@ const reducer = (state, action) => {
   switch (action.type) {
     case 'merge':
       return { ...state, ...action.payload };
+    case 'tickCooldown':
+      return {
+        ...state,
+        cooldownEtaSeconds: state.cooldownEtaSeconds > 0 ? state.cooldownEtaSeconds - 1 : 0
+      };
     case 'resetWallet':
       return {
         ...state,
         address: '',
         balance: '',
         nextClaimBlock: '',
+        currentBlockHeight: '',
+        cooldownEtaSeconds: 0,
         canClaim: true,
         owner: '',
         faucetAmount: '1000',
@@ -72,7 +125,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
       if (!ready || !targetAddress) return;
       try {
         const snapshot = await service.fetchFaucetSnapshot(targetAddress);
-        dispatch({ type: 'merge', payload: snapshot });
+        dispatch({ type: 'merge', payload: withCooldownEta(snapshot) });
       } catch (err) {
         dispatch({ type: 'merge', payload: { status: `Read data failed: ${err?.message || err}` } });
       }
@@ -87,7 +140,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
       for (let attempt = 0; attempt < 6; attempt += 1) {
         try {
           const snapshot = await service.fetchFaucetSnapshot(targetAddress);
-          dispatch({ type: 'merge', payload: snapshot });
+          dispatch({ type: 'merge', payload: withCooldownEta(snapshot) });
           if (snapshot.canClaim === false) {
             return true;
           }
@@ -293,9 +346,13 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
     const restoreAddress = async () => {
       try {
         const localAddress = localStorage.getItem(LAST_CONNECTED_WALLET_KEY) || '';
-        if (mounted && localAddress) {
+        if (mounted && localAddress && isAddressCompatibleWithNetwork(localAddress, network)) {
           dispatch({ type: 'merge', payload: { address: localAddress } });
           return;
+        }
+
+        if (localAddress && !isAddressCompatibleWithNetwork(localAddress, network)) {
+          localStorage.removeItem(LAST_CONNECTED_WALLET_KEY);
         }
       } catch (_) {
         // skip local fallback and continue with connector storage
@@ -303,7 +360,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
 
       try {
         const storedAddress = await service.getStoredAddress();
-        if (mounted && storedAddress) {
+        if (mounted && storedAddress && isAddressCompatibleWithNetwork(storedAddress, network)) {
           try {
             localStorage.setItem(LAST_CONNECTED_WALLET_KEY, storedAddress);
           } catch (_) {
@@ -326,6 +383,16 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  useEffect(() => {
+    if (state.canClaim || state.cooldownEtaSeconds <= 0) return undefined;
+
+    const timer = setInterval(() => {
+      dispatch({ type: 'tickCooldown' });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [state.canClaim, state.cooldownEtaSeconds]);
 
   return {
     ...state,
