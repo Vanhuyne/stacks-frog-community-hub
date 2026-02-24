@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import { createFrogContractService } from '../services/frogContractService';
+import toast from 'react-hot-toast';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const LAST_CONNECTED_WALLET_KEY = 'frog:last-connected-wallet';
@@ -229,6 +230,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
           status: 'Claim transaction submitted. Waiting for confirmation...'
         }
       });
+      toast.success('Claim submitted. Waiting for confirmation...');
 
       const synced = await syncAfterClaim(state.address);
       dispatch({
@@ -239,8 +241,13 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
             : 'Claim submitted. On-chain data is still syncing.'
         }
       });
+      if (synced) {
+        toast.success('Claim confirmed. Cooldown started.');
+      }
     } catch (err) {
-      dispatch({ type: 'merge', payload: { status: `Claim failed: ${err?.message || err}` } });
+      const message = String(err?.message || err || 'Unknown error');
+      dispatch({ type: 'merge', payload: { status: `Claim failed: ${message}` } });
+      toast.error(`Claim failed: ${message}`);
     } finally {
       dispatch({ type: 'merge', payload: { isClaiming: false } });
     }
