@@ -119,6 +119,7 @@ const extractTxId = (result) => {
 export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddress, tipsContractName, network, readOnlyBaseUrl, address, enabled, apiBaseUrl, hasDaoPass = false, tipAmountStx = '0.1' }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const refreshInFlightRef = useRef(null);
+  const optimisticLikedPostIdsRef = useRef(new Set());
 
   const service = useMemo(
     () => createFrogSocialService({ contractAddress, contractName, tipsContractAddress, tipsContractName, network, readOnlyBaseUrl }),
@@ -145,6 +146,35 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     }
     return payload.posts;
   }, [apiBaseUrl]);
+
+  const applyOptimisticLikes = useCallback((posts) => {
+    const list = Array.isArray(posts) ? posts : [];
+    const optimisticSet = optimisticLikedPostIdsRef.current;
+
+    if (!(optimisticSet instanceof Set) || optimisticSet.size === 0) return list;
+
+    let changed = false;
+
+    const next = list.map((post) => {
+      const id = String(post?.id || '');
+      if (!optimisticSet.has(id)) return post;
+
+      if (post?.hasLikedByViewer) {
+        optimisticSet.delete(id);
+        return post;
+      }
+
+      changed = true;
+      const likeCountNum = Number.parseInt(String(post?.likeCount || '0'), 10) || 0;
+      return {
+        ...post,
+        hasLikedByViewer: true,
+        likeCount: String(likeCountNum + 1)
+      };
+    });
+
+    return changed ? next : list;
+  }, []);
 
   const hydrateFeedWithOffchain = useCallback(async (feed) => {
     const hashes = (feed.posts || []).map((post) => post.contentHash);
@@ -199,6 +229,7 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
             const feedLimit = attempt === 0 ? limit : Math.min(limit, 6);
             const feed = await service.fetchFeed({ senderAddress: sender, viewerAddress: address, limit: feedLimit });
             const hydrated = await hydrateFeedWithOffchain(feed);
+            const posts = applyOptimisticLikes(hydrated.posts);
             dispatch({
               type: 'merge',
               payload: {
@@ -207,11 +238,11 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
                 treasury: hydrated.config.treasury || '',
                 lastPostId: hydrated.config.lastPostId || '0',
                 viewerBalance: hydrated.viewerBalance || '',
-                posts: hydrated.posts,
+                posts,
                 status: attempt > 0 ? 'Social feed synced after rate-limit cooldown.' : ''
               }
             });
-            return hydrated;
+            return { ...hydrated, posts };
           } catch (err) {
             const isLastAttempt = attempt === maxAttempts - 1;
             if (!isRateLimitedError(err) || isLastAttempt) {
@@ -250,7 +281,7 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     } finally {
       refreshInFlightRef.current = null;
     }
-  }, [address, contractAddress, hydrateFeedWithOffchain, ready, service]);
+  }, [address, applyOptimisticLikes, contractAddress, hydrateFeedWithOffchain, ready, service]);
 
   const waitForFeedUpdate = useCallback(async (nextExpectedLastId = '') => {
     if (!ready) return;
@@ -478,7 +509,8 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
       dispatch({ type: 'merge', payload: { status: 'You cannot like your own post.' } });
       return false;
     }
-    if (existing?.hasLikedByViewer) {
+    const optimisticLiked = optimisticLikedPostIdsRef.current.has(String(postId));
+    if (existing?.hasLikedByViewer || optimisticLiked) {
       dispatch({ type: 'merge', payload: { status: 'You already liked this post.' } });
       return false;
     }
@@ -496,6 +528,7 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
 
     try {
       await service.likePost(postId);
+      optimisticLikedPostIdsRef.current.add(String(postId));
 
       const optimisticPosts = state.posts.map((item) => {
         if (String(item.id) !== String(postId)) return item;
@@ -667,6 +700,10 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     if (isDocumentHidden()) return;
     refresh(10);
   }, [refresh]);
+
+  useEffect(() => {
+    optimisticLikedPostIdsRef.current.clear();
+  }, [address, contractAddress, contractName, network]);
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
