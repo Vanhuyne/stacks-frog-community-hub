@@ -1156,8 +1156,8 @@ export default function App() {
           </section>
 
           <header className="max-w-3xl">
-            <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">EXPLORE ECOSYSTEM</p>
-            <h2 className="text-3xl leading-tight md:text-4xl">Featured Stacks ecosystem</h2>
+            {/* <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">EXPLORE STACKS ECOSYSTEM</p> */}
+            <h2 className="text-3xl leading-tight md:text-4xl">EXPLORE STACKS ECOSYSTEM</h2>
             <p className="mt-3 text-base text-emerald-900/60">
               Featured apps in a Stacks-style ecosystem layout for quick exploration.
             </p>
