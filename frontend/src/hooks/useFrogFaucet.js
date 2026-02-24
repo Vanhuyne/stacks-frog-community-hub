@@ -16,6 +16,7 @@ const isAddressCompatibleWithNetwork = (address, network) => {
 };
 
 const ESTIMATED_SECONDS_PER_STACKS_BLOCK = 600;
+const cooldownTargetMsByKey = new Map();
 
 const parseNonNegativeInt = (value) => {
   const raw = String(value || '').trim();
@@ -27,9 +28,26 @@ const parseNonNegativeInt = (value) => {
   }
 };
 
-const withCooldownEta = (snapshot) => {
+const makeCooldownTargetKey = ({ network, address, nextClaimBlock }) => {
+  const net = String(network || '').toLowerCase() || 'unknown';
+  const who = String(address || '').trim();
+  const next = String(nextClaimBlock || '').trim();
+  return net + ':' + who + ':' + next;
+};
+
+const clearCooldownTargetsForWallet = ({ network, address }) => {
+  const net = String(network || '').toLowerCase() || 'unknown';
+  const who = String(address || '').trim();
+  const prefix = net + ':' + who + ':';
+  for (const key of cooldownTargetMsByKey.keys()) {
+    if (key.startsWith(prefix)) cooldownTargetMsByKey.delete(key);
+  }
+};
+
+const withCooldownEta = ({ snapshot, address, network }) => {
   const canClaim = Boolean(snapshot?.canClaim);
   if (canClaim) {
+    clearCooldownTargetsForWallet({ network, address });
     return { ...snapshot, cooldownEtaSeconds: 0 };
   }
 
@@ -42,10 +60,20 @@ const withCooldownEta = (snapshot) => {
   const remainingBlocks = nextClaimBlock - currentBlockHeight;
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
   const safeRemainingBlocks = remainingBlocks > maxSafe ? Number.MAX_SAFE_INTEGER : Number(remainingBlocks);
+  const estimatedSeconds = safeRemainingBlocks * ESTIMATED_SECONDS_PER_STACKS_BLOCK;
+
+  const key = makeCooldownTargetKey({ network, address, nextClaimBlock: snapshot?.nextClaimBlock });
+  const nowMs = Date.now();
+  const existingTargetMs = cooldownTargetMsByKey.get(key);
+  const targetMs = typeof existingTargetMs === 'number' && existingTargetMs > nowMs
+    ? existingTargetMs
+    : (nowMs + (estimatedSeconds * 1000));
+
+  cooldownTargetMsByKey.set(key, targetMs);
 
   return {
     ...snapshot,
-    cooldownEtaSeconds: safeRemainingBlocks * ESTIMATED_SECONDS_PER_STACKS_BLOCK
+    cooldownEtaSeconds: Math.max(0, Math.ceil((targetMs - nowMs) / 1000))
   };
 };
 
@@ -126,7 +154,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
       if (!ready || !targetAddress) return;
       try {
         const snapshot = await service.fetchFaucetSnapshot(targetAddress);
-        dispatch({ type: 'merge', payload: withCooldownEta(snapshot) });
+        dispatch({ type: 'merge', payload: withCooldownEta({ snapshot, address: targetAddress, network }) });
       } catch (err) {
         dispatch({ type: 'merge', payload: { status: `Read data failed: ${err?.message || err}` } });
       }
@@ -141,7 +169,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
       for (let attempt = 0; attempt < 6; attempt += 1) {
         try {
           const snapshot = await service.fetchFaucetSnapshot(targetAddress);
-          dispatch({ type: 'merge', payload: withCooldownEta(snapshot) });
+          dispatch({ type: 'merge', payload: withCooldownEta({ snapshot, address: targetAddress, network }) });
           if (snapshot.canClaim === false) {
             return true;
           }
@@ -385,7 +413,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
     return () => {
       mounted = false;
     };
-  }, [ready, service]);
+  }, [network, ready, service]);
 
   useEffect(() => {
     refreshData();
