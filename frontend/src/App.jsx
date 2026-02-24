@@ -466,9 +466,13 @@ export default function App() {
       />
       <header className="sticky top-0 z-40 border-b border-emerald-950/10 bg-white/85 backdrop-blur">
         <div className="flex items-center gap-4 px-[6vw] py-3.5">
-          <div className="shrink-0 rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">
+          <button
+            type="button"
+            className="shrink-0 rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10"
+            onClick={() => setActiveTab('ecosystem')}
+          >
             FROG Community Hub
-          </div>
+          </button>
           <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto" aria-label="Frontend tabs">
             {visibleTabs.map((tab) => (
               <button
