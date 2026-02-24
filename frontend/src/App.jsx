@@ -30,6 +30,13 @@ const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase()
 const defaultHiroApiBaseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
 // In dev we can proxy via /hiro to avoid CORS; in production call Hiro API directly unless overridden.
 const readOnlyBaseUrl = import.meta.env.VITE_HIRO_API_BASE_URL || (import.meta.env.DEV ? '/hiro' : defaultHiroApiBaseUrl);
+const configuredSocialApiBaseUrl = String(import.meta.env.VITE_SOCIAL_API_BASE_URL || '').trim();
+const defaultSocialApiBaseUrl = import.meta.env.DEV
+  ? 'http://localhost:8787'
+  : 'https://stacks-frog-community-hub.onrender.com';
+const socialApiBaseUrl = (!import.meta.env.DEV && (configuredSocialApiBaseUrl.startsWith('http://localhost') || configuredSocialApiBaseUrl.startsWith('https://localhost') || configuredSocialApiBaseUrl.startsWith('http://127.') || configuredSocialApiBaseUrl.startsWith('https://127.')))
+  ? defaultSocialApiBaseUrl
+  : (configuredSocialApiBaseUrl || defaultSocialApiBaseUrl);
 const primaryButtonClass =
   'rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
@@ -233,7 +240,7 @@ export default function App() {
     readOnlyBaseUrl,
     address: faucet.address,
     enabled: activeTab === 'social',
-    apiBaseUrl: import.meta.env.VITE_SOCIAL_API_BASE_URL || '',
+    apiBaseUrl: socialApiBaseUrl,
     hasDaoPass: dao.hasPass,
     tipAmountStx: socialTipAmountStx
   });
