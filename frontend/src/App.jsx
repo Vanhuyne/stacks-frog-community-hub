@@ -193,7 +193,7 @@ export default function App() {
   const initialTab = (() => {
     const candidate = new URLSearchParams(window.location.search).get('tab');
     if (candidate === 'dao-nft' || candidate === 'social' || candidate === 'ecosystem' || candidate === 'faucet' || candidate === 'admin') return candidate;
-    return 'social';
+    return 'ecosystem';
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [ecosystemCategory, setEcosystemCategory] = useState('Highlighted Apps');
@@ -248,7 +248,7 @@ export default function App() {
   );
 
   const visibleTabs = useMemo(
-    () => tabs.filter((tab) => tab.id !== 'admin' || (Boolean(faucet.address) && isOwner)),
+    () => tabs.filter((tab) => tab.id !== 'ecosystem' && (tab.id !== 'admin' || (Boolean(faucet.address) && isOwner))),
     [faucet.address, isOwner]
   );
 
