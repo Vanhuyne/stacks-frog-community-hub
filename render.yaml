@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: frog-community-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    healthCheckPath: /health
+    disk:
+      name: frog-community-backend-disk
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BACKEND_STACKS_NETWORK
+        value: mainnet
+      - key: HIRO_API_BASE_URL
+        value: https://api.hiro.so
+      - key: TIPS_CONTRACT_ID
+        value: SP18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4EFYJMNW.frog-social-tips-v1
+      - key: DATA_DIR
+        value: /var/data/data
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
+      - key: BACKEND_PUBLIC_BASE_URL
+        sync: false

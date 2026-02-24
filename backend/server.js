@@ -8,9 +8,9 @@ import multer from 'multer';
 
 const app = express();
 const port = Number(process.env.BACKEND_PORT || process.env.PORT || 8787);
-const dataDir = path.resolve(process.cwd(), 'data');
+const dataDir = path.resolve(process.env.DATA_DIR || path.join(process.cwd(), 'data'));
 const dataFile = path.join(dataDir, 'posts.json');
-const uploadsDir = path.resolve(process.cwd(), 'uploads');
+const uploadsDir = path.resolve(process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads'));
 
 const backendNetwork = String(process.env.BACKEND_STACKS_NETWORK || process.env.STACKS_NETWORK || 'mainnet').toLowerCase();
 const defaultHiroApiBaseUrl = backendNetwork === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
