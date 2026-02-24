@@ -15,66 +15,60 @@ const isAddressCompatibleWithNetwork = (address, network) => {
   return true;
 };
 
-const ESTIMATED_SECONDS_PER_STACKS_BLOCK = 600;
-const cooldownTargetMsByKey = new Map();
+const COOLDOWN_DURATION_SECONDS = 24 * 60 * 60;
+const COOLDOWN_END_AT_PREFIX = 'frog:cooldown-end-at';
 
-const parseNonNegativeInt = (value) => {
-  const raw = String(value || '').trim();
-  if (!/^\d+$/.test(raw)) return null;
+const getCooldownStorageKey = ({ network, address }) => {
+  const net = String(network || '').toLowerCase() || 'unknown';
+  const who = String(address || '').trim();
+  return COOLDOWN_END_AT_PREFIX + ':' + net + ':' + who;
+};
+
+const readCooldownEndAtMs = ({ network, address }) => {
   try {
-    return BigInt(raw);
+    const raw = localStorage.getItem(getCooldownStorageKey({ network, address }));
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   } catch (_) {
     return null;
   }
 };
 
-const makeCooldownTargetKey = ({ network, address, nextClaimBlock }) => {
-  const net = String(network || '').toLowerCase() || 'unknown';
-  const who = String(address || '').trim();
-  const next = String(nextClaimBlock || '').trim();
-  return net + ':' + who + ':' + next;
+const writeCooldownEndAtMs = ({ network, address, endAtMs }) => {
+  try {
+    localStorage.setItem(getCooldownStorageKey({ network, address }), String(endAtMs));
+  } catch (_) {
+    // Ignore storage write errors.
+  }
 };
 
-const clearCooldownTargetsForWallet = ({ network, address }) => {
-  const net = String(network || '').toLowerCase() || 'unknown';
-  const who = String(address || '').trim();
-  const prefix = net + ':' + who + ':';
-  for (const key of cooldownTargetMsByKey.keys()) {
-    if (key.startsWith(prefix)) cooldownTargetMsByKey.delete(key);
+const clearCooldownEndAtMs = ({ network, address }) => {
+  try {
+    localStorage.removeItem(getCooldownStorageKey({ network, address }));
+  } catch (_) {
+    // Ignore storage remove errors.
   }
+};
+
+const startCooldownCountdown = ({ network, address }) => {
+  const endAtMs = Date.now() + (COOLDOWN_DURATION_SECONDS * 1000);
+  writeCooldownEndAtMs({ network, address, endAtMs });
+  return COOLDOWN_DURATION_SECONDS;
 };
 
 const withCooldownEta = ({ snapshot, address, network }) => {
   const canClaim = Boolean(snapshot?.canClaim);
   if (canClaim) {
-    clearCooldownTargetsForWallet({ network, address });
+    clearCooldownEndAtMs({ network, address });
     return { ...snapshot, cooldownEtaSeconds: 0 };
   }
 
-  const nextClaimBlock = parseNonNegativeInt(snapshot?.nextClaimBlock);
-  const currentBlockHeight = parseNonNegativeInt(snapshot?.currentBlockHeight);
-  if (nextClaimBlock === null || currentBlockHeight === null || nextClaimBlock <= currentBlockHeight) {
-    return { ...snapshot, cooldownEtaSeconds: 0 };
-  }
+  const endAtMs = readCooldownEndAtMs({ network, address });
+  if (!endAtMs) return { ...snapshot, cooldownEtaSeconds: 0 };
 
-  const remainingBlocks = nextClaimBlock - currentBlockHeight;
-  const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
-  const safeRemainingBlocks = remainingBlocks > maxSafe ? Number.MAX_SAFE_INTEGER : Number(remainingBlocks);
-  const estimatedSeconds = safeRemainingBlocks * ESTIMATED_SECONDS_PER_STACKS_BLOCK;
-
-  const key = makeCooldownTargetKey({ network, address, nextClaimBlock: snapshot?.nextClaimBlock });
-  const nowMs = Date.now();
-  const existingTargetMs = cooldownTargetMsByKey.get(key);
-  const targetMs = typeof existingTargetMs === 'number' && existingTargetMs > nowMs
-    ? existingTargetMs
-    : (nowMs + (estimatedSeconds * 1000));
-
-  cooldownTargetMsByKey.set(key, targetMs);
-
-  return {
-    ...snapshot,
-    cooldownEtaSeconds: Math.max(0, Math.ceil((targetMs - nowMs) / 1000))
-  };
+  const remainingSeconds = Math.max(0, Math.ceil((endAtMs - Date.now()) / 1000));
+  return { ...snapshot, cooldownEtaSeconds: remainingSeconds };
 };
 
 const initialState = {
@@ -159,7 +153,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
         dispatch({ type: 'merge', payload: { status: `Read data failed: ${err?.message || err}` } });
       }
     },
-    [ready, service, state.address]
+    [network, ready, service, state.address]
   );
 
   const syncAfterClaim = useCallback(
@@ -182,7 +176,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
 
       return false;
     },
-    [ready, service]
+    [network, ready, service]
   );
 
   const connectWallet = useCallback(async () => {
@@ -270,6 +264,8 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
         }
       });
       if (synced) {
+        const cooldownEtaSeconds = startCooldownCountdown({ network, address: state.address });
+        dispatch({ type: 'merge', payload: { canClaim: false, cooldownEtaSeconds } });
         toast.success('Claim confirmed. Cooldown started.');
       }
     } catch (err) {
@@ -279,7 +275,7 @@ export const useFrogFaucet = ({ contractAddress, contractName, network, readOnly
     } finally {
       dispatch({ type: 'merge', payload: { isClaiming: false } });
     }
-  }, [service, state.address, state.canClaim, state.faucetPaused, state.isClaiming, state.nextClaimBlock, syncAfterClaim]);
+  }, [network, service, state.address, state.canClaim, state.faucetPaused, state.isClaiming, state.nextClaimBlock, syncAfterClaim]);
 
   const transfer = useCallback(async () => {
     if (state.isTransferring || !state.address || !state.recipient || !state.amount) return;

@@ -573,7 +573,7 @@ export default function App() {
               </div>
               <div className="flex items-center justify-between gap-3 py-2">
                 <span>Reclaim in</span>
-                <strong>{faucet.address ? (faucet.canClaim ? 'Ready now' : formatCooldownEta(faucet.cooldownEtaSeconds)) : '-'}</strong>
+                <strong>{faucet.address ? (faucet.canClaim ? 'Ready now' : (faucet.cooldownEtaSeconds > 0 ? formatCooldownEta(faucet.cooldownEtaSeconds) : 'Cooldown active')) : '-'}</strong>
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
                 {!faucet.address ? (
