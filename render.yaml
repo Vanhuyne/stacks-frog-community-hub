@@ -14,7 +14,7 @@ services:
       - key: HIRO_API_BASE_URL
         value: https://api.hiro.so
       - key: TIPS_CONTRACT_ID
-        value: SP18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4EFYJMNW.frog-social-tips-v1
+        value: SP18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4EFYJMNW.frog-social-tips-reputation-v1
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
