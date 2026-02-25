@@ -27,6 +27,6 @@ fi
 if rg -n --color=never "$forbidden_pattern" "${existing_targets[@]}"; then
   echo ""
   echo "[contract-check] Found archived contract names in active runtime/config files." >&2
-  echo "[contract-check] Allowed active contracts: frog-token-v3, frog-dao-nft-v5, frog-social-v1, frog-social-tips-v1" >&2
+  echo "[contract-check] Allowed active contracts: frog-token-v3, frog-dao-nft-v5, frog-social-v1, frog-social-reputation-v1, frog-social-tips-v1, frog-social-tips-reputation-v1" >&2
   exit 1
 fi

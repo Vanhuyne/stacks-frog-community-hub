@@ -24,6 +24,11 @@ path = "contracts/frog-social-reputation-v1.clar"
 clarity_version = 3
 epoch = "latest"
 
+[contracts.frog-social-tips-reputation-v1]
+path = "contracts/frog-social-tips-reputation-v1.clar"
+clarity_version = 3
+epoch = "latest"
+
 [repl]
 costs_version = 2
 
