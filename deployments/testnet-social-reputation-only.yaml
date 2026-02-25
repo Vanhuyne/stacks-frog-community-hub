@@ -1,0 +1,18 @@
+---
+id: 0
+name: Testnet social reputation only
+network: testnet
+stacks-node: "https://api.testnet.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: frog-social-reputation-v1
+            expected-sender: ST18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4FSMA9T0
+            cost: 40770
+            path: contracts/frog-social-reputation-v1.clar
+            anchor-block-only: true
+            clarity-version: 3
+      epoch: "3.3"
