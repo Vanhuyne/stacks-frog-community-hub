@@ -4,7 +4,7 @@ rpc_bind = "https://api.testnet.hiro.so"
 
 [accounts.deployer]
 # Local only. This file is ignored by git.
-mnemonic = "observe live dirt include sun twice patch vanish swamp window floor vocal ready very adapt awake patch noise foot suggest chuckle seminar erode open"
+mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 
 [network]
 name = "testnet"
