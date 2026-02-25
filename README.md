@@ -1,57 +1,52 @@
 # FROG Community Hub
 
-FROG Community Hub is a Stacks dApp for community growth around FROG token with faucet, DAO pass, social posting, and STX tipping.
+Stacks dApp for FROG community operations: faucet, DAO pass, social posting, and STX tipping.
 
-## Why This Repo Matters For Leaderboards
+## Quickstart
 
-This repo demonstrates activity across the 3 required areas:
+```bash
+# 1) bootstrap local config
+cd /Users/vanhuy/Documents/stacks-frog-community-hub
+./scripts/bootstrap-local-config.sh
 
-- Smart contract activity and impact on Stacks:
-  - social posting contracts (`frog-social-v1`, `frog-social-reputation-v1`)
-  - STX tipping contracts (`frog-social-tips-v1`, `frog-social-tips-reputation-v1`)
-  - on-chain reputation points for creators (`+10` publish, `+2` received like)
-- Usage of Stacks SDKs:
-  - `@stacks/connect` for wallet connect and transaction requests
-  - `@stacks/transactions` for read-only calls and Clarity arg encoding
-- Public repo development activity:
-  - contract evolution, deployment plans, frontend/backend wiring, and docs
+# 2) run backend (testnet)
+cd backend && npm install && npm run dev
 
-## Demo
+# 3) run frontend (testnet)
+cd ../frontend && npm install && npm run dev:testnet
+```
 
-![Frog Social Demo 01](screenshot/frog-social-demo-01.png)
+## Tech Stack
 
-![Frog Social Demo 02](screenshot/frog-social-demo-02.png)
+- Frontend: React + Vite
+- Backend: Node.js + Express
+- On-chain: Clarity (Stacks)
+- Off-chain storage: Supabase
+- Wallet/Tx SDKs: `@stacks/connect`, `@stacks/transactions`
 
-![Frog Social Demo 03](screenshot/frog-social-demo-03.png)
+## Contracts
 
-## Features
-
-- FROG token interactions via `frog-token-v3`
-- Faucet claim/transfer + admin controls
-- DAO pass flow via `frog-dao-nft-v5`
-- Social feed with hybrid storage:
-  - on-chain: author, content hash, likes, block
-  - backend: post text, links, images
-- Reputation social flow via `frog-social-reputation-v1`:
-  - publish fee: `50 FROG`
-  - like fee: `5 FROG`
-  - one-like-per-wallet
-  - no self-like
-  - author reputation score:
-    - `+10` for each publish
-    - `+2` for each received like
-- STX tipping with reputation-compatible tips contract `frog-social-tips-reputation-v1`
-
-## Active Contracts
-
-Contracts in [Clarinet.toml](/Users/vanhuy/Documents/stacks-frog-community-hub/Clarinet.toml):
+Declared in `Clarinet.toml`:
 
 - `contracts/frog-token-v3.clar`
 - `contracts/frog-dao-nft-v5.clar`
-- `contracts/frog-social-v1.clar`
-- `contracts/frog-social-reputation-v1.clar`
-- `contracts/frog-social-tips-v1.clar`
-- `contracts/frog-social-tips-reputation-v1.clar`
+- `contracts/frog-social-v1.clar` (legacy)
+- `contracts/frog-social-reputation-v1.clar` (current testnet social)
+- `contracts/frog-social-tips-v1.clar` (legacy)
+- `contracts/frog-social-tips-reputation-v1.clar` (current testnet tips)
+
+## Architecture
+
+![Architecture](screenshot/Architecture.png)
+
+## Repository Layout
+
+- `contracts/`: Clarity contracts
+- `frontend/`: React app
+- `backend/`: social API and tip sync verification
+- `deployments/`: deployment plans
+- `scripts/`: helper scripts for setup and deploy
+- `settings/`: local Clarinet network settings (gitignored copies)
 
 ## Prerequisites
 
@@ -59,68 +54,11 @@ Contracts in [Clarinet.toml](/Users/vanhuy/Documents/stacks-frog-community-hub/C
 - npm
 - Clarinet
 
-## Local Setup
-
-```bash
-cd /Users/vanhuy/Documents/stacks-frog-community-hub
-./scripts/bootstrap-local-config.sh
-./scripts/install-hooks.sh
-```
-
-This creates local gitignored config files:
-
-- `settings/Testnet.toml`
-- `settings/Mainnet.toml`
-- `frontend/.env`
-
-## Run Locally
-
-### Backend (testnet)
-
-```bash
-cd /Users/vanhuy/Documents/stacks-frog-community-hub/backend
-npm install
-npm run dev
-```
+## Environment Configuration
 
 ### Frontend (testnet)
 
-```bash
-cd /Users/vanhuy/Documents/stacks-frog-community-hub/frontend
-npm install
-npm run dev:testnet
-```
-
-## Standard Scripts
-
-### Frontend (`frontend/`)
-
-```bash
-npm run dev:testnet
-npm run dev:mainnet
-npm run build:testnet
-npm run build:mainnet
-npm run preview:testnet
-npm run preview:mainnet
-```
-
-### Contracts (repo root)
-
-```bash
-./scripts/contracts-generate.sh testnet
-./scripts/contracts-apply.sh testnet
-./scripts/contracts-deploy.sh testnet
-
-./scripts/contracts-generate.sh mainnet
-./scripts/contracts-apply.sh mainnet
-./scripts/contracts-deploy.sh mainnet
-```
-
-## Environment
-
-### Frontend env (`frontend/.env.development` testnet)
-
-Required keys:
+Use `frontend/.env.development`:
 
 - `VITE_STACKS_NETWORK=testnet`
 - `VITE_CONTRACT_ADDRESS=<deployer>`
@@ -135,13 +73,15 @@ Required keys:
 - `VITE_SOCIAL_API_BASE_URL=<backend base url>`
 - `VITE_HIRO_API_BASE_URL=https://api.testnet.hiro.so`
 
-### Frontend env (`frontend/.env.production` mainnet)
+### Frontend (mainnet)
 
-- Keep mainnet values, currently wired to `frog-social-v1` and `frog-social-tips-v1`.
+Use `frontend/.env.production`.
 
-### Backend env (`backend/.env` testnet)
+Current production defaults remain on legacy social/tips pair unless explicitly migrated.
 
-Required keys:
+### Backend (testnet)
+
+Use `backend/.env`:
 
 - `BACKEND_PORT=8787`
 - `BACKEND_STACKS_NETWORK=testnet`
@@ -151,14 +91,44 @@ Required keys:
 - `SUPABASE_SERVICE_ROLE_KEY=<service role key>`
 - `SUPABASE_STORAGE_BUCKET=frog-uploads`
 
-## Deployment
+## Run
 
-### Dedicated testnet plans (safe migration)
+### Frontend
+
+```bash
+cd /Users/vanhuy/Documents/stacks-frog-community-hub/frontend
+npm run dev:testnet
+npm run dev:mainnet
+npm run build:testnet
+npm run build:mainnet
+```
+
+### Backend
+
+```bash
+cd /Users/vanhuy/Documents/stacks-frog-community-hub/backend
+npm run dev
+```
+
+## Deploy Contracts
+
+### Generic Scripts
+
+```bash
+cd /Users/vanhuy/Documents/stacks-frog-community-hub
+./scripts/contracts-generate.sh testnet
+./scripts/contracts-apply.sh testnet
+
+./scripts/contracts-generate.sh mainnet
+./scripts/contracts-apply.sh mainnet
+```
+
+### Safe Testnet Migration Plans
 
 Use dedicated plans to avoid touching legacy contracts:
 
-- [testnet-social-reputation-only.yaml](/Users/vanhuy/Documents/stacks-frog-community-hub/deployments/testnet-social-reputation-only.yaml)
-- [testnet-social-tips-reputation-only.yaml](/Users/vanhuy/Documents/stacks-frog-community-hub/deployments/testnet-social-tips-reputation-only.yaml)
+- `deployments/testnet-social-reputation-only.yaml`
+- `deployments/testnet-social-tips-reputation-only.yaml`
 
 Apply:
 
@@ -167,14 +137,7 @@ clarinet deployments apply -p deployments/testnet-social-reputation-only.yaml --
 clarinet deployments apply -p deployments/testnet-social-tips-reputation-only.yaml --no-dashboard
 ```
 
-### Current testnet contracts deployed for reputation flow
-
-- `ST18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4FSMA9T0.frog-social-reputation-v1`
-- `ST18GQ5APPBQ0QF1ZR2CTCW6AV63EKT6T4FSMA9T0.frog-social-tips-reputation-v1`
-
-## Validation Checklist
-
-Run before opening PR or deploy:
+## Verification Checklist
 
 ```bash
 cd /Users/vanhuy/Documents/stacks-frog-community-hub
@@ -185,27 +148,31 @@ npm run build:testnet
 npm run build:mainnet
 ```
 
-Manual app checks:
+Manual checks:
 
 - Connect wallet
-- Publish post and verify `Rep` badge appears
-- Like from second wallet and verify reputation increases
-- Tip post and verify tip sync succeeds against tips-reputation contract
+- Publish post
+- Verify `Rep` badge appears
+- Like from another wallet and confirm rep increments
+- Tip a post and verify `/tips` sync succeeds
 
-## Known Limitations
+## Operational Notes
 
-- Mainnet production config still points to legacy social/tips contracts until migration is explicitly executed.
-- Tips and social contracts must stay paired by generation:
-  - `frog-social-v1` <-> `frog-social-tips-v1`
-  - `frog-social-reputation-v1` <-> `frog-social-tips-reputation-v1`
+- `frog-social-v1` and `frog-social-tips-v1` are kept for backward compatibility.
+- Reputation flow should use `frog-social-reputation-v1` + `frog-social-tips-reputation-v1` together.
+- Backend tip verification depends on `TIPS_CONTRACT_ID`; ensure it matches active tips contract.
 
 ## Contributing
 
-- Open an issue describing bug/feature and expected behavior.
-- Keep PRs focused (contract, frontend, backend, docs separated when possible).
-- Run `clarinet check` and frontend build before requesting review.
+- Open issue with expected behavior and reproduction steps.
+- Keep PRs focused (contract/frontend/backend/docs separated where possible).
+- Run `clarinet check` and frontend builds before requesting review.
 
-## Notes
+## Security
 
-- Backend runtime data is stored at `backend/data/posts.json`.
-- `backend/data/posts.json` is gitignored (local runtime data only).
+- Never commit secrets.
+- Keep real keys only in local `.env` or deployment platform env vars.
+
+## License
+
+Add your project license here (MIT/Apache-2.0/etc.) if you plan broad public reuse.
