@@ -17,6 +17,14 @@
 (define-data-var like-fee uint u5)
 (define-data-var last-post-id uint u0)
 
+(define-constant reputation-publish-points u10)
+(define-constant reputation-like-received-points u2)
+
+(define-map author-reputation
+  {author: principal}
+  {points: uint}
+)
+
 (define-map posts
   {post-id: uint}
   {
@@ -38,6 +46,13 @@
 (define-private (charge-fee (amount uint) (payer principal))
   (contract-call? .frog-token-v3 transfer amount payer (var-get treasury) none))
 
+(define-private (read-reputation (who principal))
+  (get points (default-to {points: u0} (map-get? author-reputation {author: who}))))
+
+(define-private (add-reputation (who principal) (delta uint))
+  (let ((current (read-reputation who)))
+    (map-set author-reputation {author: who} {points: (+ current delta)})))
+
 (define-read-only (get-social-config)
   (ok {
     treasury: (var-get treasury),
@@ -48,6 +63,9 @@
 
 (define-read-only (get-post (post-id uint))
   (ok (map-get? posts {post-id: post-id})))
+
+(define-read-only (get-author-reputation (who principal))
+  (ok (read-reputation who)))
 
 (define-read-only (has-liked (post-id uint) (who principal))
   (is-some (map-get? likes {post-id: post-id, liker: who})))
@@ -70,6 +88,7 @@
         created-at: stacks-block-height,
         like-count: u0
       })
+    (add-reputation tx-sender reputation-publish-points)
     (var-set last-post-id next-id)
     (ok next-id)))
 
@@ -91,6 +110,7 @@
             created-at: (get created-at post),
             like-count: (+ (get like-count post) u1)
           })
+        (add-reputation (get author post) reputation-like-received-points)
         (ok (+ (get like-count post) u1)))
     err-post-not-found))
 
