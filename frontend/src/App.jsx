@@ -90,6 +90,16 @@ const formatTipAmountFromMicroStx = (value) => {
   }
 };
 
+const addMicroStxStrings = (left, right) => {
+  try {
+    const a = BigInt(String(left || '0'));
+    const b = BigInt(String(right || '0'));
+    return (a + b).toString();
+  } catch (_) {
+    return String(left || '0');
+  }
+};
+
 
 const formatCooldownEta = (seconds) => {
   const total = Number(seconds);
@@ -292,27 +302,59 @@ export default function App() {
   const isSocialFeedLoading = social.isRefreshing && socialFeed.length === 0;
   const isSocialActionLocked = social.isRefreshing || social.isPublishing || Boolean(social.likingPostId) || Boolean(social.tippingPostId);
 
-  const topCreatorsWeekly = useMemo(() => {
-    const cutoffTime = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    const creators = new Map();
+  const authorDashboard = useMemo(() => {
+    const authors = new Map();
+    let totalLikes = 0;
+    let totalTipsMicroStx = '0';
 
     for (const post of socialFeed) {
-      const publishedAt = Date.parse(String(post.createdAtIso || ''));
-      if (!Number.isFinite(publishedAt) || publishedAt < cutoffTime) continue;
+      const author = String(post.author || '').trim();
+      if (!author) continue;
 
-      const key = String(post.author || '').trim();
-      if (!key) continue;
+      const likes = Number.parseInt(String(post.likeCount || '0'), 10) || 0;
+      const reputation = Number.parseInt(String(post.authorReputation || '0'), 10) || 0;
+      const postTipsMicroStx = String(post.totalTipMicroStx || '0');
 
-      const current = creators.get(key) || { author: key, totalLikes: 0, postCount: 0 };
-      current.totalLikes += Number(post.likeCount || '0');
+      totalLikes += likes;
+      totalTipsMicroStx = addMicroStxStrings(totalTipsMicroStx, postTipsMicroStx);
+
+      const current = authors.get(author) || {
+        author,
+        postCount: 0,
+        totalLikes: 0,
+        totalTipsMicroStx: '0',
+        reputation: 0
+      };
+
       current.postCount += 1;
-      creators.set(key, current);
+      current.totalLikes += likes;
+      current.totalTipsMicroStx = addMicroStxStrings(current.totalTipsMicroStx, postTipsMicroStx);
+      current.reputation = Math.max(current.reputation, reputation);
+      authors.set(author, current);
     }
 
-    return [...creators.values()]
-      .sort((a, b) => b.totalLikes - a.totalLikes)
-      .slice(0, 5);
-  }, [socialFeed]);
+    const rankedAuthors = [...authors.values()].sort((a, b) => {
+      if (b.reputation !== a.reputation) return b.reputation - a.reputation;
+      if (b.totalLikes !== a.totalLikes) return b.totalLikes - a.totalLikes;
+      return b.postCount - a.postCount;
+    });
+
+    const topAuthors = rankedAuthors.slice(0, 5);
+    const currentAuthor = faucet.address ? authors.get(faucet.address) || null : null;
+    const currentAuthorRank = currentAuthor
+      ? (rankedAuthors.findIndex((item) => item.author === faucet.address) + 1)
+      : 0;
+
+    return {
+      authorCount: authors.size,
+      totalPosts: socialFeed.length,
+      totalLikes,
+      totalTipsMicroStx,
+      topAuthors,
+      currentAuthor,
+      currentAuthorRank
+    };
+  }, [faucet.address, socialFeed]);
 
   const updateSocialSelection = () => {
     const node = socialComposerRef.current;
@@ -878,23 +920,52 @@ export default function App() {
             </div>
 
             <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Weekly Leaderboard (Last 7 Days)</p>
-              <h2 className="mt-1 text-xl font-semibold">Top 5 Creators</h2>
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Author Dashboard</p>
+              <h2 className="mt-1 text-xl font-semibold">Creator Performance</h2>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Authors</p>
+                  <p className="text-base font-semibold text-emerald-950">{authorDashboard.authorCount}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Posts</p>
+                  <p className="text-base font-semibold text-emerald-950">{authorDashboard.totalPosts}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Likes</p>
+                  <p className="text-base font-semibold text-emerald-950">{authorDashboard.totalLikes}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">STX Tipped</p>
+                  <p className="text-base font-semibold text-emerald-950">{formatTipAmountFromMicroStx(authorDashboard.totalTipsMicroStx)}</p>
+                </div>
+              </div>
+              <p className="mt-4 text-xs uppercase tracking-[0.12em] text-emerald-800/70">Top Authors by Reputation</p>
               <div className="mt-4 space-y-2.5">
-                {topCreatorsWeekly.length > 0 ? topCreatorsWeekly.map((creator, index) => (
+                {authorDashboard.topAuthors.length > 0 ? authorDashboard.topAuthors.map((creator, index) => (
                   <div key={creator.author} className="flex items-center justify-between rounded-2xl border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
                     <div>
                       <p className="text-xs text-emerald-900/60">Rank #{index + 1}</p>
                       <p className="text-sm font-semibold text-emerald-950">@{socialHandleFromAddress(creator.author)}</p>
+                      <p className="text-[11px] text-emerald-900/60">{creator.postCount} posts • {creator.totalLikes} likes</p>
                     </div>
-                    <strong className="text-sm">{creator.totalLikes} likes</strong>
+                    <strong className="text-sm">Rep {creator.reputation}</strong>
                   </div>
                 )) : (
                   <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-2 text-sm text-emerald-900/70">
-                    No rankings this week.
+                    No author metrics yet.
                   </div>
                 )}
               </div>
+              {faucet.address && (
+                <div className="mt-4 rounded-2xl border border-emerald-900/10 bg-white px-3 py-2">
+                  {authorDashboard.currentAuthor ? (
+                    <p className="text-xs text-emerald-900/70">Your rank #{authorDashboard.currentAuthorRank} • Rep {authorDashboard.currentAuthor.reputation} • {authorDashboard.currentAuthor.postCount} posts</p>
+                  ) : (
+                    <p className="text-xs text-emerald-900/60">You are not ranked yet. Publish your first post to enter the dashboard.</p>
+                  )}
+                </div>
+              )}
               <p className="mt-4 text-xs text-emerald-900/60">Fees: Publish {social.postFee || '50'} FROG, Like {social.likeFee || '5'} FROG. Tip: {socialTipAmountStx} STX. Treasury: {shortenAddress(social.treasury)}</p>
             </div>
           </header>
