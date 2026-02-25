@@ -39,7 +39,7 @@ Declared in `Clarinet.toml`:
 
 ![Architecture](screenshot/Architecture.png)
 
-## Repository Layout
+## Project Structure
 
 - `contracts/`: Clarity contracts
 - `frontend/`: React app
@@ -173,6 +173,3 @@ Manual checks:
 - Never commit secrets.
 - Keep real keys only in local `.env` or deployment platform env vars.
 
-## License
-
-Add your project license here (MIT/Apache-2.0/etc.) if you plan broad public reuse.
