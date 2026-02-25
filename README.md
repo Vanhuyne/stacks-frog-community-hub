@@ -22,6 +22,7 @@ FROG Community Hub is a Stacks dApp focused on onboarding and community activity
   - like fee: `5 FROG`
   - one-like-per-wallet
   - no self-like
+  - author reputation points (on-chain): +10 per publish, +2 per received like
   - hybrid data model:
     - on-chain: author, content hash, likes, block
     - backend: post text + links by content hash
@@ -103,6 +104,29 @@ Use env files by mode:
 - `VITE_SOCIAL_CONTRACT_NAME=frog-social-v1`
 - `VITE_SOCIAL_API_BASE_URL=<your backend API base URL>`
 - `VITE_HIRO_API_BASE_URL=<optional>`
+
+## Standard Scripts
+
+Frontend (inside `frontend/`):
+
+```bash
+npm run dev:testnet
+npm run dev:mainnet
+npm run build:testnet
+npm run build:mainnet
+```
+
+Contracts (from repo root):
+
+```bash
+./scripts/contracts-generate.sh testnet
+./scripts/contracts-apply.sh testnet
+./scripts/contracts-deploy.sh testnet
+
+./scripts/contracts-generate.sh mainnet
+./scripts/contracts-apply.sh mainnet
+./scripts/contracts-deploy.sh mainnet
+```
 
 ## Deploy (Testnet)
 

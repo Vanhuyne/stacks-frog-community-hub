@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:testnet": "vite --mode development",
+    "dev:mainnet": "vite --mode production",
+    "build:testnet": "vite build --mode development",
+    "build:mainnet": "vite build --mode production",
+    "preview:testnet": "vite preview --mode development",
+    "preview:mainnet": "vite preview --mode production"
   },
   "dependencies": {
     "@stacks/connect": "^8.1.9",

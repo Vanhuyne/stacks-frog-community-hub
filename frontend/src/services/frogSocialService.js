@@ -134,16 +134,20 @@ export const createFrogSocialService = ({
   const cachedHasLikedByKey = new Map();
   const cachedTipStatsByPostId = new Map();
   const cachedFrogBalanceByAddress = new Map();
+  const cachedReputationByAddress = new Map();
   const inFlightPostById = new Map();
   const inFlightHasLikedByKey = new Map();
   const inFlightTipStatsByPostId = new Map();
   const inFlightFrogBalanceByAddress = new Map();
+  const inFlightReputationByAddress = new Map();
   const hasLikedCacheTtlMs = 30_000;
   const postCacheTtlMs = 8_000;
   const tipStatsCacheTtlMs = 6_000;
   const frogBalanceCacheTtlMs = 12_000;
+  const reputationCacheTtlMs = 12_000;
   const configCacheTtlMs = 12_000;
   let tipsUnavailable = false;
+  let reputationUnavailable = false;
   let cachedConfigEntry = null;
   let inFlightConfigPromise = null;
 
@@ -376,6 +380,41 @@ export const createFrogSocialService = ({
     }
   };
 
+  const fetchAuthorReputation = async (senderAddress, who) => {
+    if (reputationUnavailable || !isLikelyPrincipal(who)) return '0';
+
+    const cacheKey = String(who).trim();
+    const cached = cachedReputationByAddress.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) return cached.value;
+
+    const inFlight = inFlightReputationByAddress.get(cacheKey);
+    if (inFlight) return inFlight;
+
+    const requestPromise = (async () => {
+      const { Cl } = await loadTransactionsModule();
+      try {
+        const value = await readOnly(senderAddress, 'get-author-reputation', [Cl.standardPrincipal(who)]);
+        const parsed = stringifyClarityValue(value) || '0';
+        cachedReputationByAddress.set(cacheKey, { value: parsed, expiresAt: Date.now() + reputationCacheTtlMs });
+        return parsed;
+      } catch (err) {
+        const message = String(err?.message || err || '').toLowerCase();
+        if ((message.includes('function') && message.includes('not')) || message.includes('unknown function')) {
+          reputationUnavailable = true;
+          return '0';
+        }
+        throw err;
+      }
+    })();
+
+    inFlightReputationByAddress.set(cacheKey, requestPromise);
+    try {
+      return await requestPromise;
+    } finally {
+      inFlightReputationByAddress.delete(cacheKey);
+    }
+  };
+
   const fetchFeed = async ({ senderAddress, viewerAddress, limit = 10 }) => {
     const config = await fetchConfig(senderAddress);
     const lastId = toSafeInt(config.lastPostId);
@@ -410,12 +449,20 @@ export const createFrogSocialService = ({
           tipStats = { totalTipMicroStx: '0', tipCount: '0' };
         }
 
+        let authorReputation = '0';
+        try {
+          authorReputation = await fetchAuthorReputation(senderAddress, post.author);
+        } catch (_) {
+          authorReputation = '0';
+        }
+
         posts.push({
           ...post,
           likeCount: String(post.likeCount || '0'),
           hasLikedByViewer,
           totalTipMicroStx: String(tipStats.totalTipMicroStx || '0'),
-          tipCount: String(tipStats.tipCount || '0')
+          tipCount: String(tipStats.tipCount || '0'),
+          authorReputation: String(authorReputation || '0')
         });
       } catch (err) {
         if (isRateLimitedError(err)) break;
@@ -447,12 +494,14 @@ export const createFrogSocialService = ({
     cachedHasLikedByKey.clear();
     cachedTipStatsByPostId.clear();
     cachedFrogBalanceByAddress.clear();
+    cachedReputationByAddress.clear();
     cachedConfigEntry = null;
     inFlightConfigPromise = null;
     inFlightPostById.clear();
     inFlightHasLikedByKey.clear();
     inFlightTipStatsByPostId.clear();
     inFlightFrogBalanceByAddress.clear();
+    inFlightReputationByAddress.clear();
     return response;
   };
 
@@ -470,9 +519,11 @@ export const createFrogSocialService = ({
     cachedPostsById.delete(String(postId));
     cachedHasLikedByKey.clear();
     cachedFrogBalanceByAddress.clear();
+    cachedReputationByAddress.clear();
     cachedConfigEntry = null;
     inFlightHasLikedByKey.clear();
     inFlightFrogBalanceByAddress.clear();
+    inFlightReputationByAddress.clear();
     return response;
   };
 

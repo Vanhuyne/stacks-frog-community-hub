@@ -942,6 +942,7 @@ export default function App() {
                           <div>
                             <p className="text-sm font-semibold text-emerald-950">@{socialHandleFromAddress(post.author)}</p>
                             <p className="font-mono text-[11px] text-emerald-900/60">{shortenAddress(post.author)}</p>
+                            <p className="mt-1 inline-flex items-center rounded-full border border-emerald-700/20 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-800">Rep {post.authorReputation || '0'}</p>
                           </div>
                         </div>
                         <p className="text-xs text-emerald-900/60">{formatPostTime(post.createdAtBlock)}</p>
