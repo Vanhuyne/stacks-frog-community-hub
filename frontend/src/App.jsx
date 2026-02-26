@@ -38,15 +38,15 @@ const socialApiBaseUrl = (!import.meta.env.DEV && (configuredSocialApiBaseUrl.st
   ? defaultSocialApiBaseUrl
   : (configuredSocialApiBaseUrl || defaultSocialApiBaseUrl);
 const primaryButtonClass =
-  'rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-none bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
-  'rounded-xl border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-medium text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-none border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-medium text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const formatterButtonClass =
   'inline-flex items-center gap-1.5 border-r border-emerald-700/20 px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50';
 const emojiTriggerButtonClass =
-  'inline-flex items-center rounded-xl border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50';
+  'inline-flex items-center rounded-none border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50';
 const mediaActionButtonClass =
-  'inline-flex items-center rounded-xl border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center rounded-none border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50';
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -517,7 +517,7 @@ export default function App() {
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            className="w-fit shrink-0 rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10"
+            className="w-fit shrink-0 rounded-none border border-emerald-700/20 bg-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10"
             onClick={() => setActiveTab('ecosystem')}
           >
             FROG Community Hub
@@ -527,7 +527,7 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
-                className={`nav-tab whitespace-nowrap rounded-xl border px-3.5 py-2 text-xs font-bold capitalize transition ${
+                className={`nav-tab whitespace-nowrap rounded-none border px-3.5 py-2 text-xs font-bold capitalize transition ${
                   activeTab === tab.id
                     ? 'is-active border-emerald-700 bg-emerald-700 text-white'
                     : 'border-emerald-700/25 bg-white/85 text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
@@ -541,7 +541,7 @@ export default function App() {
           <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
             {faucet.address ? (
               <>
-                <span className="hidden rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-2 font-mono text-xs text-emerald-800 md:inline">
+                <span className="hidden rounded-none border border-emerald-700/20 bg-emerald-50 px-3 py-2 font-mono text-xs text-emerald-800 md:inline">
                   {shortenAddress(faucet.address)}
                 </span>
                 <button
@@ -591,7 +591,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 text-base text-emerald-900/85 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 text-base text-emerald-900/85 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
@@ -610,7 +610,7 @@ export default function App() {
                   <img
                     src={faucet.tokenImage}
                     alt={faucet.tokenDisplayName || 'FROG token'}
-                    className="h-8 w-8 rounded-full border border-emerald-950/15 object-cover"
+                    className="h-8 w-8 rounded-none border border-emerald-950/15 object-cover"
                   />
                 ) : (
                   <strong>-</strong>
@@ -658,12 +658,12 @@ export default function App() {
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Transfer</h2>
               <label className="mb-3 block text-base text-emerald-900/60">
                 Recipient wallet
                 <input
-                  className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
                   value={faucet.recipient}
                   onChange={(e) => faucet.setRecipient(e.target.value)}
                   placeholder="SP..."
@@ -672,7 +672,7 @@ export default function App() {
               <label className="mb-3 block text-base text-emerald-900/60">
                 Amount
                 <input
-                  className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
                   type="number"
                   min="1"
                   value={faucet.amount}
@@ -688,7 +688,7 @@ export default function App() {
               </p>
             </div>
 
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Contract details</h2>
               <ul className="space-y-2.5 text-base text-emerald-900/80">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-sm">{contractAddress}.{contractName}</strong></li>
@@ -710,7 +710,7 @@ export default function App() {
                 Register your on-chain username and mint one non-transferable DAO pass to unlock governance.
               </p>
             </div>
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 text-base text-emerald-900/85 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 text-base text-emerald-900/85 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
@@ -752,12 +752,12 @@ export default function App() {
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Register Username</h2>
               <label className="block text-base text-emerald-900/60">
                 Username (ASCII, max 32 chars)
                 <input
-                  className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base text-emerald-950 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
+                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base text-emerald-950 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
                   value={dao.usernameInput}
                   onChange={(e) => dao.setUsernameInput(e.target.value)}
                   placeholder="froggovernor"
@@ -773,7 +773,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Mint DAO Pass</h2>
               <p className="mb-3 text-base text-emerald-900/60">
                 Requirement: username registered + hold at least 1,000 FROG (mint fee: 99 FROG).
@@ -787,7 +787,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">DAO Contract</h2>
               <ul className="space-y-2.5 text-base text-emerald-900/80">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-sm">{daoContractAddress}.{daoContractName}</strong></li>
@@ -801,9 +801,9 @@ export default function App() {
       ) : activeTab === 'social' ? (
         <>
           <header className="grid items-start gap-8 lg:grid-cols-[minmax(440px,1fr)_minmax(260px,340px)]">
-            <div className="ui-card rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-700 text-sm font-bold text-white">
+                <div className="grid h-11 w-11 place-items-center rounded-none bg-emerald-700 text-sm font-bold text-white">
                   {faucet.address ? socialHandleFromAddress(faucet.address).slice(0, 2).toUpperCase() : 'FG'}
                 </div>
                 <div>
@@ -814,7 +814,7 @@ export default function App() {
 
               <textarea
                 ref={socialComposerRef}
-                className="mt-4 min-h-[150px] w-full resize-none rounded-2xl border border-emerald-900/15 bg-emerald-50/35 px-4 py-3 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                className="mt-4 min-h-[150px] w-full resize-none rounded-none border border-emerald-900/15 bg-emerald-50/35 px-4 py-3 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
                 value={socialPostInput}
                 onSelect={updateSocialSelection}
                 onKeyUp={updateSocialSelection}
@@ -828,7 +828,7 @@ export default function App() {
               />
 
               <div className="mt-3 space-y-2">
-                <div className="inline-flex flex-wrap overflow-hidden rounded-xl border border-emerald-700/20 bg-white">
+                <div className="inline-flex flex-wrap overflow-hidden rounded-none border border-emerald-700/20 bg-white">
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}><span>Bold</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}><span>Italic</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}><span>Code</span></button>
@@ -880,26 +880,26 @@ export default function App() {
                   </button>
 
                   {socialImageFile && socialImagePreviewUrl && (
-                    <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-700/20 bg-white px-2 py-1.5">
-                      <img src={socialImagePreviewUrl} alt="Selected upload preview" className="h-9 w-9 rounded-md object-cover" />
+                    <div className="inline-flex items-center gap-2 rounded-none border border-emerald-700/20 bg-white px-2 py-1.5">
+                      <img src={socialImagePreviewUrl} alt="Selected upload preview" className="h-9 w-9 rounded-none object-cover" />
                       <div className="max-w-[150px]">
                         <p className="truncate text-xs font-medium text-emerald-900">{socialImageFile.name}</p>
                         <p className="text-[11px] text-emerald-900/60">One image per post</p>
                       </div>
-                      <button type="button" className="rounded-md border border-emerald-700/20 px-2 py-1 text-[11px] font-medium text-emerald-800" onClick={clearSocialImage}>Remove</button>
+                      <button type="button" className="rounded-none border border-emerald-700/20 px-2 py-1 text-[11px] font-medium text-emerald-800" onClick={clearSocialImage}>Remove</button>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="mt-3 rounded-2xl border border-emerald-900/15 bg-emerald-50/40 px-4 py-3">
+              <div className="mt-3 rounded-none border border-emerald-900/15 bg-emerald-50/40 px-4 py-3">
                 <p className="mb-2 text-[11px] font-normal uppercase tracking-[0.14em] text-emerald-800/70">Live Preview</p>
                 {socialPostInput.trim() || socialImagePreviewUrl
                   ? (
                     <div className="space-y-3 text-[15px] leading-relaxed text-emerald-950">
                       {socialPostInput.trim() ? renderPostContent(socialPostInput) : null}
                       {socialImagePreviewUrl && (
-                        <img src={socialImagePreviewUrl} alt="Post image preview" className="max-h-72 w-full rounded-2xl border border-emerald-900/10 bg-emerald-100/40 object-contain" />
+                        <img src={socialImagePreviewUrl} alt="Post image preview" className="max-h-72 w-full rounded-none border border-emerald-900/10 bg-emerald-100/40 object-contain" />
                       )}
                     </div>
                   )
@@ -917,23 +917,23 @@ export default function App() {
               {!social.ready && <p className="mt-1 text-base text-emerald-900/55">Social contract is not configured.</p>}
             </div>
 
-            <div className="ui-card rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Author Dashboard</p>
               <h2 className="mt-1 text-xl font-normal">Creator Performance</h2>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
+                <div className="rounded-none border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Authors</p>
                   <p className="text-base font-normal text-emerald-950">{authorDashboard.authorCount}</p>
                 </div>
-                <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
+                <div className="rounded-none border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Posts</p>
                   <p className="text-base font-normal text-emerald-950">{authorDashboard.totalPosts}</p>
                 </div>
-                <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
+                <div className="rounded-none border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Likes</p>
                   <p className="text-base font-normal text-emerald-950">{authorDashboard.totalLikes}</p>
                 </div>
-                <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
+                <div className="rounded-none border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">STX Tipped</p>
                   <p className="text-base font-normal text-emerald-950">{formatTipAmountFromMicroStx(authorDashboard.totalTipsMicroStx)}</p>
                 </div>
@@ -941,7 +941,7 @@ export default function App() {
               <p className="mt-4 text-xs uppercase tracking-[0.12em] text-emerald-800/70">Top Authors by Reputation</p>
               <div className="mt-4 space-y-2.5">
                 {authorDashboard.topAuthors.length > 0 ? authorDashboard.topAuthors.map((creator, index) => (
-                  <div key={creator.author} className="flex items-center justify-between rounded-2xl border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
+                  <div key={creator.author} className="flex items-center justify-between rounded-none border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
                     <div>
                       <p className="text-base text-emerald-900/60">Rank #{index + 1}</p>
                       <p className="text-sm font-normal text-emerald-950">@{socialHandleFromAddress(creator.author)}</p>
@@ -950,13 +950,13 @@ export default function App() {
                     <strong className="text-sm">Rep {creator.reputation}</strong>
                   </div>
                 )) : (
-                  <div className="rounded-2xl border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-2 text-sm text-emerald-900/70">
+                  <div className="rounded-none border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-2 text-sm text-emerald-900/70">
                     No author metrics yet.
                   </div>
                 )}
               </div>
               {faucet.address && (
-                <div className="mt-4 rounded-2xl border border-emerald-900/10 bg-white px-3 py-2">
+                <div className="mt-4 rounded-none border border-emerald-900/10 bg-white px-3 py-2">
                   {authorDashboard.currentAuthor ? (
                     <p className="text-xs text-emerald-900/70">Your rank #{authorDashboard.currentAuthorRank} • Rep {authorDashboard.currentAuthor.reputation} • {authorDashboard.currentAuthor.postCount} posts</p>
                   ) : (
@@ -975,7 +975,7 @@ export default function App() {
                 <h2 className="text-2xl font-normal">Latest Posts</h2>
               </div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full border border-emerald-700/20 bg-white px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
+                <span className="rounded-none border border-emerald-700/20 bg-white px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
                 <button className={ghostButtonClass} onClick={() => social.refresh(20)} disabled={!social.ready || isSocialActionLocked}>
                   {social.isRefreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
@@ -984,7 +984,7 @@ export default function App() {
 
             {isSocialFeedLoading ? (
               <div className="mx-auto grid max-w-3xl gap-4">
-                <div className="ui-card rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                <div className="ui-card rounded-none border border-emerald-900/15 bg-white p-6 shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                   <div className="h-4 w-32 animate-pulse rounded bg-emerald-100" />
                   <div className="mt-4 space-y-2">
                     <div className="h-3 w-full animate-pulse rounded bg-emerald-100" />
@@ -1002,16 +1002,16 @@ export default function App() {
                   const isOwnPost = Boolean(faucet.address && post.author === faucet.address);
                   const isTippingThisPost = social.tippingPostId === String(post.id);
                   return (
-                    <article key={post.id} className="ui-card ui-card--interactive overflow-hidden rounded-3xl border border-emerald-900/15 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                    <article key={post.id} className="ui-card ui-card--interactive overflow-hidden rounded-none border border-emerald-900/15 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                       <div className="flex items-center justify-between border-b border-emerald-900/10 px-4 py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">
+                          <div className="grid h-9 w-9 place-items-center rounded-none bg-emerald-100 text-xs font-bold text-emerald-800">
                             {socialHandleFromAddress(post.author).slice(0, 2).toUpperCase()}
                           </div>
                           <div>
                             <p className="text-sm font-normal text-emerald-950">@{socialHandleFromAddress(post.author)}</p>
                             <p className="font-mono text-[11px] text-emerald-900/60">{shortenAddress(post.author)}</p>
-                            <p className="mt-1 inline-flex items-center rounded-full border border-emerald-700/20 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-emerald-800">Rep {post.authorReputation || '0'}</p>
+                            <p className="mt-1 inline-flex items-center rounded-none border border-emerald-700/20 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-emerald-800">Rep {post.authorReputation || '0'}</p>
                           </div>
                         </div>
                         <p className="text-xs text-emerald-900/60">{formatPostTime(post.createdAtBlock)}</p>
@@ -1022,7 +1022,7 @@ export default function App() {
                         {Array.isArray(post.images) && post.images.length > 0 && (
                           <div className="mt-3 grid gap-2">
                             {post.images.map((imageUrl) => (
-                              <a key={`${post.id}-${imageUrl}`} href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border border-emerald-900/10">
+                              <a key={`${post.id}-${imageUrl}`} href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-none border border-emerald-900/10">
                                 <img src={imageUrl} alt="Post attachment" className="max-h-[70vh] w-full bg-emerald-100/40 object-contain" loading="lazy" />
                               </a>
                             ))}
@@ -1031,7 +1031,7 @@ export default function App() {
                         {Array.isArray(post.links) && post.links.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {post.links.map((link) => (
-                              <a key={`${post.id}-${link}`} href={link} target="_blank" rel="noreferrer" className="rounded-full border border-emerald-700/20 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:underline">
+                              <a key={`${post.id}-${link}`} href={link} target="_blank" rel="noreferrer" className="rounded-none border border-emerald-700/20 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:underline">
                                 {link}
                               </a>
                             ))}
@@ -1070,16 +1070,16 @@ export default function App() {
                 })}
                 </div>
                 {social.isRefreshing && (
-                  <div className="absolute inset-0 z-10 grid place-items-center rounded-3xl border border-emerald-900/10 bg-white/70 backdrop-blur-[1px]">
-                    <div className="flex items-center gap-2 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 text-sm text-emerald-900/80 shadow">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-700/30 border-t-emerald-700" />
+                  <div className="absolute inset-0 z-10 grid place-items-center rounded-none border border-emerald-900/10 bg-white/70 backdrop-blur-[1px]">
+                    <div className="flex items-center gap-2 rounded-none border border-emerald-900/10 bg-white px-3 py-2 text-sm text-emerald-900/80 shadow">
+                      <span className="h-4 w-4 animate-spin rounded-none border-2 border-emerald-700/30 border-t-emerald-700" />
                       <span>Syncing latest on-chain data...</span>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="rounded-3xl border border-dashed border-emerald-900/25 bg-emerald-50/40 p-6 text-sm text-emerald-900/70">
+              <div className="rounded-none border border-dashed border-emerald-900/25 bg-emerald-50/40 p-6 text-sm text-emerald-900/70">
                 Feed is empty. Publish the first post to kickstart community discussions.
               </div>
             )}
@@ -1095,7 +1095,7 @@ export default function App() {
                 Owner-only controls for pause state, claim amount, and cooldown blocks.
               </p>
             </div>
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
@@ -1128,7 +1128,7 @@ export default function App() {
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Pause / Unpause</h2>
               <p className="mb-4 text-xs text-emerald-900/60">
                 Current faucet state: <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
@@ -1143,13 +1143,13 @@ export default function App() {
               </div>
             </div>
 
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Set Claim Amount</h2>
               <p className="mb-3 text-xs text-emerald-900/60">Current amount: <strong>{faucet.faucetAmount || '-'} FROG</strong></p>
               <label className="mb-3 block text-xs text-emerald-900/60">
                 New amount
                 <input
-                  className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
                   type="number"
                   min="1"
                   value={faucet.adminAmountInput}
@@ -1163,13 +1163,13 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Set Cooldown</h2>
               <p className="mb-3 text-xs text-emerald-900/60">Current cooldown: <strong>{faucet.cooldownBlocks || '-'} blocks</strong></p>
               <label className="mb-3 block text-xs text-emerald-900/60">
                 New cooldown blocks
                 <input
-                  className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
                   type="number"
                   min="1"
                   value={faucet.adminCooldownInput}
@@ -1183,7 +1183,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">DAO Treasury</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Treasury wallet</span> <strong className="break-all font-mono text-xs">{dao.treasuryAddress || '-'}</strong></li>
@@ -1198,7 +1198,7 @@ export default function App() {
         </>
       ) : (
         <section className="flex flex-col gap-6">
-          <section className="hero-shell relative overflow-hidden rounded-3xl border border-emerald-950/10 bg-[radial-gradient(circle_at_15%_20%,rgba(52,211,153,0.28),transparent_40%),radial-gradient(circle_at_85%_15%,rgba(16,185,129,0.22),transparent_45%),linear-gradient(135deg,#f0fdf4,#dcfce7_45%,#bbf7d0)] p-6 shadow-[0_24px_60px_rgba(14,35,24,0.16)] md:p-8">
+          <section className="hero-shell relative overflow-hidden rounded-none border border-emerald-950/10 bg-[radial-gradient(circle_at_15%_20%,rgba(52,211,153,0.28),transparent_40%),radial-gradient(circle_at_85%_15%,rgba(16,185,129,0.22),transparent_45%),linear-gradient(135deg,#f0fdf4,#dcfce7_45%,#bbf7d0)] p-6 shadow-[0_24px_60px_rgba(14,35,24,0.16)] md:p-8">
             <div className="hero-orb hero-orb-a" aria-hidden="true" />
             <div className="hero-orb hero-orb-b" aria-hidden="true" />
             <p className="text-xs font-normal uppercase tracking-[0.28em] text-emerald-900/70">Community Home</p>
@@ -1219,15 +1219,15 @@ export default function App() {
             </div>
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
-              <article className="rounded-2xl border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
+              <article className="rounded-none border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
                 <p className="text-xs font-normal uppercase tracking-[0.2em] text-emerald-800/70">Publish</p>
                 <p className="mt-2 text-sm text-emerald-900/75">Share quick updates and links from your Stacks journey.</p>
               </article>
-              <article className="rounded-2xl border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
+              <article className="rounded-none border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
                 <p className="text-xs font-normal uppercase tracking-[0.2em] text-emerald-800/70">Like</p>
                 <p className="mt-2 text-sm text-emerald-900/75">Signal useful content on-chain with FROG-backed likes.</p>
               </article>
-              <article className="rounded-2xl border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
+              <article className="rounded-none border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
                 <p className="text-xs font-normal uppercase tracking-[0.2em] text-emerald-800/70">Tip</p>
                 <p className="mt-2 text-sm text-emerald-900/75">Reward creators directly using STX tips from the same feed.</p>
               </article>
@@ -1247,7 +1247,7 @@ export default function App() {
               <button
                 key={category}
                 type="button"
-                className={`pill-filter rounded-xl border px-3.5 py-2 text-xs font-bold transition ${
+                className={`pill-filter rounded-none border px-3.5 py-2 text-xs font-bold transition ${
                   ecosystemCategory === category
                     ? 'border-emerald-900 bg-emerald-900 text-white'
                     : 'border-emerald-700/20 bg-white text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
@@ -1262,15 +1262,15 @@ export default function App() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ecosystemApps.map((app) => (
-              <article className="ui-card ui-card--interactive flex flex-col gap-3 rounded-3xl border border-emerald-950/10 bg-white p-4 shadow-[0_18px_40px_rgba(14,35,24,0.12)]" key={app.name}>
-                <div className="grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-2xl border border-emerald-950/10 bg-emerald-50">
+              <article className="ui-card ui-card--interactive flex flex-col gap-3 rounded-none border border-emerald-950/10 bg-white p-4 shadow-[0_18px_40px_rgba(14,35,24,0.12)]" key={app.name}>
+                <div className="grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-none border border-emerald-950/10 bg-emerald-50">
                   <img src={app.image} alt={`${app.name} logo`} loading="lazy" className="h-full w-full object-cover" />
                 </div>
                 <h2 className="text-2xl leading-tight">{app.name}</h2>
                 <p className="text-emerald-900/60">{app.summary}</p>
                 <div className="flex flex-wrap gap-2">
                   {app.tags.map((tag) => (
-                    <span key={`${app.name}-${tag}`} className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">{tag}</span>
+                    <span key={`${app.name}-${tag}`} className="rounded-none bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">{tag}</span>
                   ))}
                 </div>
                 <a href={app.url} target="_blank" rel="noreferrer" className="w-fit font-bold text-emerald-900 transition hover:underline">
