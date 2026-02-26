@@ -710,14 +710,14 @@ export default function App() {
                 Register your on-chain username and mint one non-transferable DAO pass to unlock governance.
               </p>
             </div>
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 text-base text-emerald-900/85 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
               </div>
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Wallet</span>
-                <strong className="break-all font-mono text-xs">{faucet.address || '-'}</strong>
+                <strong className="break-all font-mono text-sm">{faucet.address || '-'}</strong>
               </div>
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>FROG balance</span>
@@ -747,14 +747,14 @@ export default function App() {
                   </>
                 )}
               </div>
-              {(dao.status || faucet.status) && <p className="mt-3 text-xs text-emerald-900/60">{dao.status || faucet.status}</p>}
+              {(dao.status || faucet.status) && <p className="mt-3 text-base text-emerald-900/60">{dao.status || faucet.status}</p>}
             </div>
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Register Username</h2>
-              <label className="block text-xs text-emerald-900/60">
+              <label className="block text-base text-emerald-900/60">
                 Username (ASCII, max 32 chars)
                 <input
                   className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base text-emerald-950 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
@@ -775,7 +775,7 @@ export default function App() {
 
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Mint DAO Pass</h2>
-              <p className="mb-3 text-xs text-emerald-900/60">
+              <p className="mb-3 text-base text-emerald-900/60">
                 Requirement: username registered + hold at least 1,000 FROG (mint fee: 99 FROG).
               </p>
               <button
@@ -789,8 +789,8 @@ export default function App() {
 
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">DAO Contract</h2>
-              <ul className="space-y-2.5">
-                <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-xs">{daoContractAddress}.{daoContractName}</strong></li>
+              <ul className="space-y-2.5 text-base text-emerald-900/80">
+                <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-sm">{daoContractAddress}.{daoContractName}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Network</span> <strong>{network}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Mint rule</span> <strong>1 pass per address</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Transfer</span> <strong>Disabled</strong></li>
@@ -808,7 +808,7 @@ export default function App() {
                 </div>
                 <div>
                   <p className="text-sm font-normal text-emerald-950">{faucet.address ? `@${socialHandleFromAddress(faucet.address)}` : '@guest'}</p>
-                  <p className="text-xs text-emerald-900/60">{faucet.address ? shortenAddress(faucet.address) : 'Connect wallet to publish and like posts'}</p>
+                  <p className="text-base text-emerald-900/60">{faucet.address ? shortenAddress(faucet.address) : 'Connect wallet to publish and like posts'}</p>
                 </div>
               </div>
 
@@ -907,14 +907,14 @@ export default function App() {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-emerald-900/60">{socialPostInput.length}/500 characters</p>
+                <p className="text-base text-emerald-900/60">{socialPostInput.length}/500 characters</p>
                 <button className={primaryButtonClass} onClick={createSocialPost} disabled={!faucet.address || !social.ready || isSocialActionLocked}>
                   {social.isPublishing ? 'Publishing...' : `Publish (${social.postFee || '50'} FROG)`}
                 </button>
               </div>
-              {socialStatus && <p className="mt-3 text-xs text-emerald-900/65">{socialStatus}</p>}
-              <p className="mt-1 text-xs text-emerald-900/55">Your balance: {social.viewerBalance || faucet.balance || '0'} FROG</p>
-              {!social.ready && <p className="mt-1 text-xs text-emerald-900/55">Social contract is not configured.</p>}
+              {socialStatus && <p className="mt-3 text-base text-emerald-900/65">{socialStatus}</p>}
+              <p className="mt-1 text-base text-emerald-900/55">Your balance: {social.viewerBalance || faucet.balance || '0'} FROG</p>
+              {!social.ready && <p className="mt-1 text-base text-emerald-900/55">Social contract is not configured.</p>}
             </div>
 
             <div className="ui-card rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
@@ -943,7 +943,7 @@ export default function App() {
                 {authorDashboard.topAuthors.length > 0 ? authorDashboard.topAuthors.map((creator, index) => (
                   <div key={creator.author} className="flex items-center justify-between rounded-2xl border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
                     <div>
-                      <p className="text-xs text-emerald-900/60">Rank #{index + 1}</p>
+                      <p className="text-base text-emerald-900/60">Rank #{index + 1}</p>
                       <p className="text-sm font-normal text-emerald-950">@{socialHandleFromAddress(creator.author)}</p>
                       <p className="text-[11px] text-emerald-900/60">{creator.postCount} posts • {creator.totalLikes} likes</p>
                     </div>
@@ -960,11 +960,11 @@ export default function App() {
                   {authorDashboard.currentAuthor ? (
                     <p className="text-xs text-emerald-900/70">Your rank #{authorDashboard.currentAuthorRank} • Rep {authorDashboard.currentAuthor.reputation} • {authorDashboard.currentAuthor.postCount} posts</p>
                   ) : (
-                    <p className="text-xs text-emerald-900/60">You are not ranked yet. Publish your first post to enter the dashboard.</p>
+                    <p className="text-base text-emerald-900/60">You are not ranked yet. Publish your first post to enter the dashboard.</p>
                   )}
                 </div>
               )}
-              <p className="mt-4 text-xs text-emerald-900/60">Fees: Publish {social.postFee || '50'} FROG, Like {social.likeFee || '5'} FROG. Tip: {socialTipAmountStx} STX. Treasury: {shortenAddress(social.treasury)}</p>
+              <p className="mt-4 text-base text-emerald-900/60">Fees: Publish {social.postFee || '50'} FROG, Like {social.likeFee || '5'} FROG. Tip: {socialTipAmountStx} STX. Treasury: {shortenAddress(social.treasury)}</p>
             </div>
           </header>
 
@@ -991,7 +991,7 @@ export default function App() {
                     <div className="h-3 w-5/6 animate-pulse rounded bg-emerald-100" />
                     <div className="h-3 w-4/6 animate-pulse rounded bg-emerald-100" />
                   </div>
-                  <p className="mt-4 text-xs text-emerald-900/65">Loading posts from chain...</p>
+                  <p className="mt-4 text-base text-emerald-900/65">Loading posts from chain...</p>
                 </div>
               </div>
             ) : socialFeed.length > 0 ? (
