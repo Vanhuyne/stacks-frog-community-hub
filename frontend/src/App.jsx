@@ -38,9 +38,9 @@ const socialApiBaseUrl = (!import.meta.env.DEV && (configuredSocialApiBaseUrl.st
   ? defaultSocialApiBaseUrl
   : (configuredSocialApiBaseUrl || defaultSocialApiBaseUrl);
 const primaryButtonClass =
-  'inline-flex min-w-[180px] items-center justify-center rounded-none bg-[#3a10e5] px-6 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'inline-flex w-full items-center justify-center rounded-none bg-[#3a10e5] px-6 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
-  'inline-flex min-w-[180px] items-center justify-center rounded-none border border-[#10162f]/35 bg-transparent px-6 py-2.5 text-sm font-medium text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'inline-flex w-full items-center justify-center rounded-none border border-[#10162f]/35 bg-transparent px-6 py-2.5 text-sm font-medium text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const formatterButtonClass =
   'inline-flex items-center gap-1.5 border-r border-[#10162f]/25 px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb]';
 const emojiTriggerButtonClass =
@@ -560,7 +560,7 @@ export default function App() {
                   {shortenAddress(faucet.address)}
                 </span>
                 <button
-                  className={ghostButtonClass}
+                  className={ghostButtonClass + ' w-auto'}
                   onClick={faucet.disconnectWallet}
                   disabled={
                     faucet.isClaiming ||
@@ -574,7 +574,7 @@ export default function App() {
                 </button>
               </>
             ) : (
-              <button className={primaryButtonClass} onClick={faucet.connectWallet} disabled={!faucet.ready || faucet.isConnecting}>
+              <button className={primaryButtonClass + ' w-auto'} onClick={faucet.connectWallet} disabled={!faucet.ready || faucet.isConnecting}>
                 {faucet.isConnecting ? 'Connecting...' : 'Connect Wallet'}
               </button>
             )}
@@ -1222,13 +1222,13 @@ export default function App() {
               A lightweight social hub where Stacks builders and holders can post updates, like community signals, and tip quality content. Start with the Social tab, then discover the wider ecosystem below.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button className={primaryButtonClass} onClick={() => setActiveTab('social')}>
+              <button className={primaryButtonClass + ' w-auto'} onClick={() => setActiveTab('social')}>
                 Open Social Feed
               </button>
-              <button className={ghostButtonClass} onClick={() => setActiveTab('dao-nft')}>
+              <button className={ghostButtonClass + ' w-auto'} onClick={() => setActiveTab('dao-nft')}>
                 Get DAO Pass
               </button>
-              <button className={ghostButtonClass} onClick={() => setActiveTab('faucet')}>
+              <button className={ghostButtonClass + ' w-auto'} onClick={() => setActiveTab('faucet')}>
                 Claim FROG
               </button>
             </div>
