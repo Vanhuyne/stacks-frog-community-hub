@@ -1,8 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+@font-face {
+  font-family: Opensauceone;
+  src: url('https://cdn.prod.website-files.com/618b0aafa4afde65f2fe38fe/618b0aafa4afde69bdfe39c3_opensauceone-light-webfont.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Opensauceone;
+  src: url('https://cdn.prod.website-files.com/618b0aafa4afde65f2fe38fe/618b0aafa4afded0c2fe39c0_opensauceone-regular-webfont.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Opensauceone;
+  src: url('https://cdn.prod.website-files.com/618b0aafa4afde65f2fe38fe/618b0aafa4afde4addfe39a8_opensauceone-semibold-webfont.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Opensauceone;
+  src: url('https://cdn.prod.website-files.com/618b0aafa4afde65f2fe38fe/618b0aafa4afded498fe39c9_opensauceone-bold-webfont.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 @layer base {
   * {
@@ -11,13 +44,13 @@
 
   body {
     margin: 0;
-    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     color: #0f1a14;
   }
 
   h1,
   h2 {
-    font-family: 'Fraunces', serif;
+    font-family: 'Opensauceone', 'Inter', sans-serif;
     letter-spacing: -0.5px;
   }
 
