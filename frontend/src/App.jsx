@@ -591,14 +591,14 @@ export default function App() {
                 </div>
               </div>
             </div>
-            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 text-base text-emerald-900/85 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
               </div>
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Wallet</span>
-                <strong className="break-all font-mono text-xs">{faucet.address || '-'}</strong>
+                <strong className="break-all font-mono text-sm">{faucet.address || '-'}</strong>
               </div>
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Balance</span>
@@ -650,9 +650,9 @@ export default function App() {
                   </>
                 )}
               </div>
-              {faucet.status && <p className="mt-3 text-xs text-emerald-900/60">{faucet.status}</p>}
+              {faucet.status && <p className="mt-3 text-base text-emerald-900/60">{faucet.status}</p>}
               {faucet.faucetPaused && (
-                <p className="mt-3 text-xs text-emerald-900/60">Claims are temporarily paused by contract admin.</p>
+                <p className="mt-3 text-base text-emerald-900/60">Claims are temporarily paused by contract admin.</p>
               )}
             </div>
           </header>
