@@ -38,9 +38,9 @@ const socialApiBaseUrl = (!import.meta.env.DEV && (configuredSocialApiBaseUrl.st
   ? defaultSocialApiBaseUrl
   : (configuredSocialApiBaseUrl || defaultSocialApiBaseUrl);
 const primaryButtonClass =
-  'rounded-none bg-[#3a10e5] px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'inline-flex min-w-[180px] items-center justify-center rounded-none bg-[#3a10e5] px-6 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
-  'rounded-none border border-[#10162f]/35 bg-transparent px-4 py-2.5 text-sm font-medium text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'inline-flex min-w-[180px] items-center justify-center rounded-none border border-[#10162f]/35 bg-transparent px-6 py-2.5 text-sm font-medium text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const formatterButtonClass =
   'inline-flex items-center gap-1.5 border-r border-[#10162f]/25 px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb]';
 const emojiTriggerButtonClass =
