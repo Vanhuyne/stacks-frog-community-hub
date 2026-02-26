@@ -660,7 +660,7 @@ export default function App() {
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Transfer</h2>
-              <label className="mb-3 block text-xs text-emerald-900/60">
+              <label className="mb-3 block text-base text-emerald-900/60">
                 Recipient wallet
                 <input
                   className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
@@ -669,7 +669,7 @@ export default function App() {
                   placeholder="SP..."
                 />
               </label>
-              <label className="mb-3 block text-xs text-emerald-900/60">
+              <label className="mb-3 block text-base text-emerald-900/60">
                 Amount
                 <input
                   className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
@@ -683,15 +683,15 @@ export default function App() {
               <button className={primaryButtonClass} onClick={faucet.transfer} disabled={!faucet.address || !faucet.recipient || !faucet.amount || faucet.isTransferring}>
                 {faucet.isTransferring ? 'Submitting...' : 'Send'}
               </button>
-              <p className="mt-3 text-xs text-emerald-900/60">
+              <p className="mt-3 text-base text-emerald-900/60">
                 Transfers are on-chain and final. Double-check recipient address before submitting.
               </p>
             </div>
 
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Contract details</h2>
-              <ul className="space-y-2.5">
-                <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-xs">{contractAddress}.{contractName}</strong></li>
+              <ul className="space-y-2.5 text-base text-emerald-900/80">
+                <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-sm">{contractAddress}.{contractName}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Network</span> <strong>{network}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Decimals</span> <strong>0</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Claim amount</span> <strong>{faucet.faucetAmount || '-'} FROG</strong></li>
