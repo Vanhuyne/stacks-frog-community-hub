@@ -38,15 +38,15 @@ const socialApiBaseUrl = (!import.meta.env.DEV && (configuredSocialApiBaseUrl.st
   ? defaultSocialApiBaseUrl
   : (configuredSocialApiBaseUrl || defaultSocialApiBaseUrl);
 const primaryButtonClass =
-  'rounded-none bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-none-none bg-[#3a10e5] px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
-  'rounded-none border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-medium text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-none-none border border-[#10162f]/35 bg-transparent px-4 py-2.5 text-sm font-medium text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const formatterButtonClass =
-  'inline-flex items-center gap-1.5 border-r border-emerald-700/20 px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50';
+  'inline-flex items-center gap-1.5 border-r border-[#10162f]/25 px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb]';
 const emojiTriggerButtonClass =
-  'inline-flex items-center rounded-none border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50';
+  'inline-flex items-center rounded-none-none border border-[#10162f]/25 bg-white px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb]';
 const mediaActionButtonClass =
-  'inline-flex items-center rounded-none border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center rounded-none-none border border-[#10162f]/25 bg-white px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb] disabled:cursor-not-allowed disabled:opacity-50';
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -123,13 +123,13 @@ const renderInlineFormatting = (text, keyPrefix = 'part') => {
   return chunks.map((chunk, index) => {
     const key = `${keyPrefix}-${index}`;
     if (/^`[^`]+`$/.test(chunk)) {
-      return <code key={key} className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[12px] text-emerald-900">{chunk.slice(1, -1)}</code>;
+      return <code key={key} className="rounded-none bg-[#e6ecff] px-1.5 py-0.5 font-mono text-[12px] text-[#10162f]">{chunk.slice(1, -1)}</code>;
     }
     if (/^\[[^\]]+\]\([^\)]+\)$/.test(chunk)) {
       const match = chunk.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
       if (!match) return <span key={key}>{chunk}</span>;
       const [, label, href] = match;
-      return <a key={key} href={href} target="_blank" rel="noreferrer" className="font-medium text-emerald-800 underline underline-offset-2">{label}</a>;
+      return <a key={key} href={href} target="_blank" rel="noreferrer" className="font-medium text-[#10162f] underline underline-offset-2">{label}</a>;
     }
     if (/^~~[^~]+~~$/.test(chunk)) {
       return <s key={key}>{chunk.slice(2, -2)}</s>;
@@ -158,7 +158,7 @@ const renderPostContent = (content) => {
           ? 'text-base font-medium'
           : 'text-sm font-medium';
       return (
-        <p key={lineKey} className={`${className} mt-1 text-emerald-950`}>
+        <p key={lineKey} className={`${className} mt-1 text-[#10162f]`}>
           {renderInlineFormatting(text, `${lineKey}-h`) }
         </p>
       );
@@ -167,7 +167,7 @@ const renderPostContent = (content) => {
     if (/^>\s+/.test(line)) {
       const text = line.replace(/^>\s+/, '');
       return (
-        <blockquote key={lineKey} className="mt-1 border-l-2 border-emerald-700/35 pl-3 text-[15px] italic leading-relaxed text-emerald-900/90">
+        <blockquote key={lineKey} className="mt-1 border-l-2 border-[#10162f]/35 pl-3 text-[15px] italic leading-relaxed text-[#10162f]/95">
           {renderInlineFormatting(text, `${lineKey}-q`) }
         </blockquote>
       );
@@ -176,7 +176,7 @@ const renderPostContent = (content) => {
     if (/^\s*[-*]\s+/.test(line)) {
       const text = line.replace(/^\s*[-*]\s+/, '');
       return (
-        <div key={lineKey} className="mt-1 flex items-start gap-2 text-[15px] leading-relaxed text-emerald-950">
+        <div key={lineKey} className="mt-1 flex items-start gap-2 text-[15px] leading-relaxed text-[#10162f]">
           <span aria-hidden="true" className="mt-1 text-xs">•</span>
           <span>{renderInlineFormatting(text, `${lineKey}-b`)}</span>
         </div>
@@ -187,8 +187,8 @@ const renderPostContent = (content) => {
       const marker = line.match(/^\s*\d+\./)?.[0] || '1.';
       const text = line.replace(/^\s*\d+\.\s+/, '');
       return (
-        <div key={lineKey} className="mt-1 flex items-start gap-2 text-[15px] leading-relaxed text-emerald-950">
-          <span className="text-xs font-medium text-emerald-900/70">{marker}</span>
+        <div key={lineKey} className="mt-1 flex items-start gap-2 text-[15px] leading-relaxed text-[#10162f]">
+          <span className="text-xs font-medium text-[#10162f]/75">{marker}</span>
           <span>{renderInlineFormatting(text, `${lineKey}-n`)}</span>
         </div>
       );
@@ -199,7 +199,7 @@ const renderPostContent = (content) => {
     }
 
     return (
-      <p key={lineKey} className="mt-1 text-[15px] leading-relaxed text-emerald-950">
+      <p key={lineKey} className="mt-1 text-[15px] leading-relaxed text-[#10162f]">
         {renderInlineFormatting(line, `${lineKey}-p`) }
       </p>
     );
@@ -502,7 +502,7 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen overflow-x-clip app-shell text-emerald-950">
+    <div className="min-h-screen overflow-x-clip app-shell text-[#10162f]">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -513,11 +513,11 @@ export default function App() {
           }
         }}
       />
-      <header className="sticky top-0 z-40 border-b border-emerald-950/10 bg-white/85 backdrop-blur site-header">
+      <header className="sticky top-0 z-40 border-b border-[#10162f]/16 bg-white/85 backdrop-blur site-header">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            className="w-fit shrink-0 rounded-none border border-emerald-700/20 bg-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10"
+            className="w-fit shrink-0 rounded-none-none border border-[#10162f]/25 bg-[#f5f3eb] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20"
             onClick={() => setActiveTab('ecosystem')}
           >
             FROG Community Hub
@@ -527,10 +527,10 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
-                className={`nav-tab whitespace-nowrap rounded-none border px-3.5 py-2 text-xs font-bold capitalize transition ${
+                className={`nav-tab whitespace-nowrap rounded-none-none border px-3.5 py-2 text-xs font-bold capitalize transition ${
                   activeTab === tab.id
-                    ? 'is-active border-emerald-700 bg-emerald-700 text-white'
-                    : 'border-emerald-700/25 bg-white/85 text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
+                    ? 'is-active border-[#3a10e5] bg-[#3a10e5] text-white'
+                    : 'border-[#10162f]/30 bg-white/85 text-[#10162f] hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20'
                 }`}
                 onClick={() => setActiveTab(tab.id)}
               >
@@ -541,7 +541,7 @@ export default function App() {
           <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
             {faucet.address ? (
               <>
-                <span className="hidden rounded-none border border-emerald-700/20 bg-emerald-50 px-3 py-2 font-mono text-xs text-emerald-800 md:inline">
+                <span className="hidden rounded-none-none border border-[#10162f]/25 bg-[#f5f3eb] px-3 py-2 font-mono text-xs text-[#10162f] md:inline">
                   {shortenAddress(faucet.address)}
                 </span>
                 <button
@@ -573,9 +573,9 @@ export default function App() {
         <>
           <header className="grid items-center gap-8 md:grid-cols-[minmax(260px,1fr)_minmax(260px,360px)]">
             <div>
-              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG Community Hub</p>
+              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-[#10162f]/65">FROG Community Hub</p>
               <h1 className="text-4xl leading-tight md:text-5xl">24h Faucet for FROG Token</h1>
-              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
+              <p className="mt-3 max-w-2xl text-base text-[#10162f]/70">
                 Claim FROG on a configurable cooldown. Connect your wallet, claim tokens, and transfer to friends.
               </p>
               <div className="frog-mascot" aria-hidden="true">
@@ -591,36 +591,36 @@ export default function App() {
                 </div>
               </div>
             </div>
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 text-base text-emerald-900/85 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 text-base text-[#10162f]/90 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Wallet</span>
                 <strong className="break-all font-mono text-sm">{faucet.address || '-'}</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Balance</span>
                 <strong>{faucet.balance || '-'} FROG</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Token avatar</span>
                 {faucet.tokenImage ? (
                   <img
                     src={faucet.tokenImage}
                     alt={faucet.tokenDisplayName || 'FROG token'}
-                    className="h-8 w-8 rounded-none border border-emerald-950/15 object-cover"
+                    className="h-8 w-8 rounded-none-none border border-[#10162f]/20 object-cover"
                   />
                 ) : (
                   <strong>-</strong>
                 )}
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Faucet status</span>
                 <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Next claim (block)</span>
                 <strong>{faucet.nextClaimBlock || '-'}</strong>
               </div>
@@ -650,29 +650,29 @@ export default function App() {
                   </>
                 )}
               </div>
-              {faucet.status && <p className="mt-3 text-base text-emerald-900/60">{faucet.status}</p>}
+              {faucet.status && <p className="mt-3 text-base text-[#10162f]/70">{faucet.status}</p>}
               {faucet.faucetPaused && (
-                <p className="mt-3 text-base text-emerald-900/60">Claims are temporarily paused by contract admin.</p>
+                <p className="mt-3 text-base text-[#10162f]/70">Claims are temporarily paused by contract admin.</p>
               )}
             </div>
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Transfer</h2>
-              <label className="mb-3 block text-base text-emerald-900/60">
+              <label className="mb-3 block text-base text-[#10162f]/70">
                 Recipient wallet
                 <input
-                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                   value={faucet.recipient}
                   onChange={(e) => faucet.setRecipient(e.target.value)}
                   placeholder="SP..."
                 />
               </label>
-              <label className="mb-3 block text-base text-emerald-900/60">
+              <label className="mb-3 block text-base text-[#10162f]/70">
                 Amount
                 <input
-                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                   type="number"
                   min="1"
                   value={faucet.amount}
@@ -683,14 +683,14 @@ export default function App() {
               <button className={primaryButtonClass} onClick={faucet.transfer} disabled={!faucet.address || !faucet.recipient || !faucet.amount || faucet.isTransferring}>
                 {faucet.isTransferring ? 'Submitting...' : 'Send'}
               </button>
-              <p className="mt-3 text-base text-emerald-900/60">
+              <p className="mt-3 text-base text-[#10162f]/70">
                 Transfers are on-chain and final. Double-check recipient address before submitting.
               </p>
             </div>
 
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Contract details</h2>
-              <ul className="space-y-2.5 text-base text-emerald-900/80">
+              <ul className="space-y-2.5 text-base text-[#10162f]/85">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-sm">{contractAddress}.{contractName}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Network</span> <strong>{network}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Decimals</span> <strong>0</strong></li>
@@ -704,26 +704,26 @@ export default function App() {
         <>
           <header className="grid items-center gap-8 md:grid-cols-[minmax(260px,1fr)_minmax(260px,360px)]">
             <div>
-              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG DAO</p>
+              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-[#10162f]/65">FROG DAO</p>
               <h1 className="text-4xl leading-tight md:text-5xl">DAO Membership Pass</h1>
-              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
+              <p className="mt-3 max-w-2xl text-base text-[#10162f]/70">
                 Register your on-chain username and mint one non-transferable DAO pass to unlock governance.
               </p>
             </div>
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 text-base text-emerald-900/85 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 text-base text-[#10162f]/90 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Wallet</span>
                 <strong className="break-all font-mono text-sm">{faucet.address || '-'}</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>FROG balance</span>
                 <strong>{dao.frogBalance || faucet.balance || '-'} FROG</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Username</span>
                 <strong>{dao.username || '-'}</strong>
               </div>
@@ -747,17 +747,17 @@ export default function App() {
                   </>
                 )}
               </div>
-              {(dao.status || faucet.status) && <p className="mt-3 text-base text-emerald-900/60">{dao.status || faucet.status}</p>}
+              {(dao.status || faucet.status) && <p className="mt-3 text-base text-[#10162f]/70">{dao.status || faucet.status}</p>}
             </div>
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Register Username</h2>
-              <label className="block text-base text-emerald-900/60">
+              <label className="block text-base text-[#10162f]/70">
                 Username (ASCII, max 32 chars)
                 <input
-                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base text-emerald-950 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
+                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base text-[#10162f] outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20 disabled:bg-[#f5f3eb]"
                   value={dao.usernameInput}
                   onChange={(e) => dao.setUsernameInput(e.target.value)}
                   placeholder="froggovernor"
@@ -773,9 +773,9 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Mint DAO Pass</h2>
-              <p className="mb-3 text-base text-emerald-900/60">
+              <p className="mb-3 text-base text-[#10162f]/70">
                 Requirement: username registered + hold at least 1,000 FROG (mint fee: 99 FROG).
               </p>
               <button
@@ -787,9 +787,9 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">DAO Contract</h2>
-              <ul className="space-y-2.5 text-base text-emerald-900/80">
+              <ul className="space-y-2.5 text-base text-[#10162f]/85">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-sm">{daoContractAddress}.{daoContractName}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Network</span> <strong>{network}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Mint rule</span> <strong>1 pass per address</strong></li>
@@ -801,20 +801,20 @@ export default function App() {
       ) : activeTab === 'social' ? (
         <>
           <header className="grid items-start gap-8 lg:grid-cols-[minmax(440px,1fr)_minmax(260px,340px)]">
-            <div className="ui-card rounded-none border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-none bg-emerald-700 text-sm font-bold text-white">
+                <div className="grid h-11 w-11 place-items-center rounded-none-none bg-[#3a10e5] text-sm font-bold text-white">
                   {faucet.address ? socialHandleFromAddress(faucet.address).slice(0, 2).toUpperCase() : 'FG'}
                 </div>
                 <div>
-                  <p className="text-sm font-normal text-emerald-950">{faucet.address ? `@${socialHandleFromAddress(faucet.address)}` : '@guest'}</p>
-                  <p className="text-base text-emerald-900/60">{faucet.address ? shortenAddress(faucet.address) : 'Connect wallet to publish and like posts'}</p>
+                  <p className="text-sm font-normal text-[#10162f]">{faucet.address ? `@${socialHandleFromAddress(faucet.address)}` : '@guest'}</p>
+                  <p className="text-base text-[#10162f]/70">{faucet.address ? shortenAddress(faucet.address) : 'Connect wallet to publish and like posts'}</p>
                 </div>
               </div>
 
               <textarea
                 ref={socialComposerRef}
-                className="mt-4 min-h-[150px] w-full resize-none rounded-none border border-emerald-900/15 bg-emerald-50/35 px-4 py-3 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                className="mt-4 min-h-[150px] w-full resize-none rounded-none-none border border-[#10162f]/20 bg-[#f5f3eb]/65 px-4 py-3 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                 value={socialPostInput}
                 onSelect={updateSocialSelection}
                 onKeyUp={updateSocialSelection}
@@ -828,7 +828,7 @@ export default function App() {
               />
 
               <div className="mt-3 space-y-2">
-                <div className="inline-flex flex-wrap overflow-hidden rounded-none border border-emerald-700/20 bg-white">
+                <div className="inline-flex flex-wrap overflow-hidden rounded-none-none border border-[#10162f]/25 bg-white">
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}><span>Bold</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}><span>Italic</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}><span>Code</span></button>
@@ -837,7 +837,7 @@ export default function App() {
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}><span>H1</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('## ')}><span>H2</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('> ')}><span>Quote</span></button>
-                  <button type="button" className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}><span>List</span></button>
+                  <button type="button" className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb]" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}><span>List</span></button>
                 </div>
 
                 <div className="flex flex-wrap items-start gap-2">
@@ -880,102 +880,102 @@ export default function App() {
                   </button>
 
                   {socialImageFile && socialImagePreviewUrl && (
-                    <div className="inline-flex items-center gap-2 rounded-none border border-emerald-700/20 bg-white px-2 py-1.5">
-                      <img src={socialImagePreviewUrl} alt="Selected upload preview" className="h-9 w-9 rounded-none object-cover" />
+                    <div className="inline-flex items-center gap-2 rounded-none-none border border-[#10162f]/25 bg-white px-2 py-1.5">
+                      <img src={socialImagePreviewUrl} alt="Selected upload preview" className="h-9 w-9 rounded-none-none object-cover" />
                       <div className="max-w-[150px]">
-                        <p className="truncate text-xs font-medium text-emerald-900">{socialImageFile.name}</p>
-                        <p className="text-[11px] text-emerald-900/60">One image per post</p>
+                        <p className="truncate text-xs font-medium text-[#10162f]">{socialImageFile.name}</p>
+                        <p className="text-[11px] text-[#10162f]/70">One image per post</p>
                       </div>
-                      <button type="button" className="rounded-none border border-emerald-700/20 px-2 py-1 text-[11px] font-medium text-emerald-800" onClick={clearSocialImage}>Remove</button>
+                      <button type="button" className="rounded-none-none border border-[#10162f]/25 px-2 py-1 text-[11px] font-medium text-[#10162f]" onClick={clearSocialImage}>Remove</button>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="mt-3 rounded-none border border-emerald-900/15 bg-emerald-50/40 px-4 py-3">
-                <p className="mb-2 text-[11px] font-normal uppercase tracking-[0.14em] text-emerald-800/70">Live Preview</p>
+              <div className="mt-3 rounded-none-none border border-[#10162f]/20 bg-[#f5f3eb]/70 px-4 py-3">
+                <p className="mb-2 text-[11px] font-normal uppercase tracking-[0.14em] text-[#10162f]/70">Live Preview</p>
                 {socialPostInput.trim() || socialImagePreviewUrl
                   ? (
-                    <div className="space-y-3 text-[15px] leading-relaxed text-emerald-950">
+                    <div className="space-y-3 text-[15px] leading-relaxed text-[#10162f]">
                       {socialPostInput.trim() ? renderPostContent(socialPostInput) : null}
                       {socialImagePreviewUrl && (
-                        <img src={socialImagePreviewUrl} alt="Post image preview" className="max-h-72 w-full rounded-none border border-emerald-900/10 bg-emerald-100/40 object-contain" />
+                        <img src={socialImagePreviewUrl} alt="Post image preview" className="max-h-72 w-full rounded-none-none border border-[#10162f]/15 bg-[#e6ecff]/70 object-contain" />
                       )}
                     </div>
                   )
-                  : <p className="text-sm text-emerald-900/55">Your formatted preview will appear here as you type.</p>}
+                  : <p className="text-sm text-[#10162f]/60">Your formatted preview will appear here as you type.</p>}
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-base text-emerald-900/60">{socialPostInput.length}/500 characters</p>
+                <p className="text-base text-[#10162f]/70">{socialPostInput.length}/500 characters</p>
                 <button className={primaryButtonClass} onClick={createSocialPost} disabled={!faucet.address || !social.ready || isSocialActionLocked}>
                   {social.isPublishing ? 'Publishing...' : `Publish (${social.postFee || '50'} FROG)`}
                 </button>
               </div>
-              {socialStatus && <p className="mt-3 text-base text-emerald-900/65">{socialStatus}</p>}
-              <p className="mt-1 text-base text-emerald-900/55">Your balance: {social.viewerBalance || faucet.balance || '0'} FROG</p>
-              {!social.ready && <p className="mt-1 text-base text-emerald-900/55">Social contract is not configured.</p>}
+              {socialStatus && <p className="mt-3 text-base text-[#10162f]/70">{socialStatus}</p>}
+              <p className="mt-1 text-base text-[#10162f]/60">Your balance: {social.viewerBalance || faucet.balance || '0'} FROG</p>
+              {!social.ready && <p className="mt-1 text-base text-[#10162f]/60">Social contract is not configured.</p>}
             </div>
 
-            <div className="ui-card rounded-none border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Author Dashboard</p>
+            <div className="ui-card rounded-none-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <p className="text-xs uppercase tracking-[0.2em] text-[#10162f]/65">Author Dashboard</p>
               <h2 className="mt-1 text-xl font-normal">Creator Performance</h2>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-none border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Authors</p>
-                  <p className="text-base font-normal text-emerald-950">{authorDashboard.authorCount}</p>
+                <div className="rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[#10162f]/70">Authors</p>
+                  <p className="text-base font-normal text-[#10162f]">{authorDashboard.authorCount}</p>
                 </div>
-                <div className="rounded-none border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Posts</p>
-                  <p className="text-base font-normal text-emerald-950">{authorDashboard.totalPosts}</p>
+                <div className="rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[#10162f]/70">Posts</p>
+                  <p className="text-base font-normal text-[#10162f]">{authorDashboard.totalPosts}</p>
                 </div>
-                <div className="rounded-none border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Likes</p>
-                  <p className="text-base font-normal text-emerald-950">{authorDashboard.totalLikes}</p>
+                <div className="rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[#10162f]/70">Likes</p>
+                  <p className="text-base font-normal text-[#10162f]">{authorDashboard.totalLikes}</p>
                 </div>
-                <div className="rounded-none border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">STX Tipped</p>
-                  <p className="text-base font-normal text-emerald-950">{formatTipAmountFromMicroStx(authorDashboard.totalTipsMicroStx)}</p>
+                <div className="rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[#10162f]/70">STX Tipped</p>
+                  <p className="text-base font-normal text-[#10162f]">{formatTipAmountFromMicroStx(authorDashboard.totalTipsMicroStx)}</p>
                 </div>
               </div>
-              <p className="mt-4 text-xs uppercase tracking-[0.12em] text-emerald-800/70">Top Authors by Reputation</p>
+              <p className="mt-4 text-xs uppercase tracking-[0.12em] text-[#10162f]/70">Top Authors by Reputation</p>
               <div className="mt-4 space-y-2.5">
                 {authorDashboard.topAuthors.length > 0 ? authorDashboard.topAuthors.map((creator, index) => (
-                  <div key={creator.author} className="flex items-center justify-between rounded-none border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
+                  <div key={creator.author} className="flex items-center justify-between rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/85 px-3 py-2">
                     <div>
-                      <p className="text-base text-emerald-900/60">Rank #{index + 1}</p>
-                      <p className="text-sm font-normal text-emerald-950">@{socialHandleFromAddress(creator.author)}</p>
-                      <p className="text-[11px] text-emerald-900/60">{creator.postCount} posts • {creator.totalLikes} likes</p>
+                      <p className="text-base text-[#10162f]/70">Rank #{index + 1}</p>
+                      <p className="text-sm font-normal text-[#10162f]">@{socialHandleFromAddress(creator.author)}</p>
+                      <p className="text-[11px] text-[#10162f]/70">{creator.postCount} posts • {creator.totalLikes} likes</p>
                     </div>
                     <strong className="text-sm">Rep {creator.reputation}</strong>
                   </div>
                 )) : (
-                  <div className="rounded-none border border-dashed border-emerald-900/25 bg-emerald-50/40 px-3 py-2 text-sm text-emerald-900/70">
+                  <div className="rounded-none-none border border-dashed border-[#10162f]/30 bg-[#f5f3eb]/70 px-3 py-2 text-sm text-[#10162f]/75">
                     No author metrics yet.
                   </div>
                 )}
               </div>
               {faucet.address && (
-                <div className="mt-4 rounded-none border border-emerald-900/10 bg-white px-3 py-2">
+                <div className="mt-4 rounded-none-none border border-[#10162f]/15 bg-white px-3 py-2">
                   {authorDashboard.currentAuthor ? (
-                    <p className="text-xs text-emerald-900/70">Your rank #{authorDashboard.currentAuthorRank} • Rep {authorDashboard.currentAuthor.reputation} • {authorDashboard.currentAuthor.postCount} posts</p>
+                    <p className="text-xs text-[#10162f]/75">Your rank #{authorDashboard.currentAuthorRank} • Rep {authorDashboard.currentAuthor.reputation} • {authorDashboard.currentAuthor.postCount} posts</p>
                   ) : (
-                    <p className="text-base text-emerald-900/60">You are not ranked yet. Publish your first post to enter the dashboard.</p>
+                    <p className="text-base text-[#10162f]/70">You are not ranked yet. Publish your first post to enter the dashboard.</p>
                   )}
                 </div>
               )}
-              <p className="mt-4 text-base text-emerald-900/60">Fees: Publish {social.postFee || '50'} FROG, Like {social.likeFee || '5'} FROG. Tip: {socialTipAmountStx} STX. Treasury: {shortenAddress(social.treasury)}</p>
+              <p className="mt-4 text-base text-[#10162f]/70">Fees: Publish {social.postFee || '50'} FROG, Like {social.likeFee || '5'} FROG. Tip: {socialTipAmountStx} STX. Treasury: {shortenAddress(social.treasury)}</p>
             </div>
           </header>
 
           <section className="mt-8">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Community Feed</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-[#10162f]/65">Community Feed</p>
                 <h2 className="text-2xl font-normal">Latest Posts</h2>
               </div>
               <div className="flex items-center gap-2">
-                <span className="rounded-none border border-emerald-700/20 bg-white px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
+                <span className="rounded-none-none border border-[#10162f]/25 bg-white px-3 py-1 text-xs font-bold text-[#10162f]">{socialFeed.length} posts</span>
                 <button className={ghostButtonClass} onClick={() => social.refresh(20)} disabled={!social.ready || isSocialActionLocked}>
                   {social.isRefreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
@@ -984,14 +984,14 @@ export default function App() {
 
             {isSocialFeedLoading ? (
               <div className="mx-auto grid max-w-3xl gap-4">
-                <div className="ui-card rounded-none border border-emerald-900/15 bg-white p-6 shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
-                  <div className="h-4 w-32 animate-pulse rounded bg-emerald-100" />
+                <div className="ui-card rounded-none-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                  <div className="h-4 w-32 animate-pulse rounded-none bg-[#e6ecff]" />
                   <div className="mt-4 space-y-2">
-                    <div className="h-3 w-full animate-pulse rounded bg-emerald-100" />
-                    <div className="h-3 w-5/6 animate-pulse rounded bg-emerald-100" />
-                    <div className="h-3 w-4/6 animate-pulse rounded bg-emerald-100" />
+                    <div className="h-3 w-full animate-pulse rounded-none bg-[#e6ecff]" />
+                    <div className="h-3 w-5/6 animate-pulse rounded-none bg-[#e6ecff]" />
+                    <div className="h-3 w-4/6 animate-pulse rounded-none bg-[#e6ecff]" />
                   </div>
-                  <p className="mt-4 text-base text-emerald-900/65">Loading posts from chain...</p>
+                  <p className="mt-4 text-base text-[#10162f]/70">Loading posts from chain...</p>
                 </div>
               </div>
             ) : socialFeed.length > 0 ? (
@@ -1002,19 +1002,19 @@ export default function App() {
                   const isOwnPost = Boolean(faucet.address && post.author === faucet.address);
                   const isTippingThisPost = social.tippingPostId === String(post.id);
                   return (
-                    <article key={post.id} className="ui-card ui-card--interactive overflow-hidden rounded-none border border-emerald-900/15 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
-                      <div className="flex items-center justify-between border-b border-emerald-900/10 px-4 py-3">
+                    <article key={post.id} className="ui-card ui-card--interactive overflow-hidden rounded-none-none border border-[#10162f]/20 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                      <div className="flex items-center justify-between border-b border-[#10162f]/15 px-4 py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="grid h-9 w-9 place-items-center rounded-none bg-emerald-100 text-xs font-bold text-emerald-800">
+                          <div className="grid h-9 w-9 place-items-center rounded-none-none bg-[#e6ecff] text-xs font-bold text-[#10162f]">
                             {socialHandleFromAddress(post.author).slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-sm font-normal text-emerald-950">@{socialHandleFromAddress(post.author)}</p>
-                            <p className="font-mono text-[11px] text-emerald-900/60">{shortenAddress(post.author)}</p>
-                            <p className="mt-1 inline-flex items-center rounded-none border border-emerald-700/20 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-emerald-800">Rep {post.authorReputation || '0'}</p>
+                            <p className="text-sm font-normal text-[#10162f]">@{socialHandleFromAddress(post.author)}</p>
+                            <p className="font-mono text-[11px] text-[#10162f]/70">{shortenAddress(post.author)}</p>
+                            <p className="mt-1 inline-flex items-center rounded-none-none border border-[#10162f]/25 bg-[#f5f3eb] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[#10162f]">Rep {post.authorReputation || '0'}</p>
                           </div>
                         </div>
-                        <p className="text-xs text-emerald-900/60">{formatPostTime(post.createdAtBlock)}</p>
+                        <p className="text-xs text-[#10162f]/70">{formatPostTime(post.createdAtBlock)}</p>
                       </div>
 
                       <div className="px-4 py-4">
@@ -1022,8 +1022,8 @@ export default function App() {
                         {Array.isArray(post.images) && post.images.length > 0 && (
                           <div className="mt-3 grid gap-2">
                             {post.images.map((imageUrl) => (
-                              <a key={`${post.id}-${imageUrl}`} href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-none border border-emerald-900/10">
-                                <img src={imageUrl} alt="Post attachment" className="max-h-[70vh] w-full bg-emerald-100/40 object-contain" loading="lazy" />
+                              <a key={`${post.id}-${imageUrl}`} href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-none-none border border-[#10162f]/15">
+                                <img src={imageUrl} alt="Post attachment" className="max-h-[70vh] w-full bg-[#e6ecff]/70 object-contain" loading="lazy" />
                               </a>
                             ))}
                           </div>
@@ -1031,7 +1031,7 @@ export default function App() {
                         {Array.isArray(post.links) && post.links.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {post.links.map((link) => (
-                              <a key={`${post.id}-${link}`} href={link} target="_blank" rel="noreferrer" className="rounded-none border border-emerald-700/20 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:underline">
+                              <a key={`${post.id}-${link}`} href={link} target="_blank" rel="noreferrer" className="rounded-none-none border border-[#10162f]/25 bg-[#e6ecff] px-2.5 py-1 text-xs font-medium text-[#10162f] hover:underline">
                                 {link}
                               </a>
                             ))}
@@ -1039,11 +1039,11 @@ export default function App() {
                         )}
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-emerald-900/10 bg-emerald-50/40 px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 text-sm text-emerald-900/70">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#10162f]/15 bg-[#f5f3eb]/70 px-4 py-3">
+                        <span className="inline-flex items-center gap-1.5 text-sm text-[#10162f]/75">
                           <span aria-hidden="true">❤️</span>
                           <span>{post.likeCount || '0'} likes</span>
-                          <span className="text-emerald-900/45">•</span>
+                          <span className="text-[#10162f]/55">•</span>
                           <span>{formatTipAmountFromMicroStx(post.totalTipMicroStx || '0')} STX tipped</span>
                         </span>
                         <div className="flex items-center gap-2">
@@ -1070,16 +1070,16 @@ export default function App() {
                 })}
                 </div>
                 {social.isRefreshing && (
-                  <div className="absolute inset-0 z-10 grid place-items-center rounded-none border border-emerald-900/10 bg-white/70 backdrop-blur-[1px]">
-                    <div className="flex items-center gap-2 rounded-none border border-emerald-900/10 bg-white px-3 py-2 text-sm text-emerald-900/80 shadow">
-                      <span className="h-4 w-4 animate-spin rounded-none border-2 border-emerald-700/30 border-t-emerald-700" />
+                  <div className="absolute inset-0 z-10 grid place-items-center rounded-none-none border border-[#10162f]/15 bg-white/70 backdrop-blur-[1px]">
+                    <div className="flex items-center gap-2 rounded-none-none border border-[#10162f]/15 bg-white px-3 py-2 text-sm text-[#10162f]/85 shadow">
+                      <span className="h-4 w-4 animate-spin rounded-none-none border-2 border-[#10162f]/30 border-t-[#3a10e5]" />
                       <span>Syncing latest on-chain data...</span>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="rounded-none border border-dashed border-emerald-900/25 bg-emerald-50/40 p-6 text-sm text-emerald-900/70">
+              <div className="rounded-none-none border border-dashed border-[#10162f]/30 bg-[#f5f3eb]/70 p-6 text-sm text-[#10162f]/75">
                 Feed is empty. Publish the first post to kickstart community discussions.
               </div>
             )}
@@ -1089,22 +1089,22 @@ export default function App() {
         <>
           <header className="grid items-center gap-8 md:grid-cols-[minmax(260px,1fr)_minmax(260px,420px)]">
             <div>
-              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG ADMIN</p>
+              <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-[#10162f]/65">FROG ADMIN</p>
               <h1 className="text-4xl leading-tight md:text-5xl">Faucet Admin Controls</h1>
-              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
+              <p className="mt-3 max-w-2xl text-base text-[#10162f]/70">
                 Owner-only controls for pause state, claim amount, and cooldown blocks.
               </p>
             </div>
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Connected wallet</span>
                 <strong className="break-all font-mono text-xs">{faucet.address || '-'}</strong>
               </div>
-              <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
+              <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Contract owner</span>
                 <strong className="break-all font-mono text-xs">{faucet.owner || '-'}</strong>
               </div>
@@ -1123,14 +1123,14 @@ export default function App() {
                   </button>
                 )}
               </div>
-              {faucet.status && <p className="mt-3 text-xs text-emerald-900/60">{faucet.status}</p>}
+              {faucet.status && <p className="mt-3 text-xs text-[#10162f]/70">{faucet.status}</p>}
             </div>
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Pause / Unpause</h2>
-              <p className="mb-4 text-xs text-emerald-900/60">
+              <p className="mb-4 text-xs text-[#10162f]/70">
                 Current faucet state: <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
               </p>
               <div className="flex flex-wrap gap-3">
@@ -1143,13 +1143,13 @@ export default function App() {
               </div>
             </div>
 
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Set Claim Amount</h2>
-              <p className="mb-3 text-xs text-emerald-900/60">Current amount: <strong>{faucet.faucetAmount || '-'} FROG</strong></p>
-              <label className="mb-3 block text-xs text-emerald-900/60">
+              <p className="mb-3 text-xs text-[#10162f]/70">Current amount: <strong>{faucet.faucetAmount || '-'} FROG</strong></p>
+              <label className="mb-3 block text-xs text-[#10162f]/70">
                 New amount
                 <input
-                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                   type="number"
                   min="1"
                   value={faucet.adminAmountInput}
@@ -1163,13 +1163,13 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Set Cooldown</h2>
-              <p className="mb-3 text-xs text-emerald-900/60">Current cooldown: <strong>{faucet.cooldownBlocks || '-'} blocks</strong></p>
-              <label className="mb-3 block text-xs text-emerald-900/60">
+              <p className="mb-3 text-xs text-[#10162f]/70">Current cooldown: <strong>{faucet.cooldownBlocks || '-'} blocks</strong></p>
+              <label className="mb-3 block text-xs text-[#10162f]/70">
                 New cooldown blocks
                 <input
-                  className="mt-1.5 w-full rounded-none border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                   type="number"
                   min="1"
                   value={faucet.adminCooldownInput}
@@ -1183,7 +1183,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-none border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">DAO Treasury</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Treasury wallet</span> <strong className="break-all font-mono text-xs">{dao.treasuryAddress || '-'}</strong></li>
@@ -1198,12 +1198,12 @@ export default function App() {
         </>
       ) : (
         <section className="flex flex-col gap-6">
-          <section className="hero-shell relative overflow-hidden rounded-none border border-emerald-950/10 bg-[radial-gradient(circle_at_15%_20%,rgba(52,211,153,0.28),transparent_40%),radial-gradient(circle_at_85%_15%,rgba(16,185,129,0.22),transparent_45%),linear-gradient(135deg,#f0fdf4,#dcfce7_45%,#bbf7d0)] p-6 shadow-[0_24px_60px_rgba(14,35,24,0.16)] md:p-8">
+          <section className="hero-shell relative overflow-hidden rounded-none-none border border-[#10162f]/16 bg-[radial-gradient(circle_at_14%_14%,rgba(191,231,255,0.55),transparent_42%),radial-gradient(circle_at_86%_18%,rgba(58,16,229,0.14),transparent_48%),linear-gradient(135deg,#f5f3eb,#eef1ff_52%,#e6ecff)] p-6 shadow-[0_24px_60px_rgba(16,22,47,0.16)] md:p-8">
             <div className="hero-orb hero-orb-a" aria-hidden="true" />
             <div className="hero-orb hero-orb-b" aria-hidden="true" />
-            <p className="text-xs font-normal uppercase tracking-[0.28em] text-emerald-900/70">Community Home</p>
-            <h1 className="mt-3 text-4xl leading-tight text-emerald-950 md:text-5xl">Frog Social for Stacks Community</h1>
-            <p className="mt-4 max-w-3xl text-base text-emerald-950/70">
+            <p className="text-xs font-normal uppercase tracking-[0.28em] text-[#10162f]/75">Community Home</p>
+            <h1 className="mt-3 text-4xl leading-tight text-[#10162f] md:text-5xl">Frog Social for Stacks Community</h1>
+            <p className="mt-4 max-w-3xl text-base text-[#10162f]/70">
               A lightweight social hub where Stacks builders and holders can post updates, like community signals, and tip quality content. Start with the Social tab, then discover the wider ecosystem below.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -1219,25 +1219,25 @@ export default function App() {
             </div>
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
-              <article className="rounded-none border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
-                <p className="text-xs font-normal uppercase tracking-[0.2em] text-emerald-800/70">Publish</p>
-                <p className="mt-2 text-sm text-emerald-900/75">Share quick updates and links from your Stacks journey.</p>
+              <article className="rounded-none-none border border-[#10162f]/16 bg-white/80 p-4 backdrop-blur">
+                <p className="text-xs font-normal uppercase tracking-[0.2em] text-[#10162f]/70">Publish</p>
+                <p className="mt-2 text-sm text-[#10162f]/80">Share quick updates and links from your Stacks journey.</p>
               </article>
-              <article className="rounded-none border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
-                <p className="text-xs font-normal uppercase tracking-[0.2em] text-emerald-800/70">Like</p>
-                <p className="mt-2 text-sm text-emerald-900/75">Signal useful content on-chain with FROG-backed likes.</p>
+              <article className="rounded-none-none border border-[#10162f]/16 bg-white/80 p-4 backdrop-blur">
+                <p className="text-xs font-normal uppercase tracking-[0.2em] text-[#10162f]/70">Like</p>
+                <p className="mt-2 text-sm text-[#10162f]/80">Signal useful content on-chain with FROG-backed likes.</p>
               </article>
-              <article className="rounded-none border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
-                <p className="text-xs font-normal uppercase tracking-[0.2em] text-emerald-800/70">Tip</p>
-                <p className="mt-2 text-sm text-emerald-900/75">Reward creators directly using STX tips from the same feed.</p>
+              <article className="rounded-none-none border border-[#10162f]/16 bg-white/80 p-4 backdrop-blur">
+                <p className="text-xs font-normal uppercase tracking-[0.2em] text-[#10162f]/70">Tip</p>
+                <p className="mt-2 text-sm text-[#10162f]/80">Reward creators directly using STX tips from the same feed.</p>
               </article>
             </div>
           </section>
 
           <header className="max-w-3xl">
-            {/* <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">EXPLORE STACKS ECOSYSTEM</p> */}
+            {/* <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-[#10162f]/65">EXPLORE STACKS ECOSYSTEM</p> */}
             <h2 className="text-3xl leading-tight md:text-4xl">EXPLORE STACKS ECOSYSTEM</h2>
-            <p className="mt-3 text-base text-emerald-900/60">
+            <p className="mt-3 text-base text-[#10162f]/70">
               Featured apps in a Stacks-style ecosystem layout for quick exploration.
             </p>
           </header>
@@ -1247,10 +1247,10 @@ export default function App() {
               <button
                 key={category}
                 type="button"
-                className={`pill-filter rounded-none border px-3.5 py-2 text-xs font-bold transition ${
+                className={`pill-filter rounded-none-none border px-3.5 py-2 text-xs font-bold transition ${
                   ecosystemCategory === category
-                    ? 'border-emerald-900 bg-emerald-900 text-white'
-                    : 'border-emerald-700/20 bg-white text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
+                    ? 'border-[#10162f] bg-[#10162f] text-white'
+                    : 'border-[#10162f]/25 bg-white text-[#10162f] hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20'
                 }`}
                 onClick={() => setEcosystemCategory(category)}
               >
@@ -1262,18 +1262,18 @@ export default function App() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ecosystemApps.map((app) => (
-              <article className="ui-card ui-card--interactive flex flex-col gap-3 rounded-none border border-emerald-950/10 bg-white p-4 shadow-[0_18px_40px_rgba(14,35,24,0.12)]" key={app.name}>
-                <div className="grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-none border border-emerald-950/10 bg-emerald-50">
+              <article className="ui-card ui-card--interactive flex flex-col gap-3 rounded-none-none border border-[#10162f]/16 bg-white p-4 shadow-[0_18px_40px_rgba(14,35,24,0.12)]" key={app.name}>
+                <div className="grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-none-none border border-[#10162f]/16 bg-[#f5f3eb]">
                   <img src={app.image} alt={`${app.name} logo`} loading="lazy" className="h-full w-full object-cover" />
                 </div>
                 <h2 className="text-2xl leading-tight">{app.name}</h2>
-                <p className="text-emerald-900/60">{app.summary}</p>
+                <p className="text-[#10162f]/70">{app.summary}</p>
                 <div className="flex flex-wrap gap-2">
                   {app.tags.map((tag) => (
-                    <span key={`${app.name}-${tag}`} className="rounded-none bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">{tag}</span>
+                    <span key={`${app.name}-${tag}`} className="rounded-none-none bg-[#e6ecff] px-2.5 py-1 text-xs font-bold text-[#10162f]">{tag}</span>
                   ))}
                 </div>
-                <a href={app.url} target="_blank" rel="noreferrer" className="w-fit font-bold text-emerald-900 transition hover:underline">
+                <a href={app.url} target="_blank" rel="noreferrer" className="w-fit font-bold text-[#10162f] transition hover:underline">
                   View on stacks.co
                 </a>
               </article>
