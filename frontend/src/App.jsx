@@ -38,15 +38,15 @@ const socialApiBaseUrl = (!import.meta.env.DEV && (configuredSocialApiBaseUrl.st
   ? defaultSocialApiBaseUrl
   : (configuredSocialApiBaseUrl || defaultSocialApiBaseUrl);
 const primaryButtonClass =
-  'rounded-none-none bg-[#3a10e5] px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-none bg-[#3a10e5] px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
-  'rounded-none-none border border-[#10162f]/35 bg-transparent px-4 py-2.5 text-sm font-medium text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-none border border-[#10162f]/35 bg-transparent px-4 py-2.5 text-sm font-medium text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#10162f]/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const formatterButtonClass =
   'inline-flex items-center gap-1.5 border-r border-[#10162f]/25 px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb]';
 const emojiTriggerButtonClass =
-  'inline-flex items-center rounded-none-none border border-[#10162f]/25 bg-white px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb]';
+  'inline-flex items-center rounded-none border border-[#10162f]/25 bg-white px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb]';
 const mediaActionButtonClass =
-  'inline-flex items-center rounded-none-none border border-[#10162f]/25 bg-white px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb] disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center rounded-none border border-[#10162f]/25 bg-white px-3 py-1.5 text-xs font-medium text-[#10162f] transition hover:bg-[#f5f3eb] disabled:cursor-not-allowed disabled:opacity-50';
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -508,8 +508,23 @@ export default function App() {
         toastOptions={{
           duration: 3500,
           style: {
-            border: '1px solid rgba(6, 78, 59, 0.15)',
-            color: '#064e3b'
+            border: '1px solid rgba(16, 22, 47, 0.3)',
+            background: '#f5f3eb',
+            color: '#10162f',
+            borderRadius: '0px',
+            boxShadow: '-4px 4px 0 rgba(15, 26, 70, 0.98)'
+          },
+          success: {
+            iconTheme: {
+              primary: '#3a10e5',
+              secondary: '#f5f3eb'
+            }
+          },
+          error: {
+            iconTheme: {
+              primary: '#be1809',
+              secondary: '#f5f3eb'
+            }
           }
         }}
       />
@@ -517,7 +532,7 @@ export default function App() {
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            className="w-fit shrink-0 rounded-none-none border border-[#10162f]/25 bg-[#f5f3eb] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20"
+            className="w-fit shrink-0 rounded-none border border-[#10162f]/25 bg-[#f5f3eb] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20"
             onClick={() => setActiveTab('ecosystem')}
           >
             FROG Community Hub
@@ -527,7 +542,7 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
-                className={`nav-tab whitespace-nowrap rounded-none-none border px-3.5 py-2 text-xs font-bold capitalize transition ${
+                className={`nav-tab whitespace-nowrap rounded-none border px-3.5 py-2 text-xs font-bold capitalize transition ${
                   activeTab === tab.id
                     ? 'is-active border-[#3a10e5] bg-[#3a10e5] text-white'
                     : 'border-[#10162f]/30 bg-white/85 text-[#10162f] hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20'
@@ -541,7 +556,7 @@ export default function App() {
           <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
             {faucet.address ? (
               <>
-                <span className="hidden rounded-none-none border border-[#10162f]/25 bg-[#f5f3eb] px-3 py-2 font-mono text-xs text-[#10162f] md:inline">
+                <span className="hidden rounded-none border border-[#10162f]/25 bg-[#f5f3eb] px-3 py-2 font-mono text-xs text-[#10162f] md:inline">
                   {shortenAddress(faucet.address)}
                 </span>
                 <button
@@ -591,7 +606,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 text-base text-[#10162f]/90 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 text-base text-[#10162f]/90 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
@@ -610,7 +625,7 @@ export default function App() {
                   <img
                     src={faucet.tokenImage}
                     alt={faucet.tokenDisplayName || 'FROG token'}
-                    className="h-8 w-8 rounded-none-none border border-[#10162f]/20 object-cover"
+                    className="h-8 w-8 rounded-none border border-[#10162f]/20 object-cover"
                   />
                 ) : (
                   <strong>-</strong>
@@ -658,12 +673,12 @@ export default function App() {
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Transfer</h2>
               <label className="mb-3 block text-base text-[#10162f]/70">
                 Recipient wallet
                 <input
-                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
+                  className="mt-1.5 w-full rounded-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                   value={faucet.recipient}
                   onChange={(e) => faucet.setRecipient(e.target.value)}
                   placeholder="SP..."
@@ -672,7 +687,7 @@ export default function App() {
               <label className="mb-3 block text-base text-[#10162f]/70">
                 Amount
                 <input
-                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
+                  className="mt-1.5 w-full rounded-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                   type="number"
                   min="1"
                   value={faucet.amount}
@@ -688,7 +703,7 @@ export default function App() {
               </p>
             </div>
 
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Contract details</h2>
               <ul className="space-y-2.5 text-base text-[#10162f]/85">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-sm">{contractAddress}.{contractName}</strong></li>
@@ -710,7 +725,7 @@ export default function App() {
                 Register your on-chain username and mint one non-transferable DAO pass to unlock governance.
               </p>
             </div>
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 text-base text-[#10162f]/90 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 text-base text-[#10162f]/90 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
@@ -752,12 +767,12 @@ export default function App() {
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Register Username</h2>
               <label className="block text-base text-[#10162f]/70">
                 Username (ASCII, max 32 chars)
                 <input
-                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base text-[#10162f] outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20 disabled:bg-[#f5f3eb]"
+                  className="mt-1.5 w-full rounded-none border border-[#10162f]/20 px-3 py-2.5 text-base text-[#10162f] outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20 disabled:bg-[#f5f3eb]"
                   value={dao.usernameInput}
                   onChange={(e) => dao.setUsernameInput(e.target.value)}
                   placeholder="froggovernor"
@@ -773,7 +788,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Mint DAO Pass</h2>
               <p className="mb-3 text-base text-[#10162f]/70">
                 Requirement: username registered + hold at least 1,000 FROG (mint fee: 99 FROG).
@@ -787,7 +802,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">DAO Contract</h2>
               <ul className="space-y-2.5 text-base text-[#10162f]/85">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-sm">{daoContractAddress}.{daoContractName}</strong></li>
@@ -801,9 +816,9 @@ export default function App() {
       ) : activeTab === 'social' ? (
         <>
           <header className="grid items-start gap-8 lg:grid-cols-[minmax(440px,1fr)_minmax(260px,340px)]">
-            <div className="ui-card rounded-none-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-none-none bg-[#3a10e5] text-sm font-bold text-white">
+                <div className="grid h-11 w-11 place-items-center rounded-none bg-[#3a10e5] text-sm font-bold text-white">
                   {faucet.address ? socialHandleFromAddress(faucet.address).slice(0, 2).toUpperCase() : 'FG'}
                 </div>
                 <div>
@@ -814,7 +829,7 @@ export default function App() {
 
               <textarea
                 ref={socialComposerRef}
-                className="mt-4 min-h-[150px] w-full resize-none rounded-none-none border border-[#10162f]/20 bg-[#f5f3eb]/65 px-4 py-3 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
+                className="mt-4 min-h-[150px] w-full resize-none rounded-none border border-[#10162f]/20 bg-[#f5f3eb]/65 px-4 py-3 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                 value={socialPostInput}
                 onSelect={updateSocialSelection}
                 onKeyUp={updateSocialSelection}
@@ -828,7 +843,7 @@ export default function App() {
               />
 
               <div className="mt-3 space-y-2">
-                <div className="inline-flex flex-wrap overflow-hidden rounded-none-none border border-[#10162f]/25 bg-white">
+                <div className="inline-flex flex-wrap overflow-hidden rounded-none border border-[#10162f]/25 bg-white">
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('**')}><span>Bold</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('*')}><span>Italic</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyWrapFormat('`')}><span>Code</span></button>
@@ -880,26 +895,26 @@ export default function App() {
                   </button>
 
                   {socialImageFile && socialImagePreviewUrl && (
-                    <div className="inline-flex items-center gap-2 rounded-none-none border border-[#10162f]/25 bg-white px-2 py-1.5">
-                      <img src={socialImagePreviewUrl} alt="Selected upload preview" className="h-9 w-9 rounded-none-none object-cover" />
+                    <div className="inline-flex items-center gap-2 rounded-none border border-[#10162f]/25 bg-white px-2 py-1.5">
+                      <img src={socialImagePreviewUrl} alt="Selected upload preview" className="h-9 w-9 rounded-none object-cover" />
                       <div className="max-w-[150px]">
                         <p className="truncate text-xs font-medium text-[#10162f]">{socialImageFile.name}</p>
                         <p className="text-[11px] text-[#10162f]/70">One image per post</p>
                       </div>
-                      <button type="button" className="rounded-none-none border border-[#10162f]/25 px-2 py-1 text-[11px] font-medium text-[#10162f]" onClick={clearSocialImage}>Remove</button>
+                      <button type="button" className="rounded-none border border-[#10162f]/25 px-2 py-1 text-[11px] font-medium text-[#10162f]" onClick={clearSocialImage}>Remove</button>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="mt-3 rounded-none-none border border-[#10162f]/20 bg-[#f5f3eb]/70 px-4 py-3">
+              <div className="mt-3 rounded-none border border-[#10162f]/20 bg-[#f5f3eb]/70 px-4 py-3">
                 <p className="mb-2 text-[11px] font-normal uppercase tracking-[0.14em] text-[#10162f]/70">Live Preview</p>
                 {socialPostInput.trim() || socialImagePreviewUrl
                   ? (
                     <div className="space-y-3 text-[15px] leading-relaxed text-[#10162f]">
                       {socialPostInput.trim() ? renderPostContent(socialPostInput) : null}
                       {socialImagePreviewUrl && (
-                        <img src={socialImagePreviewUrl} alt="Post image preview" className="max-h-72 w-full rounded-none-none border border-[#10162f]/15 bg-[#e6ecff]/70 object-contain" />
+                        <img src={socialImagePreviewUrl} alt="Post image preview" className="max-h-72 w-full rounded-none border border-[#10162f]/15 bg-[#e6ecff]/70 object-contain" />
                       )}
                     </div>
                   )
@@ -917,23 +932,23 @@ export default function App() {
               {!social.ready && <p className="mt-1 text-base text-[#10162f]/60">Social contract is not configured.</p>}
             </div>
 
-            <div className="ui-card rounded-none-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <p className="text-xs uppercase tracking-[0.2em] text-[#10162f]/65">Author Dashboard</p>
               <h2 className="mt-1 text-xl font-normal">Creator Performance</h2>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <div className="rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
+                <div className="rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-[#10162f]/70">Authors</p>
                   <p className="text-base font-normal text-[#10162f]">{authorDashboard.authorCount}</p>
                 </div>
-                <div className="rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
+                <div className="rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-[#10162f]/70">Posts</p>
                   <p className="text-base font-normal text-[#10162f]">{authorDashboard.totalPosts}</p>
                 </div>
-                <div className="rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
+                <div className="rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-[#10162f]/70">Likes</p>
                   <p className="text-base font-normal text-[#10162f]">{authorDashboard.totalLikes}</p>
                 </div>
-                <div className="rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
+                <div className="rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/80 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-[#10162f]/70">STX Tipped</p>
                   <p className="text-base font-normal text-[#10162f]">{formatTipAmountFromMicroStx(authorDashboard.totalTipsMicroStx)}</p>
                 </div>
@@ -941,7 +956,7 @@ export default function App() {
               <p className="mt-4 text-xs uppercase tracking-[0.12em] text-[#10162f]/70">Top Authors by Reputation</p>
               <div className="mt-4 space-y-2.5">
                 {authorDashboard.topAuthors.length > 0 ? authorDashboard.topAuthors.map((creator, index) => (
-                  <div key={creator.author} className="flex items-center justify-between rounded-none-none border border-[#10162f]/15 bg-[#f5f3eb]/85 px-3 py-2">
+                  <div key={creator.author} className="flex items-center justify-between rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/85 px-3 py-2">
                     <div>
                       <p className="text-base text-[#10162f]/70">Rank #{index + 1}</p>
                       <p className="text-sm font-normal text-[#10162f]">@{socialHandleFromAddress(creator.author)}</p>
@@ -950,13 +965,13 @@ export default function App() {
                     <strong className="text-sm">Rep {creator.reputation}</strong>
                   </div>
                 )) : (
-                  <div className="rounded-none-none border border-dashed border-[#10162f]/30 bg-[#f5f3eb]/70 px-3 py-2 text-sm text-[#10162f]/75">
+                  <div className="rounded-none border border-dashed border-[#10162f]/30 bg-[#f5f3eb]/70 px-3 py-2 text-sm text-[#10162f]/75">
                     No author metrics yet.
                   </div>
                 )}
               </div>
               {faucet.address && (
-                <div className="mt-4 rounded-none-none border border-[#10162f]/15 bg-white px-3 py-2">
+                <div className="mt-4 rounded-none border border-[#10162f]/15 bg-white px-3 py-2">
                   {authorDashboard.currentAuthor ? (
                     <p className="text-xs text-[#10162f]/75">Your rank #{authorDashboard.currentAuthorRank} • Rep {authorDashboard.currentAuthor.reputation} • {authorDashboard.currentAuthor.postCount} posts</p>
                   ) : (
@@ -975,7 +990,7 @@ export default function App() {
                 <h2 className="text-2xl font-normal">Latest Posts</h2>
               </div>
               <div className="flex items-center gap-2">
-                <span className="rounded-none-none border border-[#10162f]/25 bg-white px-3 py-1 text-xs font-bold text-[#10162f]">{socialFeed.length} posts</span>
+                <span className="rounded-none border border-[#10162f]/25 bg-white px-3 py-1 text-xs font-bold text-[#10162f]">{socialFeed.length} posts</span>
                 <button className={ghostButtonClass} onClick={() => social.refresh(20)} disabled={!social.ready || isSocialActionLocked}>
                   {social.isRefreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
@@ -984,7 +999,7 @@ export default function App() {
 
             {isSocialFeedLoading ? (
               <div className="mx-auto grid max-w-3xl gap-4">
-                <div className="ui-card rounded-none-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                <div className="ui-card rounded-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                   <div className="h-4 w-32 animate-pulse rounded-none bg-[#e6ecff]" />
                   <div className="mt-4 space-y-2">
                     <div className="h-3 w-full animate-pulse rounded-none bg-[#e6ecff]" />
@@ -1002,16 +1017,16 @@ export default function App() {
                   const isOwnPost = Boolean(faucet.address && post.author === faucet.address);
                   const isTippingThisPost = social.tippingPostId === String(post.id);
                   return (
-                    <article key={post.id} className="ui-card ui-card--interactive overflow-hidden rounded-none-none border border-[#10162f]/20 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                    <article key={post.id} className="ui-card ui-card--interactive overflow-hidden rounded-none border border-[#10162f]/20 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                       <div className="flex items-center justify-between border-b border-[#10162f]/15 px-4 py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="grid h-9 w-9 place-items-center rounded-none-none bg-[#e6ecff] text-xs font-bold text-[#10162f]">
+                          <div className="grid h-9 w-9 place-items-center rounded-none bg-[#e6ecff] text-xs font-bold text-[#10162f]">
                             {socialHandleFromAddress(post.author).slice(0, 2).toUpperCase()}
                           </div>
                           <div>
                             <p className="text-sm font-normal text-[#10162f]">@{socialHandleFromAddress(post.author)}</p>
                             <p className="font-mono text-[11px] text-[#10162f]/70">{shortenAddress(post.author)}</p>
-                            <p className="mt-1 inline-flex items-center rounded-none-none border border-[#10162f]/25 bg-[#f5f3eb] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[#10162f]">Rep {post.authorReputation || '0'}</p>
+                            <p className="mt-1 inline-flex items-center rounded-none border border-[#10162f]/25 bg-[#f5f3eb] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[#10162f]">Rep {post.authorReputation || '0'}</p>
                           </div>
                         </div>
                         <p className="text-xs text-[#10162f]/70">{formatPostTime(post.createdAtBlock)}</p>
@@ -1022,7 +1037,7 @@ export default function App() {
                         {Array.isArray(post.images) && post.images.length > 0 && (
                           <div className="mt-3 grid gap-2">
                             {post.images.map((imageUrl) => (
-                              <a key={`${post.id}-${imageUrl}`} href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-none-none border border-[#10162f]/15">
+                              <a key={`${post.id}-${imageUrl}`} href={imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-none border border-[#10162f]/15">
                                 <img src={imageUrl} alt="Post attachment" className="max-h-[70vh] w-full bg-[#e6ecff]/70 object-contain" loading="lazy" />
                               </a>
                             ))}
@@ -1031,7 +1046,7 @@ export default function App() {
                         {Array.isArray(post.links) && post.links.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {post.links.map((link) => (
-                              <a key={`${post.id}-${link}`} href={link} target="_blank" rel="noreferrer" className="rounded-none-none border border-[#10162f]/25 bg-[#e6ecff] px-2.5 py-1 text-xs font-medium text-[#10162f] hover:underline">
+                              <a key={`${post.id}-${link}`} href={link} target="_blank" rel="noreferrer" className="rounded-none border border-[#10162f]/25 bg-[#e6ecff] px-2.5 py-1 text-xs font-medium text-[#10162f] hover:underline">
                                 {link}
                               </a>
                             ))}
@@ -1070,16 +1085,16 @@ export default function App() {
                 })}
                 </div>
                 {social.isRefreshing && (
-                  <div className="absolute inset-0 z-10 grid place-items-center rounded-none-none border border-[#10162f]/15 bg-white/70 backdrop-blur-[1px]">
-                    <div className="flex items-center gap-2 rounded-none-none border border-[#10162f]/15 bg-white px-3 py-2 text-sm text-[#10162f]/85 shadow">
-                      <span className="h-4 w-4 animate-spin rounded-none-none border-2 border-[#10162f]/30 border-t-[#3a10e5]" />
+                  <div className="absolute inset-0 z-10 grid place-items-center rounded-none border border-[#10162f]/15 bg-white/70 backdrop-blur-[1px]">
+                    <div className="flex items-center gap-2 rounded-none border border-[#10162f]/15 bg-white px-3 py-2 text-sm text-[#10162f]/85 shadow">
+                      <span className="h-4 w-4 animate-spin rounded-none border-2 border-[#10162f]/30 border-t-[#3a10e5]" />
                       <span>Syncing latest on-chain data...</span>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="rounded-none-none border border-dashed border-[#10162f]/30 bg-[#f5f3eb]/70 p-6 text-sm text-[#10162f]/75">
+              <div className="rounded-none border border-dashed border-[#10162f]/30 bg-[#f5f3eb]/70 p-6 text-sm text-[#10162f]/75">
                 Feed is empty. Publish the first post to kickstart community discussions.
               </div>
             )}
@@ -1095,7 +1110,7 @@ export default function App() {
                 Owner-only controls for pause state, claim amount, and cooldown blocks.
               </p>
             </div>
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-[#10162f]/16 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
@@ -1128,7 +1143,7 @@ export default function App() {
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Pause / Unpause</h2>
               <p className="mb-4 text-xs text-[#10162f]/70">
                 Current faucet state: <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
@@ -1143,13 +1158,13 @@ export default function App() {
               </div>
             </div>
 
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Set Claim Amount</h2>
               <p className="mb-3 text-xs text-[#10162f]/70">Current amount: <strong>{faucet.faucetAmount || '-'} FROG</strong></p>
               <label className="mb-3 block text-xs text-[#10162f]/70">
                 New amount
                 <input
-                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
+                  className="mt-1.5 w-full rounded-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                   type="number"
                   min="1"
                   value={faucet.adminAmountInput}
@@ -1163,13 +1178,13 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">Set Cooldown</h2>
               <p className="mb-3 text-xs text-[#10162f]/70">Current cooldown: <strong>{faucet.cooldownBlocks || '-'} blocks</strong></p>
               <label className="mb-3 block text-xs text-[#10162f]/70">
                 New cooldown blocks
                 <input
-                  className="mt-1.5 w-full rounded-none-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
+                  className="mt-1.5 w-full rounded-none border border-[#10162f]/20 px-3 py-2.5 text-base outline-none transition focus:border-[#3a10e5] focus:ring-2 focus:ring-[#3a10e5]/20"
                   type="number"
                   min="1"
                   value={faucet.adminCooldownInput}
@@ -1183,7 +1198,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ui-card rounded-none-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-normal">DAO Treasury</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Treasury wallet</span> <strong className="break-all font-mono text-xs">{dao.treasuryAddress || '-'}</strong></li>
@@ -1198,7 +1213,7 @@ export default function App() {
         </>
       ) : (
         <section className="flex flex-col gap-6">
-          <section className="hero-shell relative overflow-hidden rounded-none-none border border-[#10162f]/16 bg-[radial-gradient(circle_at_14%_14%,rgba(191,231,255,0.55),transparent_42%),radial-gradient(circle_at_86%_18%,rgba(58,16,229,0.14),transparent_48%),linear-gradient(135deg,#f5f3eb,#eef1ff_52%,#e6ecff)] p-6 shadow-[0_24px_60px_rgba(16,22,47,0.16)] md:p-8">
+          <section className="hero-shell relative overflow-hidden rounded-none border border-[#10162f]/16 bg-[radial-gradient(circle_at_14%_14%,rgba(191,231,255,0.55),transparent_42%),radial-gradient(circle_at_86%_18%,rgba(58,16,229,0.14),transparent_48%),linear-gradient(135deg,#f5f3eb,#eef1ff_52%,#e6ecff)] p-6 shadow-[0_24px_60px_rgba(16,22,47,0.16)] md:p-8">
             <div className="hero-orb hero-orb-a" aria-hidden="true" />
             <div className="hero-orb hero-orb-b" aria-hidden="true" />
             <p className="text-xs font-normal uppercase tracking-[0.28em] text-[#10162f]/75">Community Home</p>
@@ -1219,15 +1234,15 @@ export default function App() {
             </div>
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
-              <article className="rounded-none-none border border-[#10162f]/16 bg-white/80 p-4 backdrop-blur">
+              <article className="rounded-none border border-[#10162f]/16 bg-white/80 p-4 backdrop-blur">
                 <p className="text-xs font-normal uppercase tracking-[0.2em] text-[#10162f]/70">Publish</p>
                 <p className="mt-2 text-sm text-[#10162f]/80">Share quick updates and links from your Stacks journey.</p>
               </article>
-              <article className="rounded-none-none border border-[#10162f]/16 bg-white/80 p-4 backdrop-blur">
+              <article className="rounded-none border border-[#10162f]/16 bg-white/80 p-4 backdrop-blur">
                 <p className="text-xs font-normal uppercase tracking-[0.2em] text-[#10162f]/70">Like</p>
                 <p className="mt-2 text-sm text-[#10162f]/80">Signal useful content on-chain with FROG-backed likes.</p>
               </article>
-              <article className="rounded-none-none border border-[#10162f]/16 bg-white/80 p-4 backdrop-blur">
+              <article className="rounded-none border border-[#10162f]/16 bg-white/80 p-4 backdrop-blur">
                 <p className="text-xs font-normal uppercase tracking-[0.2em] text-[#10162f]/70">Tip</p>
                 <p className="mt-2 text-sm text-[#10162f]/80">Reward creators directly using STX tips from the same feed.</p>
               </article>
@@ -1247,7 +1262,7 @@ export default function App() {
               <button
                 key={category}
                 type="button"
-                className={`pill-filter rounded-none-none border px-3.5 py-2 text-xs font-bold transition ${
+                className={`pill-filter rounded-none border px-3.5 py-2 text-xs font-bold transition ${
                   ecosystemCategory === category
                     ? 'border-[#10162f] bg-[#10162f] text-white'
                     : 'border-[#10162f]/25 bg-white text-[#10162f] hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20'
@@ -1262,15 +1277,15 @@ export default function App() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ecosystemApps.map((app) => (
-              <article className="ui-card ui-card--interactive flex flex-col gap-3 rounded-none-none border border-[#10162f]/16 bg-white p-4 shadow-[0_18px_40px_rgba(14,35,24,0.12)]" key={app.name}>
-                <div className="grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-none-none border border-[#10162f]/16 bg-[#f5f3eb]">
+              <article className="ui-card ui-card--interactive flex flex-col gap-3 rounded-none border border-[#10162f]/16 bg-white p-4 shadow-[0_18px_40px_rgba(14,35,24,0.12)]" key={app.name}>
+                <div className="grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-none border border-[#10162f]/16 bg-[#f5f3eb]">
                   <img src={app.image} alt={`${app.name} logo`} loading="lazy" className="h-full w-full object-cover" />
                 </div>
                 <h2 className="text-2xl leading-tight">{app.name}</h2>
                 <p className="text-[#10162f]/70">{app.summary}</p>
                 <div className="flex flex-wrap gap-2">
                   {app.tags.map((tag) => (
-                    <span key={`${app.name}-${tag}`} className="rounded-none-none bg-[#e6ecff] px-2.5 py-1 text-xs font-bold text-[#10162f]">{tag}</span>
+                    <span key={`${app.name}-${tag}`} className="rounded-none bg-[#e6ecff] px-2.5 py-1 text-xs font-bold text-[#10162f]">{tag}</span>
                   ))}
                 </div>
                 <a href={app.url} target="_blank" rel="noreferrer" className="w-fit font-bold text-[#10162f] transition hover:underline">
