@@ -38,15 +38,15 @@ const socialApiBaseUrl = (!import.meta.env.DEV && (configuredSocialApiBaseUrl.st
   ? defaultSocialApiBaseUrl
   : (configuredSocialApiBaseUrl || defaultSocialApiBaseUrl);
 const primaryButtonClass =
-  'rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-normal text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/25 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const ghostButtonClass =
-  'rounded-xl border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-normal text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
+  'rounded-xl border border-emerald-700/35 bg-transparent px-4 py-2.5 text-sm font-medium text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-900/15 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none';
 const formatterButtonClass =
-  'inline-flex items-center gap-1.5 border-r border-emerald-700/20 px-3 py-1.5 text-xs font-normal text-emerald-800 transition hover:bg-emerald-50';
+  'inline-flex items-center gap-1.5 border-r border-emerald-700/20 px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50';
 const emojiTriggerButtonClass =
-  'inline-flex items-center rounded-xl border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-normal text-emerald-800 transition hover:bg-emerald-50';
+  'inline-flex items-center rounded-xl border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50';
 const mediaActionButtonClass =
-  'inline-flex items-center rounded-xl border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-normal text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center rounded-xl border border-emerald-700/20 bg-white px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50';
 const shortenAddress = (address) => {
   if (!address) return '';
   if (address.length <= 14) return address;
@@ -129,7 +129,7 @@ const renderInlineFormatting = (text, keyPrefix = 'part') => {
       const match = chunk.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
       if (!match) return <span key={key}>{chunk}</span>;
       const [, label, href] = match;
-      return <a key={key} href={href} target="_blank" rel="noreferrer" className="font-normal text-emerald-800 underline underline-offset-2">{label}</a>;
+      return <a key={key} href={href} target="_blank" rel="noreferrer" className="font-medium text-emerald-800 underline underline-offset-2">{label}</a>;
     }
     if (/^~~[^~]+~~$/.test(chunk)) {
       return <s key={key}>{chunk.slice(2, -2)}</s>;
@@ -155,8 +155,8 @@ const renderPostContent = (content) => {
       const className = level === 1
         ? 'text-lg font-bold'
         : level === 2
-          ? 'text-base font-normal'
-          : 'text-sm font-normal';
+          ? 'text-base font-medium'
+          : 'text-sm font-medium';
       return (
         <p key={lineKey} className={`${className} mt-1 text-emerald-950`}>
           {renderInlineFormatting(text, `${lineKey}-h`) }
@@ -188,7 +188,7 @@ const renderPostContent = (content) => {
       const text = line.replace(/^\s*\d+\.\s+/, '');
       return (
         <div key={lineKey} className="mt-1 flex items-start gap-2 text-[15px] leading-relaxed text-emerald-950">
-          <span className="text-xs font-normal text-emerald-900/70">{marker}</span>
+          <span className="text-xs font-medium text-emerald-900/70">{marker}</span>
           <span>{renderInlineFormatting(text, `${lineKey}-n`)}</span>
         </div>
       );
@@ -575,7 +575,7 @@ export default function App() {
             <div>
               <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG Community Hub</p>
               <h1 className="text-4xl leading-tight md:text-5xl">24h Faucet for FROG Token</h1>
-              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
+              <p className="mt-3 max-w-2xl text-xs text-emerald-900/60">
                 Claim FROG on a configurable cooldown. Connect your wallet, claim tokens, and transfer to friends.
               </p>
               <div className="frog-mascot" aria-hidden="true">
@@ -650,17 +650,17 @@ export default function App() {
                   </>
                 )}
               </div>
-              {faucet.status && <p className="mt-3 text-sm text-emerald-900/60">{faucet.status}</p>}
+              {faucet.status && <p className="mt-3 text-xs text-emerald-900/60">{faucet.status}</p>}
               {faucet.faucetPaused && (
-                <p className="mt-3 text-sm text-emerald-900/60">Claims are temporarily paused by contract admin.</p>
+                <p className="mt-3 text-xs text-emerald-900/60">Claims are temporarily paused by contract admin.</p>
               )}
             </div>
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-normal">Transfer</h2>
-              <label className="mb-3 block text-base text-emerald-900/60">
+              <h2 className="mb-3 text-lg font-medium">Transfer</h2>
+              <label className="mb-3 block text-xs text-emerald-900/60">
                 Recipient wallet
                 <input
                   className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
@@ -669,7 +669,7 @@ export default function App() {
                   placeholder="SP..."
                 />
               </label>
-              <label className="mb-3 block text-base text-emerald-900/60">
+              <label className="mb-3 block text-xs text-emerald-900/60">
                 Amount
                 <input
                   className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
@@ -689,7 +689,7 @@ export default function App() {
             </div>
 
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-normal">Contract details</h2>
+              <h2 className="mb-3 text-lg font-medium">Contract details</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-xs">{contractAddress}.{contractName}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Network</span> <strong>{network}</strong></li>
@@ -706,7 +706,7 @@ export default function App() {
             <div>
               <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG DAO</p>
               <h1 className="text-4xl leading-tight md:text-5xl">DAO Membership Pass</h1>
-              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
+              <p className="mt-3 max-w-2xl text-xs text-emerald-900/60">
                 Register your on-chain username and mint one non-transferable DAO pass to unlock governance.
               </p>
             </div>
@@ -747,14 +747,14 @@ export default function App() {
                   </>
                 )}
               </div>
-              {(dao.status || faucet.status) && <p className="mt-3 text-sm text-emerald-900/60">{dao.status || faucet.status}</p>}
+              {(dao.status || faucet.status) && <p className="mt-3 text-xs text-emerald-900/60">{dao.status || faucet.status}</p>}
             </div>
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-normal">Register Username</h2>
-              <label className="block text-base text-emerald-900/60">
+              <h2 className="mb-3 text-lg font-medium">Register Username</h2>
+              <label className="block text-xs text-emerald-900/60">
                 Username (ASCII, max 32 chars)
                 <input
                   className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base text-emerald-950 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20 disabled:bg-emerald-50"
@@ -774,8 +774,8 @@ export default function App() {
             </div>
 
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-normal">Mint DAO Pass</h2>
-              <p className="mb-3 text-base text-emerald-900/60">
+              <h2 className="mb-3 text-lg font-medium">Mint DAO Pass</h2>
+              <p className="mb-3 text-xs text-emerald-900/60">
                 Requirement: username registered + hold at least 1,000 FROG (mint fee: 99 FROG).
               </p>
               <button
@@ -788,7 +788,7 @@ export default function App() {
             </div>
 
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-normal">DAO Contract</h2>
+              <h2 className="mb-3 text-lg font-medium">DAO Contract</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-xs">{daoContractAddress}.{daoContractName}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Network</span> <strong>{network}</strong></li>
@@ -807,7 +807,7 @@ export default function App() {
                   {faucet.address ? socialHandleFromAddress(faucet.address).slice(0, 2).toUpperCase() : 'FG'}
                 </div>
                 <div>
-                  <p className="text-sm font-normal text-emerald-950">{faucet.address ? `@${socialHandleFromAddress(faucet.address)}` : '@guest'}</p>
+                  <p className="text-sm font-medium text-emerald-950">{faucet.address ? `@${socialHandleFromAddress(faucet.address)}` : '@guest'}</p>
                   <p className="text-xs text-emerald-900/60">{faucet.address ? shortenAddress(faucet.address) : 'Connect wallet to publish and like posts'}</p>
                 </div>
               </div>
@@ -837,7 +837,7 @@ export default function App() {
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('# ')}><span>H1</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('## ')}><span>H2</span></button>
                   <button type="button" className={formatterButtonClass} onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('> ')}><span>Quote</span></button>
-                  <button type="button" className="inline-flex items-center px-3 py-1.5 text-xs font-normal text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}><span>List</span></button>
+                  <button type="button" className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:bg-emerald-50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyLinePrefixFormat('- ')}><span>List</span></button>
                 </div>
 
                 <div className="flex flex-wrap items-start gap-2">
@@ -883,17 +883,17 @@ export default function App() {
                     <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-700/20 bg-white px-2 py-1.5">
                       <img src={socialImagePreviewUrl} alt="Selected upload preview" className="h-9 w-9 rounded-md object-cover" />
                       <div className="max-w-[150px]">
-                        <p className="truncate text-xs font-normal text-emerald-900">{socialImageFile.name}</p>
+                        <p className="truncate text-xs font-medium text-emerald-900">{socialImageFile.name}</p>
                         <p className="text-[11px] text-emerald-900/60">One image per post</p>
                       </div>
-                      <button type="button" className="rounded-md border border-emerald-700/20 px-2 py-1 text-[11px] font-normal text-emerald-800" onClick={clearSocialImage}>Remove</button>
+                      <button type="button" className="rounded-md border border-emerald-700/20 px-2 py-1 text-[11px] font-medium text-emerald-800" onClick={clearSocialImage}>Remove</button>
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="mt-3 rounded-2xl border border-emerald-900/15 bg-emerald-50/40 px-4 py-3">
-                <p className="mb-2 text-[11px] font-normal uppercase tracking-[0.14em] text-emerald-800/70">Live Preview</p>
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-emerald-800/70">Live Preview</p>
                 {socialPostInput.trim() || socialImagePreviewUrl
                   ? (
                     <div className="space-y-3 text-[15px] leading-relaxed text-emerald-950">
@@ -912,30 +912,30 @@ export default function App() {
                   {social.isPublishing ? 'Publishing...' : `Publish (${social.postFee || '50'} FROG)`}
                 </button>
               </div>
-              {socialStatus && <p className="mt-3 text-sm text-emerald-900/65">{socialStatus}</p>}
+              {socialStatus && <p className="mt-3 text-xs text-emerald-900/65">{socialStatus}</p>}
               <p className="mt-1 text-xs text-emerald-900/55">Your balance: {social.viewerBalance || faucet.balance || '0'} FROG</p>
               {!social.ready && <p className="mt-1 text-xs text-emerald-900/55">Social contract is not configured.</p>}
             </div>
 
             <div className="ui-card rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Author Dashboard</p>
-              <h2 className="mt-1 text-xl font-normal">Creator Performance</h2>
+              <h2 className="mt-1 text-xl font-medium">Creator Performance</h2>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Authors</p>
-                  <p className="text-base font-normal text-emerald-950">{authorDashboard.authorCount}</p>
+                  <p className="text-base font-medium text-emerald-950">{authorDashboard.authorCount}</p>
                 </div>
                 <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Posts</p>
-                  <p className="text-base font-normal text-emerald-950">{authorDashboard.totalPosts}</p>
+                  <p className="text-base font-medium text-emerald-950">{authorDashboard.totalPosts}</p>
                 </div>
                 <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">Likes</p>
-                  <p className="text-base font-normal text-emerald-950">{authorDashboard.totalLikes}</p>
+                  <p className="text-base font-medium text-emerald-950">{authorDashboard.totalLikes}</p>
                 </div>
                 <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50/50 px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.08em] text-emerald-900/60">STX Tipped</p>
-                  <p className="text-base font-normal text-emerald-950">{formatTipAmountFromMicroStx(authorDashboard.totalTipsMicroStx)}</p>
+                  <p className="text-base font-medium text-emerald-950">{formatTipAmountFromMicroStx(authorDashboard.totalTipsMicroStx)}</p>
                 </div>
               </div>
               <p className="mt-4 text-xs uppercase tracking-[0.12em] text-emerald-800/70">Top Authors by Reputation</p>
@@ -944,7 +944,7 @@ export default function App() {
                   <div key={creator.author} className="flex items-center justify-between rounded-2xl border border-emerald-900/10 bg-emerald-50/60 px-3 py-2">
                     <div>
                       <p className="text-xs text-emerald-900/60">Rank #{index + 1}</p>
-                      <p className="text-sm font-normal text-emerald-950">@{socialHandleFromAddress(creator.author)}</p>
+                      <p className="text-sm font-medium text-emerald-950">@{socialHandleFromAddress(creator.author)}</p>
                       <p className="text-[11px] text-emerald-900/60">{creator.postCount} posts • {creator.totalLikes} likes</p>
                     </div>
                     <strong className="text-sm">Rep {creator.reputation}</strong>
@@ -972,7 +972,7 @@ export default function App() {
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Community Feed</p>
-                <h2 className="text-2xl font-normal">Latest Posts</h2>
+                <h2 className="text-2xl font-medium">Latest Posts</h2>
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-full border border-emerald-700/20 bg-white px-3 py-1 text-xs font-bold text-emerald-800">{socialFeed.length} posts</span>
@@ -991,7 +991,7 @@ export default function App() {
                     <div className="h-3 w-5/6 animate-pulse rounded bg-emerald-100" />
                     <div className="h-3 w-4/6 animate-pulse rounded bg-emerald-100" />
                   </div>
-                  <p className="mt-4 text-sm text-emerald-900/65">Loading posts from chain...</p>
+                  <p className="mt-4 text-xs text-emerald-900/65">Loading posts from chain...</p>
                 </div>
               </div>
             ) : socialFeed.length > 0 ? (
@@ -1009,9 +1009,9 @@ export default function App() {
                             {socialHandleFromAddress(post.author).slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-sm font-normal text-emerald-950">@{socialHandleFromAddress(post.author)}</p>
+                            <p className="text-sm font-medium text-emerald-950">@{socialHandleFromAddress(post.author)}</p>
                             <p className="font-mono text-[11px] text-emerald-900/60">{shortenAddress(post.author)}</p>
-                            <p className="mt-1 inline-flex items-center rounded-full border border-emerald-700/20 bg-emerald-50 px-2 py-0.5 text-[10px] font-normal uppercase tracking-[0.08em] text-emerald-800">Rep {post.authorReputation || '0'}</p>
+                            <p className="mt-1 inline-flex items-center rounded-full border border-emerald-700/20 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-emerald-800">Rep {post.authorReputation || '0'}</p>
                           </div>
                         </div>
                         <p className="text-xs text-emerald-900/60">{formatPostTime(post.createdAtBlock)}</p>
@@ -1031,7 +1031,7 @@ export default function App() {
                         {Array.isArray(post.links) && post.links.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {post.links.map((link) => (
-                              <a key={`${post.id}-${link}`} href={link} target="_blank" rel="noreferrer" className="rounded-full border border-emerald-700/20 bg-emerald-100 px-2.5 py-1 text-xs font-normal text-emerald-800 hover:underline">
+                              <a key={`${post.id}-${link}`} href={link} target="_blank" rel="noreferrer" className="rounded-full border border-emerald-700/20 bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:underline">
                                 {link}
                               </a>
                             ))}
@@ -1091,7 +1091,7 @@ export default function App() {
             <div>
               <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG ADMIN</p>
               <h1 className="text-4xl leading-tight md:text-5xl">Faucet Admin Controls</h1>
-              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
+              <p className="mt-3 max-w-2xl text-xs text-emerald-900/60">
                 Owner-only controls for pause state, claim amount, and cooldown blocks.
               </p>
             </div>
@@ -1123,14 +1123,14 @@ export default function App() {
                   </button>
                 )}
               </div>
-              {faucet.status && <p className="mt-3 text-sm text-emerald-900/60">{faucet.status}</p>}
+              {faucet.status && <p className="mt-3 text-xs text-emerald-900/60">{faucet.status}</p>}
             </div>
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-normal">Pause / Unpause</h2>
-              <p className="mb-4 text-base text-emerald-900/60">
+              <h2 className="mb-3 text-lg font-medium">Pause / Unpause</h2>
+              <p className="mb-4 text-xs text-emerald-900/60">
                 Current faucet state: <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
               </p>
               <div className="flex flex-wrap gap-3">
@@ -1144,9 +1144,9 @@ export default function App() {
             </div>
 
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-normal">Set Claim Amount</h2>
-              <p className="mb-3 text-base text-emerald-900/60">Current amount: <strong>{faucet.faucetAmount || '-'} FROG</strong></p>
-              <label className="mb-3 block text-base text-emerald-900/60">
+              <h2 className="mb-3 text-lg font-medium">Set Claim Amount</h2>
+              <p className="mb-3 text-xs text-emerald-900/60">Current amount: <strong>{faucet.faucetAmount || '-'} FROG</strong></p>
+              <label className="mb-3 block text-xs text-emerald-900/60">
                 New amount
                 <input
                   className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
@@ -1164,9 +1164,9 @@ export default function App() {
             </div>
 
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-normal">Set Cooldown</h2>
-              <p className="mb-3 text-base text-emerald-900/60">Current cooldown: <strong>{faucet.cooldownBlocks || '-'} blocks</strong></p>
-              <label className="mb-3 block text-base text-emerald-900/60">
+              <h2 className="mb-3 text-lg font-medium">Set Cooldown</h2>
+              <p className="mb-3 text-xs text-emerald-900/60">Current cooldown: <strong>{faucet.cooldownBlocks || '-'} blocks</strong></p>
+              <label className="mb-3 block text-xs text-emerald-900/60">
                 New cooldown blocks
                 <input
                   className="mt-1.5 w-full rounded-xl border border-emerald-950/15 px-3 py-2.5 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
@@ -1184,7 +1184,7 @@ export default function App() {
             </div>
 
             <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
-              <h2 className="mb-3 text-lg font-normal">DAO Treasury</h2>
+              <h2 className="mb-3 text-lg font-medium">DAO Treasury</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Treasury wallet</span> <strong className="break-all font-mono text-xs">{dao.treasuryAddress || '-'}</strong></li>
                 <li className="flex items-center justify-between gap-3"><span>Mint fee</span> <strong>{dao.mintFee || '-'} FROG</strong></li>
@@ -1201,7 +1201,7 @@ export default function App() {
           <section className="hero-shell relative overflow-hidden rounded-3xl border border-emerald-950/10 bg-[radial-gradient(circle_at_15%_20%,rgba(52,211,153,0.28),transparent_40%),radial-gradient(circle_at_85%_15%,rgba(16,185,129,0.22),transparent_45%),linear-gradient(135deg,#f0fdf4,#dcfce7_45%,#bbf7d0)] p-6 shadow-[0_24px_60px_rgba(14,35,24,0.16)] md:p-8">
             <div className="hero-orb hero-orb-a" aria-hidden="true" />
             <div className="hero-orb hero-orb-b" aria-hidden="true" />
-            <p className="text-xs font-normal uppercase tracking-[0.28em] text-emerald-900/70">Community Home</p>
+            <p className="text-xs font-medium uppercase tracking-[0.28em] text-emerald-900/70">Community Home</p>
             <h1 className="mt-3 text-4xl leading-tight text-emerald-950 md:text-5xl">Frog Social for Stacks Community</h1>
             <p className="mt-4 max-w-3xl text-base text-emerald-950/70">
               A lightweight social hub where Stacks builders and holders can post updates, like community signals, and tip quality content. Start with the Social tab, then discover the wider ecosystem below.
@@ -1220,15 +1220,15 @@ export default function App() {
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
               <article className="rounded-2xl border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
-                <p className="text-xs font-normal uppercase tracking-[0.2em] text-emerald-800/70">Publish</p>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-800/70">Publish</p>
                 <p className="mt-2 text-sm text-emerald-900/75">Share quick updates and links from your Stacks journey.</p>
               </article>
               <article className="rounded-2xl border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
-                <p className="text-xs font-normal uppercase tracking-[0.2em] text-emerald-800/70">Like</p>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-800/70">Like</p>
                 <p className="mt-2 text-sm text-emerald-900/75">Signal useful content on-chain with FROG-backed likes.</p>
               </article>
               <article className="rounded-2xl border border-emerald-950/10 bg-white/80 p-4 backdrop-blur">
-                <p className="text-xs font-normal uppercase tracking-[0.2em] text-emerald-800/70">Tip</p>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-800/70">Tip</p>
                 <p className="mt-2 text-sm text-emerald-900/75">Reward creators directly using STX tips from the same feed.</p>
               </article>
             </div>
@@ -1237,7 +1237,7 @@ export default function App() {
           <header className="max-w-3xl">
             {/* <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">EXPLORE STACKS ECOSYSTEM</p> */}
             <h2 className="text-3xl leading-tight md:text-4xl">EXPLORE STACKS ECOSYSTEM</h2>
-            <p className="mt-3 text-base text-emerald-900/60">
+            <p className="mt-3 text-xs text-emerald-900/60">
               Featured apps in a Stacks-style ecosystem layout for quick exploration.
             </p>
           </header>
