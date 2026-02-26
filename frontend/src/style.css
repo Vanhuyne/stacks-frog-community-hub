@@ -217,7 +217,7 @@
   --frog-primary-soft: #34d399;
   --frog-surface: rgba(255, 255, 255, 0.82);
   --frog-border: rgba(4, 120, 87, 0.16);
-  --frog-shadow: 0 22px 48px rgba(14, 35, 24, 0.14);
+  --frog-shadow: -8px 8px 0 rgba(15, 26, 70, 0.98), 0 0 0 1px rgba(15, 26, 70, 0.22);
 }
 
 .app-shell {
@@ -299,7 +299,7 @@
 .ui-card--interactive:hover {
   transform: translateY(-4px);
   border-color: rgba(4, 120, 87, 0.26);
-  box-shadow: 0 26px 52px rgba(8, 44, 30, 0.2);
+  box-shadow: -12px 12px 0 rgba(15, 26, 70, 0.98), 0 0 0 1px rgba(15, 26, 70, 0.28);
 }
 
 .hero-shell {
