@@ -818,9 +818,17 @@ export default function App() {
           <header className="grid items-start gap-8 lg:grid-cols-[minmax(440px,1fr)_minmax(260px,340px)]">
             <div className="ui-card rounded-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center gap-3">
-                <div className="grid h-11 w-11 place-items-center rounded-none bg-[#3a10e5] text-sm font-bold text-white">
-                  {faucet.address ? socialHandleFromAddress(faucet.address).slice(0, 2).toUpperCase() : 'FG'}
-                </div>
+                {faucet.tokenImage ? (
+                  <img
+                    src={faucet.tokenImage}
+                    alt={faucet.tokenDisplayName || 'FROG token'}
+                    className="h-11 w-11 rounded-none border border-[#10162f]/20 bg-[#e6ecff] object-cover"
+                  />
+                ) : (
+                  <div className="grid h-11 w-11 place-items-center rounded-none bg-[#3a10e5] text-sm font-bold text-white">
+                    FG
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-normal text-[#10162f]">{faucet.address ? `@${socialHandleFromAddress(faucet.address)}` : '@guest'}</p>
                   <p className="text-base text-[#10162f]/70">{faucet.address ? shortenAddress(faucet.address) : 'Connect wallet to publish and like posts'}</p>
@@ -1020,9 +1028,17 @@ export default function App() {
                     <article key={post.id} className="ui-card ui-card--interactive overflow-hidden rounded-none border border-[#10162f]/20 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                       <div className="flex items-center justify-between border-b border-[#10162f]/15 px-4 py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="grid h-9 w-9 place-items-center rounded-none bg-[#e6ecff] text-xs font-bold text-[#10162f]">
-                            {socialHandleFromAddress(post.author).slice(0, 2).toUpperCase()}
-                          </div>
+                          {faucet.tokenImage ? (
+                            <img
+                              src={faucet.tokenImage}
+                              alt={faucet.tokenDisplayName || 'FROG token'}
+                              className="h-9 w-9 rounded-none border border-[#10162f]/20 bg-[#e6ecff] object-cover"
+                            />
+                          ) : (
+                            <div className="grid h-9 w-9 place-items-center rounded-none bg-[#e6ecff] text-xs font-bold text-[#10162f]">
+                              FG
+                            </div>
+                          )}
                           <div>
                             <p className="text-sm font-normal text-[#10162f]">@{socialHandleFromAddress(post.author)}</p>
                             <p className="font-mono text-[11px] text-[#10162f]/70">{shortenAddress(post.author)}</p>
