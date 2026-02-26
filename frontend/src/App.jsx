@@ -575,7 +575,7 @@ export default function App() {
             <div>
               <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG Community Hub</p>
               <h1 className="text-4xl leading-tight md:text-5xl">24h Faucet for FROG Token</h1>
-              <p className="mt-3 max-w-2xl text-xs text-emerald-900/60">
+              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
                 Claim FROG on a configurable cooldown. Connect your wallet, claim tokens, and transfer to friends.
               </p>
               <div className="frog-mascot" aria-hidden="true">
@@ -706,7 +706,7 @@ export default function App() {
             <div>
               <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG DAO</p>
               <h1 className="text-4xl leading-tight md:text-5xl">DAO Membership Pass</h1>
-              <p className="mt-3 max-w-2xl text-xs text-emerald-900/60">
+              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
                 Register your on-chain username and mint one non-transferable DAO pass to unlock governance.
               </p>
             </div>
@@ -1091,7 +1091,7 @@ export default function App() {
             <div>
               <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">FROG ADMIN</p>
               <h1 className="text-4xl leading-tight md:text-5xl">Faucet Admin Controls</h1>
-              <p className="mt-3 max-w-2xl text-xs text-emerald-900/60">
+              <p className="mt-3 max-w-2xl text-base text-emerald-900/60">
                 Owner-only controls for pause state, claim amount, and cooldown blocks.
               </p>
             </div>
@@ -1237,7 +1237,7 @@ export default function App() {
           <header className="max-w-3xl">
             {/* <p className="mb-2.5 text-xs uppercase tracking-[0.3em] text-emerald-800/65">EXPLORE STACKS ECOSYSTEM</p> */}
             <h2 className="text-3xl leading-tight md:text-4xl">EXPLORE STACKS ECOSYSTEM</h2>
-            <p className="mt-3 text-xs text-emerald-900/60">
+            <p className="mt-3 text-base text-emerald-900/60">
               Featured apps in a Stacks-style ecosystem layout for quick exploration.
             </p>
           </header>
