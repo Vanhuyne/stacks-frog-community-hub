@@ -502,7 +502,7 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_10%_10%,#ffffff_0%,#eaf5ef_45%,#d9efe4_100%)] text-emerald-950">
+    <div className="min-h-screen overflow-x-clip app-shell text-emerald-950">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -513,7 +513,7 @@ export default function App() {
           }
         }}
       />
-      <header className="sticky top-0 z-40 border-b border-emerald-950/10 bg-white/85 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-emerald-950/10 bg-white/85 backdrop-blur site-header">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-6 lg:px-8">
           <button
             type="button"
@@ -522,15 +522,15 @@ export default function App() {
           >
             FROG Community Hub
           </button>
-          <nav className="order-3 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1 sm:order-none sm:pb-0" aria-label="Frontend tabs">
+          <nav className="order-3 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1 sm:order-none sm:pb-0 tabs-scroll" aria-label="Frontend tabs">
             {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                className={`whitespace-nowrap rounded-xl border px-3.5 py-2 text-xs font-bold capitalize transition ${
+                className={`nav-tab whitespace-nowrap rounded-xl border px-3.5 py-2 text-xs font-bold capitalize transition ${
                   activeTab === tab.id
-                    ? 'border-emerald-700 bg-emerald-700 text-white'
-                    : 'border-emerald-700/25 bg-white text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
+                    ? 'is-active border-emerald-700 bg-emerald-700 text-white'
+                    : 'border-emerald-700/25 bg-white/85 text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
                 }`}
                 onClick={() => setActiveTab(tab.id)}
               >
@@ -591,7 +591,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
@@ -658,7 +658,7 @@ export default function App() {
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">Transfer</h2>
               <label className="mb-3 block text-base text-emerald-900/60">
                 Recipient wallet
@@ -688,7 +688,7 @@ export default function App() {
               </p>
             </div>
 
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">Contract details</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-xs">{contractAddress}.{contractName}</strong></li>
@@ -710,7 +710,7 @@ export default function App() {
                 Register your on-chain username and mint one non-transferable DAO pass to unlock governance.
               </p>
             </div>
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
@@ -752,7 +752,7 @@ export default function App() {
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">Register Username</h2>
               <label className="block text-base text-emerald-900/60">
                 Username (ASCII, max 32 chars)
@@ -773,7 +773,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">Mint DAO Pass</h2>
               <p className="mb-3 text-base text-emerald-900/60">
                 Requirement: username registered + hold at least 1,000 FROG (mint fee: 99 FROG).
@@ -787,7 +787,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">DAO Contract</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Contract</span> <strong className="break-all font-mono text-xs">{daoContractAddress}.{daoContractName}</strong></li>
@@ -801,7 +801,7 @@ export default function App() {
       ) : activeTab === 'social' ? (
         <>
           <header className="grid items-start gap-8 lg:grid-cols-[minmax(440px,1fr)_minmax(260px,340px)]">
-            <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center gap-3">
                 <div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-700 text-sm font-bold text-white">
                   {faucet.address ? socialHandleFromAddress(faucet.address).slice(0, 2).toUpperCase() : 'FG'}
@@ -917,7 +917,7 @@ export default function App() {
               {!social.ready && <p className="mt-1 text-xs text-emerald-900/55">Social contract is not configured.</p>}
             </div>
 
-            <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-800/65">Author Dashboard</p>
               <h2 className="mt-1 text-xl font-semibold">Creator Performance</h2>
               <div className="mt-4 grid grid-cols-2 gap-2">
@@ -984,7 +984,7 @@ export default function App() {
 
             {isSocialFeedLoading ? (
               <div className="mx-auto grid max-w-3xl gap-4">
-                <div className="rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                <div className="ui-card rounded-3xl border border-emerald-900/15 bg-white p-6 shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                   <div className="h-4 w-32 animate-pulse rounded bg-emerald-100" />
                   <div className="mt-4 space-y-2">
                     <div className="h-3 w-full animate-pulse rounded bg-emerald-100" />
@@ -1002,7 +1002,7 @@ export default function App() {
                   const isOwnPost = Boolean(faucet.address && post.author === faucet.address);
                   const isTippingThisPost = social.tippingPostId === String(post.id);
                   return (
-                    <article key={post.id} className="overflow-hidden rounded-3xl border border-emerald-900/15 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
+                    <article key={post.id} className="ui-card ui-card--interactive overflow-hidden rounded-3xl border border-emerald-900/15 bg-white shadow-[0_18px_38px_rgba(14,35,24,0.12)]">
                       <div className="flex items-center justify-between border-b border-emerald-900/10 px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">
@@ -1095,7 +1095,7 @@ export default function App() {
                 Owner-only controls for pause state, claim amount, and cooldown blocks.
               </p>
             </div>
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <div className="flex items-center justify-between gap-3 border-b border-dashed border-emerald-950/10 py-2">
                 <span>Status</span>
                 <strong>{faucet.address ? 'Connected' : 'Not connected'}</strong>
@@ -1128,7 +1128,7 @@ export default function App() {
           </header>
 
           <section className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">Pause / Unpause</h2>
               <p className="mb-4 text-base text-emerald-900/60">
                 Current faucet state: <strong>{faucet.faucetPaused ? 'Paused' : 'Active'}</strong>
@@ -1143,7 +1143,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">Set Claim Amount</h2>
               <p className="mb-3 text-base text-emerald-900/60">Current amount: <strong>{faucet.faucetAmount || '-'} FROG</strong></p>
               <label className="mb-3 block text-base text-emerald-900/60">
@@ -1163,7 +1163,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">Set Cooldown</h2>
               <p className="mb-3 text-base text-emerald-900/60">Current cooldown: <strong>{faucet.cooldownBlocks || '-'} blocks</strong></p>
               <label className="mb-3 block text-base text-emerald-900/60">
@@ -1183,7 +1183,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <div className="ui-card rounded-3xl border border-emerald-950/10 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
               <h2 className="mb-3 text-lg font-semibold">DAO Treasury</h2>
               <ul className="space-y-2.5">
                 <li className="flex items-center justify-between gap-3"><span>Treasury wallet</span> <strong className="break-all font-mono text-xs">{dao.treasuryAddress || '-'}</strong></li>
@@ -1198,7 +1198,9 @@ export default function App() {
         </>
       ) : (
         <section className="flex flex-col gap-6">
-          <section className="relative overflow-hidden rounded-3xl border border-emerald-950/10 bg-[radial-gradient(circle_at_15%_20%,rgba(52,211,153,0.28),transparent_40%),radial-gradient(circle_at_85%_15%,rgba(16,185,129,0.22),transparent_45%),linear-gradient(135deg,#f0fdf4,#dcfce7_45%,#bbf7d0)] p-6 shadow-[0_24px_60px_rgba(14,35,24,0.16)] md:p-8">
+          <section className="hero-shell relative overflow-hidden rounded-3xl border border-emerald-950/10 bg-[radial-gradient(circle_at_15%_20%,rgba(52,211,153,0.28),transparent_40%),radial-gradient(circle_at_85%_15%,rgba(16,185,129,0.22),transparent_45%),linear-gradient(135deg,#f0fdf4,#dcfce7_45%,#bbf7d0)] p-6 shadow-[0_24px_60px_rgba(14,35,24,0.16)] md:p-8">
+            <div className="hero-orb hero-orb-a" aria-hidden="true" />
+            <div className="hero-orb hero-orb-b" aria-hidden="true" />
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-900/70">Community Home</p>
             <h1 className="mt-3 text-4xl leading-tight text-emerald-950 md:text-5xl">Frog Social for Stacks Community</h1>
             <p className="mt-4 max-w-3xl text-base text-emerald-950/70">
@@ -1245,7 +1247,7 @@ export default function App() {
               <button
                 key={category}
                 type="button"
-                className={`rounded-xl border px-3.5 py-2 text-xs font-bold transition ${
+                className={`pill-filter rounded-xl border px-3.5 py-2 text-xs font-bold transition ${
                   ecosystemCategory === category
                     ? 'border-emerald-900 bg-emerald-900 text-white'
                     : 'border-emerald-700/20 bg-white text-emerald-700 hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10'
@@ -1260,7 +1262,7 @@ export default function App() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ecosystemApps.map((app) => (
-              <article className="flex flex-col gap-3 rounded-3xl border border-emerald-950/10 bg-white p-4 shadow-[0_18px_40px_rgba(14,35,24,0.12)]" key={app.name}>
+              <article className="ui-card ui-card--interactive flex flex-col gap-3 rounded-3xl border border-emerald-950/10 bg-white p-4 shadow-[0_18px_40px_rgba(14,35,24,0.12)]" key={app.name}>
                 <div className="grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-2xl border border-emerald-950/10 bg-emerald-50">
                   <img src={app.image} alt={`${app.name} logo`} loading="lazy" className="h-full w-full object-cover" />
                 </div>

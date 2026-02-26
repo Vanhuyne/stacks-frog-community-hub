@@ -168,3 +168,192 @@
     transform: scaleY(0.08);
   }
 }
+
+:root {
+  --frog-ink: #0f1a14;
+  --frog-primary: #047857;
+  --frog-primary-soft: #34d399;
+  --frog-surface: rgba(255, 255, 255, 0.82);
+  --frog-border: rgba(4, 120, 87, 0.16);
+  --frog-shadow: 0 22px 48px rgba(14, 35, 24, 0.14);
+}
+
+.app-shell {
+  position: relative;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(255, 255, 255, 0.94) 0%, rgba(227, 246, 236, 0.75) 40%, rgba(214, 240, 227, 0.7) 100%),
+    linear-gradient(132deg, rgba(255, 255, 255, 0.55) 0%, rgba(222, 246, 233, 0.44) 58%, rgba(198, 239, 219, 0.52) 100%);
+}
+
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(15, 26, 20, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 26, 20, 0.03) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at 30% 15%, black 30%, transparent 78%);
+  opacity: 0.28;
+}
+
+.site-header {
+  box-shadow: 0 10px 26px rgba(15, 26, 20, 0.06);
+}
+
+.tabs-scroll::-webkit-scrollbar {
+  height: 0;
+}
+
+.nav-tab {
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+}
+
+.nav-tab::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(4, 120, 87, 0.52);
+  transform: scaleX(0.1);
+  transform-origin: left;
+  opacity: 0;
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+.nav-tab:hover::after,
+.nav-tab.is-active::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+.ui-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 255, 252, 0.88) 100%);
+  border-color: var(--frog-border);
+  box-shadow: var(--frog-shadow);
+  animation: surface-in 560ms ease both;
+}
+
+.ui-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.4), transparent 48%, rgba(4, 120, 87, 0.06));
+}
+
+.ui-card--interactive {
+  transition: transform 280ms ease, box-shadow 280ms ease, border-color 280ms ease;
+}
+
+.ui-card--interactive:hover {
+  transform: translateY(-4px);
+  border-color: rgba(4, 120, 87, 0.26);
+  box-shadow: 0 26px 52px rgba(8, 44, 30, 0.2);
+}
+
+.hero-shell {
+  isolation: isolate;
+}
+
+.hero-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.52), transparent 55%);
+}
+
+.hero-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(1px);
+  animation: orb-drift 11s ease-in-out infinite;
+  z-index: 0;
+}
+
+.hero-orb-a {
+  top: -22px;
+  right: -44px;
+  width: 168px;
+  height: 168px;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.88) 0%, rgba(110, 231, 183, 0.55) 45%, rgba(52, 211, 153, 0.14) 80%);
+}
+
+.hero-orb-b {
+  bottom: -58px;
+  left: 34%;
+  width: 190px;
+  height: 190px;
+  background: radial-gradient(circle at 60% 60%, rgba(255, 255, 255, 0.5) 0%, rgba(16, 185, 129, 0.35) 44%, rgba(5, 150, 105, 0.08) 80%);
+  animation-delay: -3.5s;
+}
+
+.hero-shell > *:not(.hero-orb) {
+  position: relative;
+  z-index: 1;
+}
+
+.pill-filter {
+  backdrop-filter: blur(6px);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease, background-color 220ms ease;
+}
+
+.pill-filter:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 18px rgba(8, 44, 30, 0.12);
+}
+
+@keyframes surface-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orb-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(-10px, 12px, 0) scale(1.04);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-orb {
+    opacity: 0.65;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frog-shadow,
+  .frog-body,
+  .frog-eye,
+  .ui-card,
+  .hero-orb {
+    animation: none !important;
+  }
+
+  .ui-card--interactive,
+  .pill-filter,
+  .nav-tab {
+    transition: none !important;
+  }
+}
