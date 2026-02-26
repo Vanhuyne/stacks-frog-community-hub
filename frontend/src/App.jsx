@@ -502,7 +502,7 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,#ffffff_0%,#eaf5ef_45%,#d9efe4_100%)] text-emerald-950">
+    <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_10%_10%,#ffffff_0%,#eaf5ef_45%,#d9efe4_100%)] text-emerald-950">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -514,15 +514,15 @@ export default function App() {
         }}
       />
       <header className="sticky top-0 z-40 border-b border-emerald-950/10 bg-white/85 backdrop-blur">
-        <div className="flex items-center gap-4 px-[6vw] py-3.5">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            className="shrink-0 rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10"
+            className="w-fit shrink-0 rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-emerald-800 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-900/10"
             onClick={() => setActiveTab('ecosystem')}
           >
             FROG Community Hub
           </button>
-          <nav className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto" aria-label="Frontend tabs">
+          <nav className="order-3 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1 sm:order-none sm:pb-0" aria-label="Frontend tabs">
             {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
@@ -538,7 +538,7 @@ export default function App() {
               </button>
             ))}
           </nav>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
             {faucet.address ? (
               <>
                 <span className="hidden rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-2 font-mono text-xs text-emerald-800 md:inline">
@@ -567,7 +567,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="px-[6vw] pb-20 pt-8">
+      <main className="mx-auto w-full max-w-[1200px] px-4 pb-20 pt-8 sm:px-6 lg:px-8">
 
       {activeTab === 'faucet' ? (
         <>
@@ -684,9 +684,7 @@ export default function App() {
                 {faucet.isTransferring ? 'Submitting...' : 'Send'}
               </button>
               <p className="mt-3 text-xs text-emerald-900/60">
-                {!dao.hasPass
-                  ? 'Creating proposals requires DAO Pass in this v5 contract. Go to Frog DAO Pass tab to register username and mint pass first.'
-                  : 'You are eligible to submit proposals when title and details are filled.'}
+                Transfers are on-chain and final. Double-check recipient address before submitting.
               </p>
             </div>
 
@@ -1041,7 +1039,7 @@ export default function App() {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-emerald-900/10 bg-emerald-50/40 px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-emerald-900/10 bg-emerald-50/40 px-4 py-3">
                         <span className="inline-flex items-center gap-1.5 text-sm text-emerald-900/70">
                           <span aria-hidden="true">❤️</span>
                           <span>{post.likeCount || '0'} likes</span>
@@ -1266,7 +1264,7 @@ export default function App() {
                 <div className="grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-2xl border border-emerald-950/10 bg-emerald-50">
                   <img src={app.image} alt={`${app.name} logo`} loading="lazy" className="h-full w-full object-cover" />
                 </div>
-                <h2 className="text-3xl leading-none">{app.name}</h2>
+                <h2 className="text-2xl leading-tight">{app.name}</h2>
                 <p className="text-emerald-900/60">{app.summary}</p>
                 <div className="flex flex-wrap gap-2">
                   {app.tags.map((tag) => (
