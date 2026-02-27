@@ -6,6 +6,10 @@
   "outputDirectory": "frontend/dist",
   "rewrites": [
     {
+      "source": "/hiro/:path*",
+      "destination": "https://api.hiro.so/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

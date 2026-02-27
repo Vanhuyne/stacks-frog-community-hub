@@ -71,7 +71,7 @@ Use `frontend/.env.development`:
 - `VITE_SOCIAL_TIPS_CONTRACT_ADDRESS=<deployer>`
 - `VITE_SOCIAL_TIPS_CONTRACT_NAME=frog-social-tips-v1`
 - `VITE_SOCIAL_API_BASE_URL=<backend base url>`
-- `VITE_HIRO_API_BASE_URL=https://api.testnet.hiro.so`
+- `VITE_HIRO_API_BASE_URL=/hiro` (recommended for Vercel to avoid browser CORS)
 
 ### Frontend (mainnet)
 
@@ -173,3 +173,8 @@ Manual checks:
 - Never commit secrets.
 - Keep real keys only in local `.env` or deployment platform env vars.
 
+
+
+### Vercel Hiro Proxy
+
+Set frontend env `VITE_HIRO_API_BASE_URL=/hiro` and add rewrite `/hiro/:path* -> https://api.hiro.so/:path*` in `vercel.json` to avoid browser CORS errors from Hiro.
