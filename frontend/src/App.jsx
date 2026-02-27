@@ -213,6 +213,7 @@ export default function App() {
     return 'ecosystem';
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [activePage, setActivePage] = useState("app");
   const [ecosystemCategory, setEcosystemCategory] = useState('Highlighted Apps');
   const [socialPostInput, setSocialPostInput] = useState('');
   const [socialStatus, setSocialStatus] = useState('');
@@ -249,7 +250,7 @@ export default function App() {
     network,
     readOnlyBaseUrl,
     address: faucet.address,
-    enabled: activeTab === 'social',
+    enabled: activeTab === 'social' || (activePage === "profile" && Boolean(faucet.address)),
     apiBaseUrl: socialApiBaseUrl,
     hasDaoPass: dao.hasPass,
     tipAmountStx: socialTipAmountStx
@@ -281,6 +282,12 @@ export default function App() {
   }, [activeTab, faucet.address, isOwner]);
 
   useEffect(() => {
+    if (activePage === "profile" && !faucet.address) {
+      setActivePage("app");
+    }
+  }, [activePage, faucet.address]);
+
+  useEffect(() => {
     const handlePointerDown = (event) => {
       if (!isEmojiPickerOpen) return;
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
@@ -301,6 +308,13 @@ export default function App() {
   const socialFeed = social.posts || [];
   const isSocialFeedLoading = social.isRefreshing && socialFeed.length === 0;
   const isSocialActionLocked = social.isRefreshing || social.isPublishing || Boolean(social.likingPostId) || Boolean(social.tippingPostId);
+
+  const userPosts = useMemo(() => {
+    if (!faucet.address) return [];
+    return socialFeed.filter((post) => post.author === faucet.address);
+  }, [faucet.address, socialFeed]);
+
+  const userPostCount = userPosts.length;
 
   const authorDashboard = useMemo(() => {
     const authors = new Map();
@@ -533,7 +547,10 @@ export default function App() {
           <button
             type="button"
             className="w-fit shrink-0 rounded-none border border-[#10162f]/25 bg-[#f5f3eb] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20"
-            onClick={() => setActiveTab('ecosystem')}
+            onClick={() => {
+              setActivePage("app");
+              setActiveTab('ecosystem');
+            }}
           >
             FROG Community Hub
           </button>
@@ -547,7 +564,10 @@ export default function App() {
                     ? 'is-active border-[#3a10e5] bg-[#3a10e5] text-white'
                     : 'border-[#10162f]/30 bg-white/85 text-[#10162f] hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20'
                 }`}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActivePage("app");
+                  setActiveTab(tab.id);
+                }}
               >
                 {tab.label}
               </button>
@@ -556,12 +576,19 @@ export default function App() {
           <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
             {faucet.address ? (
               <>
-                <span className="hidden rounded-none border border-[#10162f]/25 bg-[#f5f3eb] px-3 py-2 font-mono text-xs text-[#10162f] md:inline">
+                <button
+                  type="button"
+                  className="hidden rounded-none border border-[#10162f]/25 bg-[#f5f3eb] px-3 py-2 font-mono text-xs text-[#10162f] transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-[#10162f]/20 md:inline"
+                  onClick={() => setActivePage('profile')}
+                >
                   {shortenAddress(faucet.address)}
-                </span>
+                </button>
                 <button
                   className={ghostButtonClass + ' w-auto'}
-                  onClick={faucet.disconnectWallet}
+                  onClick={() => {
+                    setActivePage("app");
+                    faucet.disconnectWallet();
+                  }}
                   disabled={
                     faucet.isClaiming ||
                     faucet.isTransferring ||
@@ -584,7 +611,48 @@ export default function App() {
 
       <main className="mx-auto w-full max-w-[1200px] px-4 pb-20 pt-8 sm:px-6 lg:px-8">
 
-      {activeTab === 'faucet' ? (
+      {activePage === 'profile' ? (
+        <section className="grid gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
+          <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <p className="text-xs uppercase tracking-[0.2em] text-[#10162f]/65">User Profile</p>
+            <h1 className="mt-2 text-3xl leading-tight">@{socialHandleFromAddress(faucet.address)}</h1>
+            <p className="mt-2 font-mono text-xs text-[#10162f]/70">{faucet.address}</p>
+            <div className="mt-5 rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/70 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.12em] text-[#10162f]/65">Total Posts</p>
+              <p className="mt-1 text-3xl font-normal text-[#10162f]">{userPostCount}</p>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button className={primaryButtonClass + ' w-auto'} onClick={() => social.refresh(50)} disabled={!social.ready || social.isRefreshing}>
+                {social.isRefreshing ? 'Refreshing...' : 'Refresh Posts'}
+              </button>
+              <button className={ghostButtonClass + ' w-auto'} onClick={() => setActivePage('app')}>
+                Back
+              </button>
+            </div>
+          </div>
+          <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+            <h2 className="text-xl">Your Latest Posts</h2>
+            <p className="mt-1 text-sm text-[#10162f]/70">Showing posts where author matches your connected wallet.</p>
+            {userPosts.length > 0 ? (
+              <div className="mt-4 space-y-3">
+                {userPosts.slice(0, 10).map((post) => (
+                  <article key={post.id} className="rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/60 px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="text-sm">Post #{post.id}</strong>
+                      <span className="text-xs text-[#10162f]/70">{formatPostTime(post.createdAtBlock)}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-[#10162f]/80">{String(post.text || '').slice(0, 160) || '(No text)'}</p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-none border border-dashed border-[#10162f]/30 bg-[#f5f3eb]/70 px-4 py-3 text-sm text-[#10162f]/75">
+                No posts yet for this wallet.
+              </div>
+            )}
+          </div>
+        </section>
+      ) : activeTab === 'faucet' ? (
         <>
           <header className="grid items-center gap-8 md:grid-cols-[minmax(260px,1fr)_minmax(260px,360px)]">
             <div>
