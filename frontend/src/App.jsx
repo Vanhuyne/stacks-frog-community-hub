@@ -1234,8 +1234,8 @@ export default function App() {
                           {!isOwnPost && (
                             <button
                               className={hasLiked
-                                ? 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#10162f]/25 bg-[#f5f3eb] text-[#10162f]/70'
-                                : 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#10162f] bg-[#10162f] text-white transition hover:-translate-y-[1px] hover:bg-[#2e4cff]'
+                                ? 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#ef4444]/35 bg-transparent text-[#ef4444]'
+                                : 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#10162f]/25 bg-transparent text-[#10162f] transition hover:bg-[#f5f3eb]'
                               }
                               type="button"
                               onClick={() => likeSocialPost(post.id)}
