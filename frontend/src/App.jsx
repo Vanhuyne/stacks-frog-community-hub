@@ -29,6 +29,10 @@ const socialTipsContractName =
 const socialTipAmountStx = import.meta.env.VITE_SOCIAL_TIP_STX || '0.1';
 
 const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
+const effectiveSocialTipsContractName =
+  network === 'mainnet' && socialTipsContractName === 'frog-social-tips-reputation-v1'
+    ? 'frog-social-tips-v1'
+    : socialTipsContractName;
 const defaultHiroApiBaseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
 const configuredHiroApiBaseUrl = String(import.meta.env.VITE_HIRO_API_BASE_URL || '').trim();
 // In dev always use Vite proxy (/hiro) to avoid browser CORS with Hiro.
@@ -258,7 +262,7 @@ export default function App() {
     contractAddress: socialContractAddress,
     contractName: socialContractName,
     tipsContractAddress: socialTipsContractAddress,
-    tipsContractName: socialTipsContractName,
+    tipsContractName: effectiveSocialTipsContractName,
     network,
     readOnlyBaseUrl,
     address: faucet.address,

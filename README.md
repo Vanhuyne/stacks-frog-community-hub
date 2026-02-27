@@ -67,9 +67,9 @@ Use `frontend/.env.development`:
 - `VITE_DAO_CONTRACT_NAME=frog-dao-nft-v5`
 - `VITE_SOCIAL_CONTRACT_ADDRESS=<deployer>`
 - `VITE_SOCIAL_CONTRACT_NAME=frog-social-reputation-v1`
-- `VITE_SOCIAL_TIPS_CONTRACT_ID=<deployer>.frog-social-tips-reputation-v1`
+- `VITE_SOCIAL_TIPS_CONTRACT_ID=<deployer>.frog-social-tips-v1`
 - `VITE_SOCIAL_TIPS_CONTRACT_ADDRESS=<deployer>`
-- `VITE_SOCIAL_TIPS_CONTRACT_NAME=frog-social-tips-reputation-v1`
+- `VITE_SOCIAL_TIPS_CONTRACT_NAME=frog-social-tips-v1`
 - `VITE_SOCIAL_API_BASE_URL=<backend base url>`
 - `VITE_HIRO_API_BASE_URL=https://api.testnet.hiro.so`
 
