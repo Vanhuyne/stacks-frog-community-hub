@@ -1243,17 +1243,18 @@ app.post('/tips', createRateLimiter({ key: 'tips', windowMs: RATE_LIMIT_WINDOW_M
         reason: verification.error
       });
 
-      if (queued) {
-        return res.status(202).json({
-          ok: true,
-          pending: true,
-          txid,
-          contentHash,
-          message: 'tip verification queued; backend will retry shortly',
-          totalTipMicroStx: normalizeTipMicroStx(postRow.total_tip_micro_stx || '0'),
-          tipCount: Number.parseInt(String(postRow.tip_count || 0), 10) || 0
-        });
-      }
+      return res.status(202).json({
+        ok: true,
+        pending: true,
+        queued,
+        txid,
+        contentHash,
+        message: queued
+          ? 'tip verification queued; backend will retry shortly'
+          : 'tip verification pending; retry shortly (jobs queue unavailable)',
+        totalTipMicroStx: normalizeTipMicroStx(postRow.total_tip_micro_stx || '0'),
+        tipCount: Number.parseInt(String(postRow.tip_count || 0), 10) || 0
+      });
     }
 
     return res.status(400).json({ error: `tip tx verification failed: ${verification.error}` });
