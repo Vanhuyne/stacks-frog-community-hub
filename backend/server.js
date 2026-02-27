@@ -696,6 +696,29 @@ const processPendingJobs = async () => {
   }
 };
 
+const probeJobsRuntime = async () => {
+  if (jobsTableUnavailable) return;
+
+  const { error } = await supabase
+    .from('jobs')
+    .select('id')
+    .limit(1);
+
+  if (!error) {
+    console.log('[jobs] jobs table ready; async retry processor enabled');
+    return;
+  }
+
+  const message = String(error.message || '').toLowerCase();
+  if (message.includes('relation') && message.includes('jobs')) {
+    jobsTableUnavailable = true;
+    console.warn('[jobs] jobs table not found; run backend/supabase/schema.sql to enable async retries');
+    return;
+  }
+
+  console.warn('[jobs] runtime probe error:', error.message || error);
+};
+
 app.use(cors());
 app.use(express.json({ limit: '64kb' }));
 app.use(createRateLimiter({ key: 'general', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_GENERAL }));
@@ -1040,6 +1063,11 @@ app.use((err, _req, res, _next) => {
 
 app.listen(port, () => {
   console.log(`backend server running on http://localhost:${port}`);
+
+  probeJobsRuntime().catch((err) => {
+    console.warn('[jobs] runtime probe failed:', err?.message || err);
+  });
+
   setInterval(() => {
     processPendingJobs().catch((err) => {
       console.warn('[jobs] unhandled processor error:', err?.message || err);
