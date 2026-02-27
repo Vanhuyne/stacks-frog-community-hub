@@ -237,6 +237,7 @@ export default function App() {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [socialImageFile, setSocialImageFile] = useState(null);
   const [socialImagePreviewUrl, setSocialImagePreviewUrl] = useState('');
+  const [tipStatusByPostId, setTipStatusByPostId] = useState({});
   const socialComposerRef = useRef(null);
   const socialImageInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
@@ -307,6 +308,10 @@ export default function App() {
   useEffect(() => {
     if (social.status) setSocialStatus(social.status);
   }, [social.status]);
+
+  useEffect(() => {
+    setTipStatusByPostId({});
+  }, [faucet.address]);
 
   useEffect(() => {
     if (activeTab === 'admin' && !(Boolean(faucet.address) && isOwner)) {
@@ -600,7 +605,25 @@ export default function App() {
   };
 
   const tipSocialPost = async (postId, recipient) => {
-    await social.tipPost(postId, recipient);
+    const result = await social.tipPost(postId, recipient);
+    if (!result || !result.message) return;
+
+    const key = String(postId);
+    const tone = result.tone || (result.ok ? 'success' : 'error');
+
+    setTipStatusByPostId((prev) => ({
+      ...prev,
+      [key]: { message: result.message, tone }
+    }));
+
+    setTimeout(() => {
+      setTipStatusByPostId((prev) => {
+        if (!(key in prev)) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }, 8000);
   };
 
 
@@ -1271,6 +1294,19 @@ export default function App() {
                             </button>
                           )}
                         </div>
+                        {tipStatusByPostId[String(post.id)] && (
+                          <p
+                            className={
+                              'text-xs ' + (tipStatusByPostId[String(post.id)].tone === 'success'
+                                ? 'text-[#0f5132]'
+                                : tipStatusByPostId[String(post.id)].tone === 'warning'
+                                  ? 'text-[#8a4b00]'
+                                  : 'text-[#9f1239]')
+                            }
+                          >
+                            {tipStatusByPostId[String(post.id)].message}
+                          </p>
+                        )}
                       </div>
                     </article>
                   );

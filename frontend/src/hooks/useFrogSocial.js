@@ -623,51 +623,46 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
 
   const tipPost = useCallback(async (postId, recipient) => {
     if (!address) {
-      dispatch({ type: 'merge', payload: { status: 'Connect wallet to tip a post.' } });
-      return false;
+      return { ok: false, tone: 'error', message: 'Connect wallet to tip a post.' };
     }
 
     if (!ready) {
-      dispatch({ type: 'merge', payload: { status: 'Missing social contract configuration.' } });
-      return false;
+      return { ok: false, tone: 'error', message: 'Missing social contract configuration.' };
     }
 
     if (!postId || !recipient) {
-      dispatch({ type: 'merge', payload: { status: 'Invalid tip target.' } });
-      return false;
+      return { ok: false, tone: 'error', message: 'Invalid tip target.' };
     }
 
     if (!hasDaoPass) {
-      const message = 'DAO Pass is required to tip posts. Go to the Frog DAO Pass tab to mint your pass first.';
-      dispatch({ type: 'merge', payload: { status: message } });
       toast.error('DAO Pass required. Open Frog DAO Pass tab first.');
-      return false;
+      return {
+        ok: false,
+        tone: 'error',
+        message: 'DAO Pass is required to tip posts. Go to the Frog DAO Pass tab to mint your pass first.'
+      };
     }
 
     if (String(recipient) === String(address)) {
-      dispatch({ type: 'merge', payload: { status: 'You cannot tip your own post.' } });
-      return false;
+      return { ok: false, tone: 'error', message: 'You cannot tip your own post.' };
     }
 
     const targetPost = state.posts.find((item) => String(item.id) === String(postId));
     const contentHash = String(targetPost?.contentHash || '').toLowerCase();
     if (!targetPost || !/^[0-9a-f]{64}$/.test(contentHash)) {
-      dispatch({ type: 'merge', payload: { status: 'Post data unavailable for tip sync. Please refresh and try again.' } });
-      return false;
+      return { ok: false, tone: 'error', message: 'Post data unavailable for tip sync. Please refresh and try again.' };
     }
 
     const microAmount = toMicroStx(tipAmountStx);
     if (!microAmount) {
-      dispatch({ type: 'merge', payload: { status: 'Invalid tip amount configuration.' } });
       toast.error('Invalid tip amount configuration.');
-      return false;
+      return { ok: false, tone: 'error', message: 'Invalid tip amount configuration.' };
     }
 
     dispatch({
       type: 'merge',
       payload: {
-        tippingPostId: String(postId),
-        status: 'Submitting ' + tipAmountStx + ' STX tip transaction...'
+        tippingPostId: String(postId)
       }
     });
 
@@ -710,25 +705,25 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
               totalTipMicroStx: addMicroStx(item.totalTipMicroStx || '0', microAmount),
               tipCount: String((Number.parseInt(String(item.tipCount || '0'), 10) || 0) + 1)
             };
-          }),
-          status: offchainSyncError
-            ? 'Tip sent (' + tipAmountStx + ' STX). On-chain success, but off-chain sync failed: ' + offchainSyncError
-            : 'Tip submitted (' + tipAmountStx + ' STX) and synced.'
+          })
         }
       });
 
       if (offchainSyncError) {
         toast.success('Tip sent: ' + tipAmountStx + ' STX');
-      } else {
-        toast.success('Tip sent and synced: ' + tipAmountStx + ' STX');
+        return {
+          ok: true,
+          tone: 'warning',
+          message: 'Tip sent (' + tipAmountStx + ' STX). On-chain success, off-chain sync pending.'
+        };
       }
 
-      return true;
+      toast.success('Tip sent and synced: ' + tipAmountStx + ' STX');
+      return { ok: true, tone: 'success', message: 'Tip sent (' + tipAmountStx + ' STX) and synced.' };
     } catch (err) {
       const message = String(err?.message || err || 'Unknown error');
-      dispatch({ type: 'merge', payload: { status: 'Tip failed: ' + message } });
       toast.error('Tip transaction failed.');
-      return false;
+      return { ok: false, tone: 'error', message: 'Tip failed: ' + message };
     } finally {
       dispatch({ type: 'merge', payload: { tippingPostId: '' } });
     }
