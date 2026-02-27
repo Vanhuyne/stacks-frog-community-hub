@@ -17,6 +17,8 @@ const parseRateLimitWaitMs = (err) => {
 const linkRegex = /https?:\/\/[^\s)]+/gi;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const isDocumentHidden = () => typeof document !== 'undefined' && Boolean(document.hidden);
+const REFRESH_DEBOUNCE_MS = 1500;
+const FEED_POLL_INTERVAL_MS = 30000;
 
 const initialState = {
   postFee: '50',
@@ -119,6 +121,7 @@ const extractTxId = (result) => {
 export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddress, tipsContractName, network, readOnlyBaseUrl, address, enabled, apiBaseUrl, hasDaoPass = false, tipAmountStx = '0.1' }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   const refreshInFlightRef = useRef(null);
+  const lastRefreshAtRef = useRef(0);
   const optimisticLikedPostIdsRef = useRef(new Set());
 
   const service = useMemo(
@@ -282,6 +285,15 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
       refreshInFlightRef.current = null;
     }
   }, [address, applyOptimisticLikes, contractAddress, hydrateFeedWithOffchain, ready, service]);
+
+  const refreshSmart = useCallback(async (limit = 10, { force = false } = {}) => {
+    if (!force) {
+      const elapsed = Date.now() - lastRefreshAtRef.current;
+      if (elapsed < REFRESH_DEBOUNCE_MS) return null;
+    }
+    lastRefreshAtRef.current = Date.now();
+    return refresh(limit);
+  }, [refresh]);
 
   const waitForFeedUpdate = useCallback(async (nextExpectedLastId = '') => {
     if (!ready) return;
@@ -707,8 +719,8 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
 
   useEffect(() => {
     if (isDocumentHidden()) return;
-    refresh(10);
-  }, [refresh]);
+    refreshSmart(10, { force: true });
+  }, [refreshSmart]);
 
   useEffect(() => {
     optimisticLikedPostIdsRef.current.clear();
@@ -719,7 +731,7 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        refresh(10);
+        refreshSmart(10, { force: true });
       }
     };
 
@@ -727,7 +739,18 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [refresh]);
+  }, [refreshSmart]);
+
+  useEffect(() => {
+    if (!ready) return undefined;
+
+    const interval = setInterval(() => {
+      if (isDocumentHidden()) return;
+      refreshSmart(10);
+    }, FEED_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [ready, refreshSmart]);
 
   return {
     ...state,
