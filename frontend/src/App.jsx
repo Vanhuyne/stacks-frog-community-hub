@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import EmojiPicker from 'emoji-picker-react';
 import { Toaster } from 'react-hot-toast';
+import { Heart, Loader2 } from 'lucide-react';
 import { ecosystemCategories, highlightedApps, tabs } from './data/ecosystemData';
 import { useFrogFaucet } from './hooks/useFrogFaucet';
 import { useFrogDaoNft } from './hooks/useFrogDaoNft';
@@ -1254,7 +1255,9 @@ export default function App() {
                                   : `Like (${social.likeFee || '5'} FROG)`}
                           >
                             <span className="text-base leading-none" aria-hidden="true">
-                              {social.likingPostId === String(post.id) ? '⏳' : hasLiked ? '❤️' : '🤍'}
+                              {social.likingPostId === String(post.id)
+                                ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+                                : <Heart className="h-4 w-4" fill={hasLiked ? 'currentColor' : 'none'} strokeWidth={2.25} />}
                             </span>
                           </button>
                         </div>
