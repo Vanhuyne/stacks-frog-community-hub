@@ -1231,35 +1231,33 @@ export default function App() {
                           >
                             {isTippingThisPost ? 'Tipping...' : isOwnPost ? 'Own post' : `Tip ${socialTipAmountStx} STX`}
                           </button>
-                          <button
-                            className={hasLiked
-                              ? 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#10162f]/25 bg-[#f5f3eb] text-[#10162f]/70'
-                              : 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#10162f] bg-[#10162f] text-white transition hover:-translate-y-[1px] hover:bg-[#2e4cff]'
-                            }
-                            type="button"
-                            onClick={() => likeSocialPost(post.id)}
-                            disabled={hasLiked || isOwnPost || social.likingPostId === String(post.id) || !faucet.address || isTippingThisPost || isSocialActionLocked}
-                            aria-label={social.likingPostId === String(post.id)
-                              ? 'Liking post'
-                              : hasLiked
-                                ? 'Post liked'
-                                : isOwnPost
-                                  ? 'Own post'
+                          {!isOwnPost && (
+                            <button
+                              className={hasLiked
+                                ? 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#10162f]/25 bg-[#f5f3eb] text-[#10162f]/70'
+                                : 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#10162f] bg-[#10162f] text-white transition hover:-translate-y-[1px] hover:bg-[#2e4cff]'
+                              }
+                              type="button"
+                              onClick={() => likeSocialPost(post.id)}
+                              disabled={hasLiked || social.likingPostId === String(post.id) || !faucet.address || isTippingThisPost || isSocialActionLocked}
+                              aria-label={social.likingPostId === String(post.id)
+                                ? 'Liking post'
+                                : hasLiked
+                                  ? 'Post liked'
                                   : `Like post (${social.likeFee || '5'} FROG)`}
-                            title={social.likingPostId === String(post.id)
-                              ? 'Liking...'
-                              : hasLiked
-                                ? 'Liked'
-                                : isOwnPost
-                                  ? 'Own post'
+                              title={social.likingPostId === String(post.id)
+                                ? 'Liking...'
+                                : hasLiked
+                                  ? 'Liked'
                                   : `Like (${social.likeFee || '5'} FROG)`}
-                          >
-                            <span className="text-base leading-none" aria-hidden="true">
-                              {social.likingPostId === String(post.id)
-                                ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
-                                : <Heart className="h-4 w-4" fill={hasLiked ? 'currentColor' : 'none'} strokeWidth={2.25} />}
-                            </span>
-                          </button>
+                            >
+                              <span className="text-base leading-none" aria-hidden="true">
+                                {social.likingPostId === String(post.id)
+                                  ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+                                  : <Heart className="h-4 w-4" fill={hasLiked ? 'currentColor' : 'none'} strokeWidth={2.25} />}
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </article>
