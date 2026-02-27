@@ -43,6 +43,28 @@ begin
 end;
 $$;
 
+-- Lightweight async queue for low-cost deployments.
+create table if not exists public.jobs (
+  id bigserial primary key,
+  type text not null,
+  status text not null default 'pending' check (status in ('pending', 'running', 'retry', 'done', 'failed')),
+  dedupe_key text,
+  payload jsonb not null default '{}'::jsonb,
+  attempts integer not null default 0,
+  last_error text,
+  next_run_at timestamptz not null default timezone('utc', now()),
+  started_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create unique index if not exists jobs_type_dedupe_key_uidx
+  on public.jobs(type, dedupe_key)
+  where dedupe_key is not null;
+
+create index if not exists jobs_status_next_run_idx
+  on public.jobs(status, next_run_at);
+
 -- Backend uses service role key, so RLS is optional.
 -- If you enable RLS later, keep server writes on service role only.
 

@@ -7,6 +7,8 @@ import multer from 'multer';
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
+app.set('trust proxy', 1);
+
 const port = Number(process.env.BACKEND_PORT || process.env.PORT || 8787);
 
 const backendNetwork = String(process.env.BACKEND_STACKS_NETWORK || process.env.STACKS_NETWORK || 'mainnet').toLowerCase();
@@ -36,9 +38,116 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
 });
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_TEXT_LENGTH = 500;
+const HIRO_TIMEOUT_MS = Number(process.env.HIRO_TIMEOUT_MS || 10000);
+
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
+const RATE_LIMIT_MAX_GENERAL = Number(process.env.RATE_LIMIT_MAX_GENERAL || 180);
+const RATE_LIMIT_MAX_POSTS = Number(process.env.RATE_LIMIT_MAX_POSTS || 20);
+const RATE_LIMIT_MAX_TIPS = Number(process.env.RATE_LIMIT_MAX_TIPS || 45);
+const RATE_LIMIT_MAX_POST_LOOKUPS = Number(process.env.RATE_LIMIT_MAX_POST_LOOKUPS || 240);
+
+const CACHE_TTL_POSTS_BY_HASH_MS = Number(process.env.CACHE_TTL_POSTS_BY_HASH_MS || 15_000);
+const CACHE_TTL_HIRO_TX_MS = Number(process.env.CACHE_TTL_HIRO_TX_MS || 20_000);
+const CACHE_TTL_VERIFY_TX_MS = Number(process.env.CACHE_TTL_VERIFY_TX_MS || 20_000);
+const CACHE_TTL_STATS_MS = Number(process.env.CACHE_TTL_STATS_MS || 30_000);
+
+const JOB_POLL_INTERVAL_MS = Number(process.env.JOB_POLL_INTERVAL_MS || 15_000);
+const JOB_BATCH_SIZE = Number(process.env.JOB_BATCH_SIZE || 6);
+const JOB_RETRY_MAX_ATTEMPTS = Number(process.env.JOB_RETRY_MAX_ATTEMPTS || 8);
+
+const JOB_TYPE_TIP_REVERIFY = 'tip_reverify';
+const JOB_STATUS_PENDING = 'pending';
+const JOB_STATUS_RUNNING = 'running';
+const JOB_STATUS_DONE = 'done';
+const JOB_STATUS_RETRY = 'retry';
+const JOB_STATUS_FAILED = 'failed';
+
 const urlRegex = /^https?:\/\//i;
 const txIdRegex = /^[0-9a-f]{64}$/i;
 const contentHashRegex = /^[0-9a-f]{64}$/;
+
+const memCache = new Map();
+const rateLimitStores = {
+  general: new Map(),
+  posts: new Map(),
+  tips: new Map(),
+  postLookup: new Map()
+};
+
+let jobsTableUnavailable = false;
+let isProcessingJobs = false;
+
+const cacheGet = (key) => {
+  const hit = memCache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    memCache.delete(key);
+    return null;
+  }
+  return hit.value;
+};
+
+const cacheSet = (key, value, ttlMs) => {
+  memCache.set(key, {
+    value,
+    expiresAt: Date.now() + Math.max(0, Number(ttlMs) || 0)
+  });
+};
+
+const cacheDeleteByPrefix = (prefix) => {
+  for (const key of memCache.keys()) {
+    if (key.startsWith(prefix)) memCache.delete(key);
+  }
+};
+
+const maybeCleanupRateStore = (store) => {
+  const now = Date.now();
+  for (const [key, info] of store.entries()) {
+    if (now > info.resetAt + RATE_LIMIT_WINDOW_MS) {
+      store.delete(key);
+    }
+  }
+};
+
+const createRateLimiter = ({ key, windowMs, maxRequests }) => {
+  const windowSize = Math.max(1_000, Number(windowMs) || RATE_LIMIT_WINDOW_MS);
+  const maxAllowed = Math.max(1, Number(maxRequests) || 1);
+  const store = rateLimitStores[key];
+
+  return (req, res, next) => {
+    const sourceKey = String(req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown');
+    const now = Date.now();
+
+    if (Math.random() < 0.01) maybeCleanupRateStore(store);
+
+    const existing = store.get(sourceKey);
+    if (!existing || now > existing.resetAt) {
+      const nextInfo = { count: 1, resetAt: now + windowSize };
+      store.set(sourceKey, nextInfo);
+      res.setHeader('X-RateLimit-Limit', String(maxAllowed));
+      res.setHeader('X-RateLimit-Remaining', String(Math.max(0, maxAllowed - nextInfo.count)));
+      res.setHeader('X-RateLimit-Reset', String(Math.floor(nextInfo.resetAt / 1000)));
+      return next();
+    }
+
+    existing.count += 1;
+    store.set(sourceKey, existing);
+
+    const remaining = Math.max(0, maxAllowed - existing.count);
+    res.setHeader('X-RateLimit-Limit', String(maxAllowed));
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+    res.setHeader('X-RateLimit-Reset', String(Math.floor(existing.resetAt / 1000)));
+
+    if (existing.count > maxAllowed) {
+      const retryAfterSec = Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
+      res.setHeader('Retry-After', String(retryAfterSec));
+      return res.status(429).json({ error: 'rate limit exceeded, please retry shortly' });
+    }
+
+    return next();
+  };
+};
 
 const safeJsonParse = (value, fallback) => {
   if (value === null || value === undefined) return fallback;
@@ -145,7 +254,16 @@ const extractUintFromFunctionArg = (arg) => {
   }
 };
 
-const fetchJsonWithTimeout = async (url, timeoutMs = 10000) => {
+const isTransientHiroError = (message) => {
+  const raw = String(message || '').toLowerCase();
+  return raw.includes('hiro request failed') || raw.includes('timed out') || raw.includes('abort');
+};
+
+const fetchJsonWithTimeout = async (url, timeoutMs = HIRO_TIMEOUT_MS) => {
+  const cacheKey = `hiro:${url}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -159,14 +277,20 @@ const fetchJsonWithTimeout = async (url, timeoutMs = 10000) => {
     });
 
     if (!response.ok) {
-      return { ok: false, error: `hiro request failed (${response.status})` };
+      const output = { ok: false, error: `hiro request failed (${response.status})` };
+      cacheSet(cacheKey, output, Math.min(5_000, CACHE_TTL_HIRO_TX_MS));
+      return output;
     }
 
     const payload = await response.json();
-    return { ok: true, payload };
+    const output = { ok: true, payload };
+    cacheSet(cacheKey, output, CACHE_TTL_HIRO_TX_MS);
+    return output;
   } catch (err) {
     const message = String(err?.message || err || 'unknown hiro error');
-    return { ok: false, error: `hiro request failed (${message})` };
+    const output = { ok: false, error: `hiro request failed (${message})` };
+    cacheSet(cacheKey, output, Math.min(3_000, CACHE_TTL_HIRO_TX_MS));
+    return output;
   } finally {
     clearTimeout(timeout);
   }
@@ -177,60 +301,82 @@ const verifyTipTxViaHiro = async ({ txid, expectedPostId, expectedAmountMicroStx
     return { ok: false, error: 'server is missing TIPS_CONTRACT_ID for tip verification' };
   }
 
+  const cacheKey = `verify:${txid}:${expectedPostId}:${expectedAmountMicroStx}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
   const txLookup = await fetchJsonWithTimeout(`${hiroApiBaseUrl}/extended/v1/tx/${txid}`);
-  if (!txLookup.ok) return txLookup;
+  if (!txLookup.ok) {
+    cacheSet(cacheKey, txLookup, Math.min(5_000, CACHE_TTL_VERIFY_TX_MS));
+    return txLookup;
+  }
 
   const payload = txLookup.payload || {};
   const txStatus = String(payload.tx_status || '').toLowerCase();
   if (txStatus !== 'success') {
-    return { ok: false, error: `transaction not successful (tx_status=${txStatus || 'unknown'})` };
+    const out = { ok: false, error: `transaction not successful (tx_status=${txStatus || 'unknown'})` };
+    cacheSet(cacheKey, out, CACHE_TTL_VERIFY_TX_MS);
+    return out;
   }
 
   const txType = String(payload.tx_type || '').toLowerCase();
   if (txType !== 'contract_call') {
-    return { ok: false, error: `invalid transaction type (${txType || 'unknown'})` };
+    const out = { ok: false, error: `invalid transaction type (${txType || 'unknown'})` };
+    cacheSet(cacheKey, out, CACHE_TTL_VERIFY_TX_MS);
+    return out;
   }
 
   const contractCall = payload.contract_call;
   if (!contractCall || typeof contractCall !== 'object') {
-    return { ok: false, error: 'missing contract_call payload in transaction' };
+    const out = { ok: false, error: 'missing contract_call payload in transaction' };
+    cacheSet(cacheKey, out, CACHE_TTL_VERIFY_TX_MS);
+    return out;
   }
 
   const contractId = String(contractCall.contract_id || '').trim();
   if (contractId !== tipsContractId) {
-    return { ok: false, error: `tx contract mismatch (expected ${tipsContractId}, got ${contractId || 'unknown'})` };
+    const out = { ok: false, error: `tx contract mismatch (expected ${tipsContractId}, got ${contractId || 'unknown'})` };
+    cacheSet(cacheKey, out, CACHE_TTL_VERIFY_TX_MS);
+    return out;
   }
 
   const functionName = String(contractCall.function_name || '').trim();
   if (functionName !== 'tip-post') {
-    return { ok: false, error: `tx function mismatch (expected tip-post, got ${functionName || 'unknown'})` };
+    const out = { ok: false, error: `tx function mismatch (expected tip-post, got ${functionName || 'unknown'})` };
+    cacheSet(cacheKey, out, CACHE_TTL_VERIFY_TX_MS);
+    return out;
   }
 
   const functionArgs = Array.isArray(contractCall.function_args) ? contractCall.function_args : [];
   if (functionArgs.length < 2) {
-    return { ok: false, error: 'tip-post tx is missing function args' };
+    const out = { ok: false, error: 'tip-post tx is missing function args' };
+    cacheSet(cacheKey, out, CACHE_TTL_VERIFY_TX_MS);
+    return out;
   }
 
   const txPostId = extractUintFromFunctionArg(functionArgs[0]);
   const txAmountMicroStx = extractUintFromFunctionArg(functionArgs[1]);
 
   if (!txPostId || txPostId !== expectedPostId) {
-    return { ok: false, error: `postId mismatch (expected ${expectedPostId}, got ${txPostId || 'unknown'})` };
+    const out = { ok: false, error: `postId mismatch (expected ${expectedPostId}, got ${txPostId || 'unknown'})` };
+    cacheSet(cacheKey, out, CACHE_TTL_VERIFY_TX_MS);
+    return out;
   }
 
   if (!txAmountMicroStx || txAmountMicroStx !== expectedAmountMicroStx) {
-    return {
-      ok: false,
-      error: `amount mismatch (expected ${expectedAmountMicroStx}, got ${txAmountMicroStx || 'unknown'})`
-    };
+    const out = { ok: false, error: `amount mismatch (expected ${expectedAmountMicroStx}, got ${txAmountMicroStx || 'unknown'})` };
+    cacheSet(cacheKey, out, CACHE_TTL_VERIFY_TX_MS);
+    return out;
   }
 
-  return {
+  const out = {
     ok: true,
     txStatus,
     blockHeight: Number(payload.block_height || 0) || 0,
     txId: String(payload.tx_id || txid).toLowerCase()
   };
+  cacheSet(cacheKey, out, CACHE_TTL_VERIFY_TX_MS);
+  return out;
 };
 
 const upload = multer({
@@ -268,19 +414,339 @@ const uploadImageToSupabase = async (file) => {
   };
 };
 
+const fetchPostTotals = async (contentHash) => {
+  const { data: postRow, error } = await supabase
+    .from('posts')
+    .select('total_tip_micro_stx, tip_count')
+    .eq('content_hash', contentHash)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || 'failed to read post totals');
+  }
+
+  return {
+    totalTipMicroStx: normalizeTipMicroStx(postRow?.total_tip_micro_stx || '0'),
+    tipCount: Number.parseInt(String(postRow?.tip_count || 0), 10) || 0
+  };
+};
+
+const persistTipReceiptAndTotals = async ({ txid, contentHash, postId, amountMicroStx, blockHeight }) => {
+  const { data: existingReceipt, error: receiptReadError } = await supabase
+    .from('tip_receipts')
+    .select('content_hash, post_id, amount_micro_stx')
+    .eq('txid', txid)
+    .maybeSingle();
+
+  if (receiptReadError) {
+    throw new Error(receiptReadError.message || 'failed to read tip receipt');
+  }
+
+  if (existingReceipt) {
+    const samePayload = String(existingReceipt.content_hash || '') === contentHash
+      && String(existingReceipt.post_id || '') === postId
+      && String(existingReceipt.amount_micro_stx || '') === amountMicroStx;
+
+    if (!samePayload) {
+      throw new Error('txid already processed for another tip payload');
+    }
+
+    const totals = await fetchPostTotals(contentHash);
+    return {
+      duplicate: true,
+      ...totals
+    };
+  }
+
+  const { error: insertReceiptError } = await supabase
+    .from('tip_receipts')
+    .insert({
+      txid,
+      content_hash: contentHash,
+      post_id: postId,
+      amount_micro_stx: amountMicroStx,
+      verified_at: new Date().toISOString(),
+      block_height: blockHeight || 0
+    });
+
+  if (insertReceiptError) {
+    if (String(insertReceiptError.code || '') === '23505') {
+      const totals = await fetchPostTotals(contentHash);
+      return {
+        duplicate: true,
+        ...totals
+      };
+    }
+    throw new Error(insertReceiptError.message || 'failed to insert tip receipt');
+  }
+
+  const { data: updatedTotals, error: totalsError } = await supabase
+    .rpc('increment_post_tip_totals', {
+      p_content_hash: contentHash,
+      p_amount_micro_stx: amountMicroStx
+    })
+    .single();
+
+  if (totalsError) {
+    await supabase.from('tip_receipts').delete().eq('txid', txid);
+    throw new Error(totalsError.message || 'failed to increment tip totals');
+  }
+
+  cacheDeleteByPrefix('stats:');
+
+  return {
+    duplicate: false,
+    totalTipMicroStx: normalizeTipMicroStx(updatedTotals.total_tip_micro_stx || '0'),
+    tipCount: Number.parseInt(String(updatedTotals.tip_count || 0), 10) || 0
+  };
+};
+
+const enqueueTipReverifyJob = async ({ txid, contentHash, postId, amountMicroStx, reason }) => {
+  if (jobsTableUnavailable) return false;
+
+  const dedupeKey = `tip-reverify:${txid}`;
+  const payload = {
+    txid,
+    contentHash,
+    postId,
+    amountMicroStx
+  };
+
+  const { error } = await supabase
+    .from('jobs')
+    .upsert({
+      type: JOB_TYPE_TIP_REVERIFY,
+      status: JOB_STATUS_PENDING,
+      dedupe_key: dedupeKey,
+      payload,
+      attempts: 0,
+      last_error: String(reason || ''),
+      next_run_at: new Date().toISOString()
+    }, {
+      onConflict: 'type,dedupe_key'
+    });
+
+  if (error) {
+    const msg = String(error.message || '').toLowerCase();
+    if (msg.includes('relation') && msg.includes('jobs')) {
+      jobsTableUnavailable = true;
+      console.warn('[jobs] jobs table unavailable; skipping async queue path');
+      return false;
+    }
+
+    console.warn('[jobs] failed to enqueue tip reverify job:', error.message || error);
+    return false;
+  }
+
+  return true;
+};
+
+const markJobResult = async ({ id, status, attempts, errorMessage, retryInMs = 0 }) => {
+  if (jobsTableUnavailable) return;
+
+  const nextRunAt = new Date(Date.now() + Math.max(0, retryInMs)).toISOString();
+
+  await supabase
+    .from('jobs')
+    .update({
+      status,
+      attempts,
+      last_error: errorMessage || null,
+      next_run_at: status === JOB_STATUS_RETRY ? nextRunAt : new Date().toISOString(),
+      started_at: status === JOB_STATUS_RUNNING ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id);
+};
+
+const processTipReverifyJob = async (job) => {
+  const payload = job.payload || {};
+  const txid = String(payload.txid || '').trim().toLowerCase();
+  const contentHash = String(payload.contentHash || '').trim().toLowerCase();
+  const postId = normalizePostId(payload.postId);
+  const amountMicroStx = normalizeTipMicroStx(payload.amountMicroStx);
+
+  if (!txIdRegex.test(txid) || !contentHashRegex.test(contentHash) || postId === '0' || amountMicroStx === '0') {
+    await markJobResult({
+      id: job.id,
+      status: JOB_STATUS_FAILED,
+      attempts: Number(job.attempts || 0) + 1,
+      errorMessage: 'invalid payload for tip reverify job'
+    });
+    return;
+  }
+
+  const verify = await verifyTipTxViaHiro({
+    txid,
+    expectedPostId: postId,
+    expectedAmountMicroStx: amountMicroStx
+  });
+
+  if (!verify.ok) {
+    const nextAttempts = Number(job.attempts || 0) + 1;
+    if (isTransientHiroError(verify.error) && nextAttempts < JOB_RETRY_MAX_ATTEMPTS) {
+      await markJobResult({
+        id: job.id,
+        status: JOB_STATUS_RETRY,
+        attempts: nextAttempts,
+        errorMessage: verify.error,
+        retryInMs: Math.min(120_000, 5_000 * (2 ** Math.min(6, nextAttempts)))
+      });
+      return;
+    }
+
+    await markJobResult({
+      id: job.id,
+      status: JOB_STATUS_FAILED,
+      attempts: nextAttempts,
+      errorMessage: verify.error
+    });
+    return;
+  }
+
+  try {
+    await persistTipReceiptAndTotals({
+      txid,
+      contentHash,
+      postId,
+      amountMicroStx,
+      blockHeight: verify.blockHeight || 0
+    });
+
+    await markJobResult({
+      id: job.id,
+      status: JOB_STATUS_DONE,
+      attempts: Number(job.attempts || 0) + 1,
+      errorMessage: null
+    });
+  } catch (err) {
+    const message = String(err?.message || err || 'unknown error');
+    const attempts = Number(job.attempts || 0) + 1;
+
+    if (attempts < JOB_RETRY_MAX_ATTEMPTS) {
+      await markJobResult({
+        id: job.id,
+        status: JOB_STATUS_RETRY,
+        attempts,
+        errorMessage: message,
+        retryInMs: Math.min(180_000, 8_000 * (2 ** Math.min(6, attempts)))
+      });
+      return;
+    }
+
+    await markJobResult({
+      id: job.id,
+      status: JOB_STATUS_FAILED,
+      attempts,
+      errorMessage: message
+    });
+  }
+};
+
+const processPendingJobs = async () => {
+  if (jobsTableUnavailable || isProcessingJobs) return;
+  isProcessingJobs = true;
+
+  try {
+    const nowIso = new Date().toISOString();
+    const { data: jobs, error } = await supabase
+      .from('jobs')
+      .select('id, type, status, attempts, payload')
+      .in('status', [JOB_STATUS_PENDING, JOB_STATUS_RETRY])
+      .lte('next_run_at', nowIso)
+      .order('created_at', { ascending: true })
+      .limit(JOB_BATCH_SIZE);
+
+    if (error) {
+      const msg = String(error.message || '').toLowerCase();
+      if (msg.includes('relation') && msg.includes('jobs')) {
+        jobsTableUnavailable = true;
+        console.warn('[jobs] jobs table unavailable; disabling background job processor');
+        return;
+      }
+
+      console.warn('[jobs] failed to fetch pending jobs:', error.message || error);
+      return;
+    }
+
+    for (const job of jobs || []) {
+      await supabase
+        .from('jobs')
+        .update({
+          status: JOB_STATUS_RUNNING,
+          started_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', job.id)
+        .in('status', [JOB_STATUS_PENDING, JOB_STATUS_RETRY]);
+
+      if (job.type === JOB_TYPE_TIP_REVERIFY) {
+        await processTipReverifyJob(job);
+      } else {
+        await markJobResult({
+          id: job.id,
+          status: JOB_STATUS_FAILED,
+          attempts: Number(job.attempts || 0) + 1,
+          errorMessage: `unknown job type ${String(job.type || '')}`
+        });
+      }
+    }
+  } finally {
+    isProcessingJobs = false;
+  }
+};
+
 app.use(cors());
 app.use(express.json({ limit: '64kb' }));
+app.use(createRateLimiter({ key: 'general', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_GENERAL }));
 
 app.get('/health', async (_req, res) => {
+  const healthCached = cacheGet('health:status');
+  if (healthCached) return res.json(healthCached);
+
   const { error } = await supabase.from('posts').select('content_hash').limit(1);
   if (error) {
     return res.status(500).json({ ok: false, error: `supabase health check failed: ${error.message}` });
   }
 
-  return res.json({ ok: true });
+  const payload = { ok: true };
+  cacheSet('health:status', payload, 3_000);
+  return res.json(payload);
 });
 
-app.post('/posts', upload.single('image'), async (req, res) => {
+app.get('/stats', async (_req, res) => {
+  const cacheKey = 'stats:global';
+  const cached = cacheGet(cacheKey);
+  if (cached) return res.json(cached);
+
+  const [postsCountResult, tipAggregateResult] = await Promise.all([
+    supabase.from('posts').select('content_hash', { count: 'exact', head: true }),
+    supabase.from('posts').select('total_tip_micro_stx, tip_count')
+  ]);
+
+  if (postsCountResult.error || tipAggregateResult.error) {
+    return res.status(500).json({ error: 'internal server error' });
+  }
+
+  let totalTipMicroStx = 0n;
+  let totalTips = 0;
+  for (const row of tipAggregateResult.data || []) {
+    totalTipMicroStx += BigInt(String(row.total_tip_micro_stx || '0'));
+    totalTips += Number.parseInt(String(row.tip_count || 0), 10) || 0;
+  }
+
+  const payload = {
+    posts: Number(postsCountResult.count || 0),
+    tips: totalTips,
+    totalTipMicroStx: totalTipMicroStx.toString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  cacheSet(cacheKey, payload, CACHE_TTL_STATS_MS);
+  return res.json(payload);
+});
+
+app.post('/posts', createRateLimiter({ key: 'posts', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_POSTS }), upload.single('image'), async (req, res) => {
   const text = String(req.body?.text || '').trim();
   const links = normalizeLinks(parseLinksInput(req.body?.links || []));
 
@@ -288,8 +754,8 @@ app.post('/posts', upload.single('image'), async (req, res) => {
     return res.status(400).json({ error: 'text is required' });
   }
 
-  if (text.length > 500) {
-    return res.status(400).json({ error: 'text max length is 500' });
+  if (text.length > MAX_TEXT_LENGTH) {
+    return res.status(400).json({ error: `text max length is ${MAX_TEXT_LENGTH}` });
   }
 
   const providedImages = normalizeImages(parseImagesInput(req.body?.images || []));
@@ -329,6 +795,9 @@ app.post('/posts', upload.single('image'), async (req, res) => {
       if (insertError) {
         throw new Error(insertError.message || 'failed to create post');
       }
+
+      cacheDeleteByPrefix('posts-by-hash:');
+      cacheDeleteByPrefix('stats:');
     } else if (uploadedImage) {
       await supabase.storage.from(supabaseStorageBucket).remove([uploadedImage.objectPath]);
     }
@@ -382,10 +851,12 @@ app.delete('/posts/:hash', async (req, res) => {
     return res.status(500).json({ error: 'internal server error' });
   }
 
+  cacheDeleteByPrefix('posts-by-hash:');
+  cacheDeleteByPrefix('stats:');
   return res.json({ ok: true, deleted: true });
 });
 
-app.post('/tips', async (req, res) => {
+app.post('/tips', createRateLimiter({ key: 'tips', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_TIPS }), async (req, res) => {
   const contentHash = String(req.body?.contentHash || '').trim().toLowerCase();
   const postId = normalizePostId(req.body?.postId);
   const amountMicroStx = normalizeTipMicroStx(req.body?.amountMicroStx);
@@ -457,57 +928,58 @@ app.post('/tips', async (req, res) => {
   });
 
   if (!verification.ok) {
+    if (isTransientHiroError(verification.error)) {
+      const queued = await enqueueTipReverifyJob({
+        txid,
+        contentHash,
+        postId,
+        amountMicroStx,
+        reason: verification.error
+      });
+
+      if (queued) {
+        return res.status(202).json({
+          ok: true,
+          pending: true,
+          txid,
+          contentHash,
+          message: 'tip verification queued; backend will retry shortly',
+          totalTipMicroStx: normalizeTipMicroStx(postRow.total_tip_micro_stx || '0'),
+          tipCount: Number.parseInt(String(postRow.tip_count || 0), 10) || 0
+        });
+      }
+    }
+
     return res.status(400).json({ error: `tip tx verification failed: ${verification.error}` });
   }
 
-  const { error: insertReceiptError } = await supabase
-    .from('tip_receipts')
-    .insert({
+  try {
+    const persisted = await persistTipReceiptAndTotals({
       txid,
-      content_hash: contentHash,
-      post_id: postId,
-      amount_micro_stx: amountMicroStx,
-      verified_at: new Date().toISOString(),
-      block_height: verification.blockHeight || 0
+      contentHash,
+      postId,
+      amountMicroStx,
+      blockHeight: verification.blockHeight || 0
     });
 
-  if (insertReceiptError) {
-    if (String(insertReceiptError.code || '') === '23505') {
-      return res.json({
-        ok: true,
-        duplicate: true,
-        txid,
-        contentHash,
-        totalTipMicroStx: normalizeTipMicroStx(postRow.total_tip_micro_stx || '0'),
-        tipCount: Number.parseInt(String(postRow.tip_count || 0), 10) || 0
-      });
+    return res.json({
+      ok: true,
+      duplicate: persisted.duplicate,
+      txid,
+      contentHash,
+      totalTipMicroStx: persisted.totalTipMicroStx,
+      tipCount: persisted.tipCount
+    });
+  } catch (err) {
+    const message = String(err?.message || err || 'internal server error');
+    if (message.includes('another tip payload')) {
+      return res.status(409).json({ error: message });
     }
-
     return res.status(500).json({ error: 'internal server error' });
   }
-
-  const { data: updatedTotals, error: totalsError } = await supabase
-    .rpc('increment_post_tip_totals', {
-      p_content_hash: contentHash,
-      p_amount_micro_stx: amountMicroStx
-    })
-    .single();
-
-  if (totalsError) {
-    await supabase.from('tip_receipts').delete().eq('txid', txid);
-    return res.status(500).json({ error: `tip tx verification failed: ${totalsError.message}` });
-  }
-
-  return res.json({
-    ok: true,
-    txid,
-    contentHash,
-    totalTipMicroStx: normalizeTipMicroStx(updatedTotals.total_tip_micro_stx || '0'),
-    tipCount: Number.parseInt(String(updatedTotals.tip_count || 0), 10) || 0
-  });
 });
 
-app.get('/posts/by-hash', async (req, res) => {
+app.get('/posts/by-hash', createRateLimiter({ key: 'postLookup', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_POST_LOOKUPS }), async (req, res) => {
   const raw = String(req.query.hashes || '').trim();
   if (!raw) {
     return res.json({ posts: {} });
@@ -521,6 +993,13 @@ app.get('/posts/by-hash', async (req, res) => {
 
   if (hashes.length === 0) {
     return res.json({ posts: {} });
+  }
+
+  const cacheKey = `posts-by-hash:${hashes.slice().sort().join(',')}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) {
+    res.setHeader('X-Cache', 'HIT');
+    return res.json(cached);
   }
 
   const { data, error } = await supabase
@@ -538,7 +1017,10 @@ app.get('/posts/by-hash', async (req, res) => {
     posts[mapped.contentHash] = mapped;
   }
 
-  return res.json({ posts });
+  const payload = { posts };
+  cacheSet(cacheKey, payload, CACHE_TTL_POSTS_BY_HASH_MS);
+  res.setHeader('X-Cache', 'MISS');
+  return res.json(payload);
 });
 
 app.use((err, _req, res, _next) => {
@@ -558,4 +1040,9 @@ app.use((err, _req, res, _next) => {
 
 app.listen(port, () => {
   console.log(`backend server running on http://localhost:${port}`);
+  setInterval(() => {
+    processPendingJobs().catch((err) => {
+      console.warn('[jobs] unhandled processor error:', err?.message || err);
+    });
+  }, JOB_POLL_INTERVAL_MS);
 });
