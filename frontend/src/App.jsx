@@ -5,6 +5,7 @@ import { ecosystemCategories, highlightedApps, tabs } from './data/ecosystemData
 import { useFrogFaucet } from './hooks/useFrogFaucet';
 import { useFrogDaoNft } from './hooks/useFrogDaoNft';
 import { useFrogSocial } from './hooks/useFrogSocial';
+import { createFrogDaoNftService } from './services/frogDaoNftService';
 
 const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || '';
 const contractName = import.meta.env.VITE_CONTRACT_NAME || 'frog-token-v3';
@@ -214,6 +215,8 @@ export default function App() {
   })();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [activePage, setActivePage] = useState("app");
+  const [usernamesByAddress, setUsernamesByAddress] = useState({});
+  const usernameLookupInFlightRef = useRef(new Set());
   const [ecosystemCategory, setEcosystemCategory] = useState('Highlighted Apps');
   const [socialPostInput, setSocialPostInput] = useState('');
   const [socialStatus, setSocialStatus] = useState('');
@@ -241,6 +244,11 @@ export default function App() {
     address: faucet.address,
     enabled: activeTab === 'dao-nft' || activeTab === 'admin' || (activeTab === 'social' && Boolean(faucet.address))
   });
+
+  const daoLookupService = useMemo(
+    () => createFrogDaoNftService({ contractAddress: daoContractAddress, contractName: daoContractName, network, readOnlyBaseUrl }),
+    [daoContractAddress, daoContractName, network, readOnlyBaseUrl]
+  );
 
   const social = useFrogSocial({
     contractAddress: socialContractAddress,
@@ -274,6 +282,10 @@ export default function App() {
   const displayUserHandle = (address) => {
     const normalized = String(address || '').trim();
     if (!normalized) return 'guest';
+
+    const mappedUsername = String(usernamesByAddress[normalized] || '').trim();
+    if (mappedUsername) return mappedUsername;
+
     if (faucet.address && normalized === faucet.address && registeredUsername) return registeredUsername;
     return socialHandleFromAddress(normalized);
   };
@@ -323,6 +335,62 @@ export default function App() {
   }, [faucet.address, socialFeed]);
 
   const userPostCount = userPosts.length;
+
+  useEffect(() => {
+    const currentAddress = String(faucet.address || '').trim();
+    if (!currentAddress || !registeredUsername) return;
+
+    setUsernamesByAddress((prev) => {
+      if (prev[currentAddress] === registeredUsername) return prev;
+      return { ...prev, [currentAddress]: registeredUsername };
+    });
+  }, [faucet.address, registeredUsername]);
+
+  useEffect(() => {
+    const addresses = new Set();
+    const currentAddress = String(faucet.address || '').trim();
+    if (currentAddress) addresses.add(currentAddress);
+
+    for (const post of socialFeed) {
+      const author = String(post?.author || '').trim();
+      if (author) addresses.add(author);
+    }
+
+    const targets = [...addresses].filter((addr) => !String(usernamesByAddress[addr] || '').trim());
+    if (targets.length === 0) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      const updates = {};
+
+      await Promise.all(targets.map(async (addr) => {
+        if (usernameLookupInFlightRef.current.has(addr)) return;
+        usernameLookupInFlightRef.current.add(addr);
+
+        try {
+          const snapshot = await daoLookupService.fetchDaoSnapshot(addr, { force: false });
+          const username = String(snapshot?.username || '').trim();
+          if (username) updates[addr] = username;
+        } catch (_) {
+          // Ignore lookup errors and fallback to address handle.
+        } finally {
+          usernameLookupInFlightRef.current.delete(addr);
+        }
+      }));
+
+      if (cancelled) return;
+      const keys = Object.keys(updates);
+      if (keys.length === 0) return;
+
+      setUsernamesByAddress((prev) => ({ ...prev, ...updates }));
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [daoLookupService, faucet.address, socialFeed, usernamesByAddress]);
 
   const authorDashboard = useMemo(() => {
     const authors = new Map();
