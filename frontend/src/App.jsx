@@ -780,7 +780,7 @@ export default function App() {
                 />
               </label>
               <button
-                className={primaryButtonClass}
+                className={`${primaryButtonClass} mt-4`}
                 onClick={dao.registerUsername}
                 disabled={!faucet.address || !dao.ready || Boolean(dao.username) || !dao.usernameInput.trim() || dao.isRegistering}
               >
@@ -794,7 +794,7 @@ export default function App() {
                 Requirement: username registered + hold at least 1,000 FROG (mint fee: 99 FROG).
               </p>
               <button
-                className={primaryButtonClass}
+                className={`${primaryButtonClass} mt-4`}
                 onClick={dao.mintPass}
                 disabled={!faucet.address || !dao.ready || dao.hasPass || !dao.eligible || dao.isMinting}
               >
