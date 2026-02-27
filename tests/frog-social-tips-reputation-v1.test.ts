@@ -6,6 +6,7 @@ const alice = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM";
 const bob = "STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6";
 
 describe("frog-social-tips-reputation-v1", () => {
+  // Xac nhan tip tra ve err u1 khi tipper khong co du STX trong simnet hien tai.
   it("returns stx-transfer error when tipper has no STX balance in current simnet", () => {
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], alice).result).toBeOk(Cl.uint(1000));
     expect(
@@ -24,6 +25,7 @@ describe("frog-social-tips-reputation-v1", () => {
     expect(creatorReputation.result).toBeUint(0);
   });
 
+  // Dam bao chi owner moi duoc cap nhat gia tri min-tip-ustx.
   it("allows only owner to update min tip", () => {
     const nonOwner = simnet.callPublicFn("frog-social-tips-reputation-v1", "set-min-tip-ustx", [Cl.uint(200000)], alice);
     expect(nonOwner.result).toBeErr(Cl.uint(500));

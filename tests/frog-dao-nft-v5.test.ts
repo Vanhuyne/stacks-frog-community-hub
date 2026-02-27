@@ -6,6 +6,7 @@ const alice = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM";
 const bob = "STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6";
 
 describe("frog-dao-nft-v5", () => {
+  // Mint pass chi hop le khi user da dang ky username va du FROG toi thieu.
   it("requires username and balance before minting pass", () => {
     const mintWithoutUsername = simnet.callPublicFn("frog-dao-nft-v5", "mint-pass", [], alice);
     expect(mintWithoutUsername.result).toBeErr(Cl.uint(402));
@@ -23,6 +24,7 @@ describe("frog-dao-nft-v5", () => {
     expect(mintPass.result).toBeOk(Cl.uint(1));
   });
 
+  // Kiem tra full lifecycle governance: tao proposal, bo phieu va execute.
   it("supports proposal lifecycle: create, vote, execute", () => {
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], alice).result).toBeOk(Cl.uint(1000));
     expect(simnet.callPublicFn("frog-dao-nft-v5", "register-username", [Cl.stringAscii("alice2")], alice).result).toBeOk(
@@ -49,6 +51,7 @@ describe("frog-dao-nft-v5", () => {
     expect(execute.result).toBeOk(Cl.bool(true));
   });
 
+  // Chan mot thanh vien bo phieu lan thu hai tren cung proposal.
   it("rejects duplicate votes", () => {
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], alice).result).toBeOk(Cl.uint(1000));
     expect(simnet.callPublicFn("frog-dao-nft-v5", "register-username", [Cl.stringAscii("alice3")], alice).result).toBeOk(

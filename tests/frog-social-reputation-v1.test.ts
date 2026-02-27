@@ -6,6 +6,7 @@ const alice = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM";
 const bob = "STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6";
 
 describe("frog-social-reputation-v1", () => {
+  // Dang bai va nhan like se tang reputation theo dung so diem quy dinh.
   it("awards publish and like reputation points", () => {
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], alice).result).toBeOk(Cl.uint(1000));
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], bob).result).toBeOk(Cl.uint(1000));
@@ -33,6 +34,7 @@ describe("frog-social-reputation-v1", () => {
     expect(authorRepAfterLike.result).toBeOk(Cl.uint(12));
   });
 
+  // Xac nhan cac ham cap nhat config chi cho phep owner goi.
   it("enforces owner-only config updates", () => {
     const nonOwner = simnet.callPublicFn("frog-social-reputation-v1", "set-like-fee", [Cl.uint(8)], alice);
     expect(nonOwner.result).toBeErr(Cl.uint(400));

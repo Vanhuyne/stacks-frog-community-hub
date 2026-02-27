@@ -6,6 +6,7 @@ const alice = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM";
 const bob = "STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6";
 
 describe("frog-social-v1", () => {
+  // Dang post va like thanh cong, dong thoi kiem tra phi FROG tru dung cho user va treasury.
   it("publishes and likes a post, charging token fees", () => {
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], alice).result).toBeOk(Cl.uint(1000));
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], bob).result).toBeOk(Cl.uint(1000));
@@ -30,6 +31,7 @@ describe("frog-social-v1", () => {
     expect(treasuryBalance.result).toBeOk(Cl.uint(55));
   });
 
+  // Chan like bai cua chinh minh va chan like trung lap tren cung post.
   it("rejects liking own post and duplicate like", () => {
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], alice).result).toBeOk(Cl.uint(1000));
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], bob).result).toBeOk(Cl.uint(1000));
@@ -46,6 +48,7 @@ describe("frog-social-v1", () => {
     expect(duplicateLike.result).toBeErr(Cl.uint(405));
   });
 
+  // Chi owner moi duoc cap nhat cau hinh fee cua social contract.
   it("allows only owner to update fee config", () => {
     const nonOwner = simnet.callPublicFn("frog-social-v1", "set-post-fee", [Cl.uint(99)], alice);
     expect(nonOwner.result).toBeErr(Cl.uint(400));

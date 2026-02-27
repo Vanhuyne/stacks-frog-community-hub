@@ -6,6 +6,7 @@ const alice = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM";
 const bob = "STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6";
 
 describe("frog-social-tips-v1", () => {
+  // Xac nhan tip tra ve err u1 khi tipper khong co du STX trong simnet hien tai.
   it("returns stx-transfer error when tipper has no STX balance in current simnet", () => {
     expect(simnet.callPublicFn("frog-token-v3", "claim", [], alice).result).toBeOk(Cl.uint(1000));
     expect(
@@ -24,6 +25,7 @@ describe("frog-social-tips-v1", () => {
     expect(creatorReputation.result).toBeUint(0);
   });
 
+  // Bao phu cac case loi va kiem tra chi owner duoc pause tipping.
   it("rejects invalid scenarios and owner-restricted settings", () => {
     const missingPost = simnet.callPublicFn("frog-social-tips-v1", "tip-post", [Cl.uint(99), Cl.uint(100000)], bob);
     expect(missingPost.result).toBeErr(Cl.uint(503));

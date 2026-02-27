@@ -6,6 +6,7 @@ const alice = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM";
 const bob = "STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6";
 
 describe("frog-token-v3", () => {
+  // Claim faucet lan dau thanh cong va lan hai bi chan boi cooldown.
   it("claims faucet once and blocks immediate re-claim", () => {
     const firstClaim = simnet.callPublicFn("frog-token-v3", "claim", [], alice);
     expect(firstClaim.result).toBeOk(Cl.uint(1000));
@@ -17,6 +18,7 @@ describe("frog-token-v3", () => {
     expect(canClaimNow.result).toBeBool(false);
   });
 
+  // Owner co the pause faucet va khi pause thi claim bi tu choi.
   it("allows owner to pause faucet and rejects claim while paused", () => {
     const pauseByOwner = simnet.callPublicFn("frog-token-v3", "set-faucet-paused", [Cl.bool(true)], deployer);
     expect(pauseByOwner.result).toBeOk(Cl.bool(true));
@@ -25,6 +27,7 @@ describe("frog-token-v3", () => {
     expect(claimWhilePaused.result).toBeErr(Cl.uint(401));
   });
 
+  // Transfer that bai neu tx-sender khac sender duoc truyen vao ham.
   it("rejects transfer when tx-sender is not the sender argument", () => {
     const claim = simnet.callPublicFn("frog-token-v3", "claim", [], alice);
     expect(claim.result).toBeOk(Cl.uint(1000));
