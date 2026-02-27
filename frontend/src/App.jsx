@@ -270,6 +270,14 @@ export default function App() {
     [faucet.address, isOwner]
   );
 
+  const registeredUsername = String(dao.username || '').trim();
+  const displayUserHandle = (address) => {
+    const normalized = String(address || '').trim();
+    if (!normalized) return 'guest';
+    if (faucet.address && normalized === faucet.address && registeredUsername) return registeredUsername;
+    return socialHandleFromAddress(normalized);
+  };
+
 
   useEffect(() => {
     if (social.status) setSocialStatus(social.status);
@@ -615,7 +623,7 @@ export default function App() {
         <section className="grid gap-6 lg:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
           <div className="ui-card rounded-none border border-[#10162f]/16 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
             <p className="text-xs uppercase tracking-[0.2em] text-[#10162f]/65">User Profile</p>
-            <h1 className="mt-2 text-3xl leading-tight">@{socialHandleFromAddress(faucet.address)}</h1>
+            <h1 className="mt-2 text-3xl leading-tight">@{displayUserHandle(faucet.address)}</h1>
             <p className="mt-2 font-mono text-xs text-[#10162f]/70">{faucet.address}</p>
             <div className="mt-5 rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/70 px-4 py-3">
               <p className="text-xs uppercase tracking-[0.12em] text-[#10162f]/65">Total Posts</p>
@@ -898,7 +906,7 @@ export default function App() {
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-normal text-[#10162f]">{faucet.address ? `@${socialHandleFromAddress(faucet.address)}` : '@guest'}</p>
+                  <p className="text-sm font-normal text-[#10162f]">{faucet.address ? `@${displayUserHandle(faucet.address)}` : '@guest'}</p>
                   <p className="text-base text-[#10162f]/70">{faucet.address ? shortenAddress(faucet.address) : 'Connect wallet to publish and like posts'}</p>
                 </div>
               </div>
@@ -1035,7 +1043,7 @@ export default function App() {
                   <div key={creator.author} className="flex items-center justify-between rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/85 px-3 py-2">
                     <div>
                       <p className="text-base text-[#10162f]/70">Rank #{index + 1}</p>
-                      <p className="text-sm font-normal text-[#10162f]">@{socialHandleFromAddress(creator.author)}</p>
+                      <p className="text-sm font-normal text-[#10162f]">@{displayUserHandle(creator.author)}</p>
                       <p className="text-[11px] text-[#10162f]/70">{creator.postCount} posts • {creator.totalLikes} likes</p>
                     </div>
                     <strong className="text-sm">Rep {creator.reputation}</strong>
@@ -1108,7 +1116,7 @@ export default function App() {
                             </div>
                           )}
                           <div>
-                            <p className="text-sm font-normal text-[#10162f]">@{socialHandleFromAddress(post.author)}</p>
+                            <p className="text-sm font-normal text-[#10162f]">@{displayUserHandle(post.author)}</p>
                             <p className="font-mono text-[11px] text-[#10162f]/70">{shortenAddress(post.author)}</p>
                             <p className="mt-1 inline-flex items-center rounded-none border border-[#10162f]/25 bg-[#f5f3eb] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[#10162f]">Rep {post.authorReputation || '0'}</p>
                           </div>
