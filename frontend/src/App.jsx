@@ -30,8 +30,11 @@ const socialTipAmountStx = import.meta.env.VITE_SOCIAL_TIP_STX || '0.1';
 
 const network = (import.meta.env.VITE_STACKS_NETWORK || 'testnet').toLowerCase();
 const defaultHiroApiBaseUrl = network === 'mainnet' ? 'https://api.hiro.so' : 'https://api.testnet.hiro.so';
-// In dev we can proxy via /hiro to avoid CORS; in production call Hiro API directly unless overridden.
-const readOnlyBaseUrl = import.meta.env.VITE_HIRO_API_BASE_URL || (import.meta.env.DEV ? '/hiro' : defaultHiroApiBaseUrl);
+const configuredHiroApiBaseUrl = String(import.meta.env.VITE_HIRO_API_BASE_URL || '').trim();
+// In dev always use Vite proxy (/hiro) to avoid browser CORS with Hiro.
+const readOnlyBaseUrl = import.meta.env.DEV
+  ? '/hiro'
+  : (configuredHiroApiBaseUrl || defaultHiroApiBaseUrl);
 const configuredSocialApiBaseUrl = String(import.meta.env.VITE_SOCIAL_API_BASE_URL || '').trim();
 const defaultSocialApiBaseUrl = import.meta.env.DEV
   ? 'http://localhost:8787'
