@@ -51,8 +51,12 @@ const CACHE_TTL_POSTS_BY_HASH_MS = Number(process.env.CACHE_TTL_POSTS_BY_HASH_MS
 const CACHE_TTL_HIRO_TX_MS = Number(process.env.CACHE_TTL_HIRO_TX_MS || 20_000);
 const CACHE_TTL_VERIFY_TX_MS = Number(process.env.CACHE_TTL_VERIFY_TX_MS || 20_000);
 const CACHE_TTL_STATS_MS = Number(process.env.CACHE_TTL_STATS_MS || 30_000);
+const CACHE_TTL_JOBS_STATS_MS = Number(process.env.CACHE_TTL_JOBS_STATS_MS || 10_000);
 
 const JOB_POLL_INTERVAL_MS = Number(process.env.JOB_POLL_INTERVAL_MS || 15_000);
+const JOB_CLEANUP_INTERVAL_MS = Number(process.env.JOB_CLEANUP_INTERVAL_MS || 3_600_000);
+const JOB_CLEANUP_DONE_AFTER_HOURS = Number(process.env.JOB_CLEANUP_DONE_AFTER_HOURS || 168);
+const JOB_CLEANUP_FAILED_AFTER_HOURS = Number(process.env.JOB_CLEANUP_FAILED_AFTER_HOURS || 720);
 const JOB_BATCH_SIZE = Number(process.env.JOB_BATCH_SIZE || 6);
 const JOB_RETRY_MAX_ATTEMPTS = Number(process.env.JOB_RETRY_MAX_ATTEMPTS || 8);
 
@@ -62,6 +66,10 @@ const JOB_STATUS_RUNNING = 'running';
 const JOB_STATUS_DONE = 'done';
 const JOB_STATUS_RETRY = 'retry';
 const JOB_STATUS_FAILED = 'failed';
+
+const IDEMPOTENCY_TTL_MS = Number(process.env.IDEMPOTENCY_TTL_MS || 600_000);
+const IDEMPOTENCY_MAX_KEY_LENGTH = Number(process.env.IDEMPOTENCY_MAX_KEY_LENGTH || 128);
+const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9._:-]{8,128}$/;
 
 const urlRegex = /^https?:\/\//i;
 const txIdRegex = /^[0-9a-f]{64}$/i;
@@ -74,6 +82,7 @@ const rateLimitStores = {
   tips: new Map(),
   postLookup: new Map()
 };
+const idempotencyStore = new Map();
 
 let jobsTableUnavailable = false;
 let isProcessingJobs = false;
@@ -101,6 +110,47 @@ const cacheDeleteByPrefix = (prefix) => {
   }
 };
 
+const getIdempotencyKey = (req) => {
+  const raw = String(req.headers['idempotency-key'] || '').trim();
+  if (!raw) return { key: '', error: '' };
+  if (raw.length > IDEMPOTENCY_MAX_KEY_LENGTH) {
+    return { key: '', error: 'Idempotency-Key is too long' };
+  }
+  if (!IDEMPOTENCY_KEY_REGEX.test(raw)) {
+    return { key: '', error: 'Idempotency-Key format is invalid' };
+  }
+  return { key: raw, error: '' };
+};
+
+const getIdempotencyEntry = (key) => {
+  const entry = idempotencyStore.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    idempotencyStore.delete(key);
+    return null;
+  }
+  return entry;
+};
+
+const setIdempotencyEntry = (key, value, ttlMs = IDEMPOTENCY_TTL_MS) => {
+  idempotencyStore.set(key, {
+    ...value,
+    expiresAt: Date.now() + Math.max(1_000, Number(ttlMs) || IDEMPOTENCY_TTL_MS)
+  });
+};
+
+const clearIdempotencyEntry = (key) => {
+  if (!key) return;
+  idempotencyStore.delete(key);
+};
+
+const maybeCleanupIdempotencyStore = () => {
+  const now = Date.now();
+  for (const [key, value] of idempotencyStore.entries()) {
+    if (now > value.expiresAt) idempotencyStore.delete(key);
+  }
+};
+
 const maybeCleanupRateStore = (store) => {
   const now = Date.now();
   for (const [key, info] of store.entries()) {
@@ -119,7 +169,10 @@ const createRateLimiter = ({ key, windowMs, maxRequests }) => {
     const sourceKey = String(req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown');
     const now = Date.now();
 
-    if (Math.random() < 0.01) maybeCleanupRateStore(store);
+    if (Math.random() < 0.01) {
+      maybeCleanupRateStore(store);
+      maybeCleanupIdempotencyStore();
+    }
 
     const existing = store.get(sourceKey);
     if (!existing || now > existing.resetAt) {
@@ -719,6 +772,40 @@ const probeJobsRuntime = async () => {
   console.warn('[jobs] runtime probe error:', error.message || error);
 };
 
+
+const cleanupOldJobs = async () => {
+  if (jobsTableUnavailable) return;
+
+  const doneBefore = new Date(Date.now() - Math.max(1, JOB_CLEANUP_DONE_AFTER_HOURS) * 60 * 60 * 1000).toISOString();
+  const failedBefore = new Date(Date.now() - Math.max(1, JOB_CLEANUP_FAILED_AFTER_HOURS) * 60 * 60 * 1000).toISOString();
+
+  const [doneDelete, failedDelete] = await Promise.all([
+    supabase.from('jobs').delete().eq('status', JOB_STATUS_DONE).lt('updated_at', doneBefore),
+    supabase.from('jobs').delete().eq('status', JOB_STATUS_FAILED).lt('updated_at', failedBefore)
+  ]);
+
+  for (const result of [doneDelete, failedDelete]) {
+    if (!result.error) continue;
+    const msg = String(result.error.message || '').toLowerCase();
+    if (msg.includes('relation') && msg.includes('jobs')) {
+      jobsTableUnavailable = true;
+      console.warn('[jobs] jobs table unavailable; disabling cleanup');
+      return;
+    }
+    console.warn('[jobs] cleanup error:', result.error.message || result.error);
+  }
+};
+
+const fetchJobStatusCount = async (status) => {
+  const { count, error } = await supabase
+    .from('jobs')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', status);
+
+  if (error) throw error;
+  return Number(count || 0);
+};
+
 app.use(cors());
 app.use(express.json({ limit: '64kb' }));
 app.use(createRateLimiter({ key: 'general', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_GENERAL }));
@@ -735,6 +822,64 @@ app.get('/health', async (_req, res) => {
   const payload = { ok: true };
   cacheSet('health:status', payload, 3_000);
   return res.json(payload);
+});
+
+
+app.get('/jobs/stats', async (_req, res) => {
+  if (jobsTableUnavailable) {
+    return res.json({
+      enabled: false,
+      pending: 0,
+      retry: 0,
+      running: 0,
+      failed: 0,
+      done: 0,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  const cacheKey = 'jobs:stats';
+  const cached = cacheGet(cacheKey);
+  if (cached) return res.json(cached);
+
+  try {
+    const [pending, retry, running, failed, done] = await Promise.all([
+      fetchJobStatusCount(JOB_STATUS_PENDING),
+      fetchJobStatusCount(JOB_STATUS_RETRY),
+      fetchJobStatusCount(JOB_STATUS_RUNNING),
+      fetchJobStatusCount(JOB_STATUS_FAILED),
+      fetchJobStatusCount(JOB_STATUS_DONE)
+    ]);
+
+    const payload = {
+      enabled: true,
+      pending,
+      retry,
+      running,
+      failed,
+      done,
+      updatedAt: new Date().toISOString()
+    };
+
+    cacheSet(cacheKey, payload, CACHE_TTL_JOBS_STATS_MS);
+    return res.json(payload);
+  } catch (error) {
+    const msg = String(error?.message || '').toLowerCase();
+    if (msg.includes('relation') && msg.includes('jobs')) {
+      jobsTableUnavailable = true;
+      return res.json({
+        enabled: false,
+        pending: 0,
+        retry: 0,
+        running: 0,
+        failed: 0,
+        done: 0,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    return res.status(500).json({ error: 'internal server error' });
+  }
 });
 
 app.get('/stats', async (_req, res) => {
@@ -770,15 +915,50 @@ app.get('/stats', async (_req, res) => {
 });
 
 app.post('/posts', createRateLimiter({ key: 'posts', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_POSTS }), upload.single('image'), async (req, res) => {
+  const { key: idempotencyKey, error: idempotencyError } = getIdempotencyKey(req);
+  if (idempotencyError) {
+    return res.status(400).json({ error: idempotencyError });
+  }
+
+  const idemCacheKey = idempotencyKey ? `idempotency:posts:${idempotencyKey}` : '';
+  if (idemCacheKey) {
+    const existing = getIdempotencyEntry(idemCacheKey);
+    if (existing?.state === 'processing') {
+      return res.status(409).json({ error: 'request with same Idempotency-Key is still processing' });
+    }
+
+    if (existing?.state === 'completed') {
+      res.setHeader('Idempotency-Replayed', 'true');
+      return res.status(existing.statusCode).json(existing.body);
+    }
+
+    setIdempotencyEntry(idemCacheKey, { state: 'processing' }, IDEMPOTENCY_TTL_MS);
+  }
+
+  const finish = (statusCode, body, { cacheResult = true } = {}) => {
+    if (idemCacheKey) {
+      if (cacheResult) {
+        setIdempotencyEntry(idemCacheKey, {
+          state: 'completed',
+          statusCode,
+          body
+        }, IDEMPOTENCY_TTL_MS);
+      } else {
+        clearIdempotencyEntry(idemCacheKey);
+      }
+    }
+    return res.status(statusCode).json(body);
+  };
+
   const text = String(req.body?.text || '').trim();
   const links = normalizeLinks(parseLinksInput(req.body?.links || []));
 
   if (!text) {
-    return res.status(400).json({ error: 'text is required' });
+    return finish(400, { error: 'text is required' });
   }
 
   if (text.length > MAX_TEXT_LENGTH) {
-    return res.status(400).json({ error: `text max length is ${MAX_TEXT_LENGTH}` });
+    return finish(400, { error: `text max length is ${MAX_TEXT_LENGTH}` });
   }
 
   const providedImages = normalizeImages(parseImagesInput(req.body?.images || []));
@@ -825,7 +1005,7 @@ app.post('/posts', createRateLimiter({ key: 'posts', windowMs: RATE_LIMIT_WINDOW
       await supabase.storage.from(supabaseStorageBucket).remove([uploadedImage.objectPath]);
     }
 
-    return res.json({ contentHash });
+    return finish(200, { contentHash });
   } catch (err) {
     if (uploadedImage) {
       await supabase.storage.from(supabaseStorageBucket).remove([uploadedImage.objectPath]);
@@ -833,10 +1013,10 @@ app.post('/posts', createRateLimiter({ key: 'posts', windowMs: RATE_LIMIT_WINDOW
 
     const message = String(err?.message || err || 'internal server error');
     if (message.toLowerCase().includes('image upload failed')) {
-      return res.status(400).json({ error: message });
+      return finish(400, { error: message });
     }
 
-    return res.status(500).json({ error: 'internal server error' });
+    return finish(500, { error: 'internal server error' }, { cacheResult: false });
   }
 });
 
@@ -1068,9 +1248,19 @@ app.listen(port, () => {
     console.warn('[jobs] runtime probe failed:', err?.message || err);
   });
 
+  cleanupOldJobs().catch((err) => {
+    console.warn('[jobs] initial cleanup failed:', err?.message || err);
+  });
+
   setInterval(() => {
     processPendingJobs().catch((err) => {
       console.warn('[jobs] unhandled processor error:', err?.message || err);
     });
   }, JOB_POLL_INTERVAL_MS);
+
+  setInterval(() => {
+    cleanupOldJobs().catch((err) => {
+      console.warn('[jobs] periodic cleanup failed:', err?.message || err);
+    });
+  }, JOB_CLEANUP_INTERVAL_MS);
 });
