@@ -425,7 +425,9 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     }
 
     if (text.length > 500) {
-      dispatch({ type: 'merge', payload: { status: 'Post content is too long (max 500 chars).' } });
+      const message = 'Post vượt quá 500 ký tự (tối đa 500).';
+      dispatch({ type: 'merge', payload: { status: message } });
+      toast.error('Post vượt quá 500 ký tự.');
       return false;
     }
 
@@ -473,8 +475,15 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     } catch (err) {
       if (contentHash) await deleteOffchainPost(contentHash);
       const errorMessage = String(err?.message || err || 'Unknown error');
-      dispatch({ type: 'merge', payload: { status: `Publish failed: ${errorMessage}` } });
-      toast.error('Post publish failed. Please try again.');
+      const isPostTooLongError = /max length is 500|text max length is 500|too long|max 500 chars|500 characters/i.test(errorMessage);
+
+      if (isPostTooLongError) {
+        dispatch({ type: 'merge', payload: { status: 'Post vượt quá 500 ký tự (tối đa 500).' } });
+        toast.error('Post vượt quá 500 ký tự.');
+      } else {
+        dispatch({ type: 'merge', payload: { status: `Publish failed: ${errorMessage}` } });
+        toast.error('Post publish failed. Please try again.');
+      }
       return false;
     } finally {
       dispatch({ type: 'merge', payload: { isPublishing: false } });
