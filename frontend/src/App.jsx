@@ -16,12 +16,17 @@ const daoContractName = import.meta.env.VITE_DAO_CONTRACT_NAME || 'frog-dao-nft-
 const socialContractAddress = import.meta.env.VITE_SOCIAL_CONTRACT_ADDRESS || contractAddress;
 const socialContractName = import.meta.env.VITE_SOCIAL_CONTRACT_NAME || 'frog-social-v1';
 
+const isLikelyContractPrincipal = (value) => /^S[PMTN][A-Z0-9]{39}$/.test(String(value || '').trim());
+
 const socialTipsContractId = String(import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_ID || '').trim();
 const socialTipsContractIdParts = socialTipsContractId.split('.');
-const socialTipsContractAddress =
-  socialTipsContractIdParts.length === 2 && socialTipsContractIdParts[0]
+const socialTipsAddressFromId =
+  socialTipsContractIdParts.length === 2 && isLikelyContractPrincipal(socialTipsContractIdParts[0])
     ? socialTipsContractIdParts[0]
-    : (import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_ADDRESS || socialContractAddress);
+    : '';
+const socialTipsAddressFallback = String(import.meta.env.VITE_SOCIAL_TIPS_CONTRACT_ADDRESS || '').trim();
+const socialTipsContractAddress = socialTipsAddressFromId
+  || (isLikelyContractPrincipal(socialTipsAddressFallback) ? socialTipsAddressFallback : socialContractAddress);
 const socialTipsContractName =
   socialTipsContractIdParts.length === 2 && socialTipsContractIdParts[1]
     ? socialTipsContractIdParts[1]

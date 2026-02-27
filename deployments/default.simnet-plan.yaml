@@ -1,0 +1,59 @@
+id: 0
+name: Simulated deployment, used as a default for `clarinet console`, `clarinet test` and `clarinet check`
+network: simnet
+genesis:
+  wallets:
+  - name: deployer
+    address: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+    balance: '0'
+    sbtc-balance: '1000000000'
+  contracts:
+  - genesis
+  - lockup
+  - bns
+  - cost-voting
+  - costs
+  - pox
+  - costs-2
+  - pox-2
+  - costs-3
+  - pox-3
+  - pox-4
+  - signers
+  - signers-voting
+  - costs-4
+plan:
+  batches:
+  - id: 0
+    transactions:
+    - transaction-type: emulated-contract-publish
+      contract-name: frog-token-v3
+      emulated-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+      path: contracts/frog-token-v3.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: frog-dao-nft-v5
+      emulated-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+      path: contracts/frog-dao-nft-v5.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: frog-social-reputation-v1
+      emulated-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+      path: contracts/frog-social-reputation-v1.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: frog-social-tips-reputation-v1
+      emulated-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+      path: contracts/frog-social-tips-reputation-v1.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: frog-social-v1
+      emulated-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+      path: contracts/frog-social-v1.clar
+      clarity-version: 3
+    - transaction-type: emulated-contract-publish
+      contract-name: frog-social-tips-v1
+      emulated-sender: STC5KHM41H6WHAST7MWWDD807YSPRQKJ68T330BQ
+      path: contracts/frog-social-tips-v1.clar
+      clarity-version: 3
+    epoch: '3.3'
