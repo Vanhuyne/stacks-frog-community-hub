@@ -19,6 +19,8 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const isDocumentHidden = () => typeof document !== 'undefined' && Boolean(document.hidden);
 const REFRESH_DEBOUNCE_MS = 1500;
 const FEED_POLL_INTERVAL_MS = 30000;
+const VISIBILITY_REFRESH_STALE_MS = 25000;
+const VISIBILITY_REFRESH_JITTER_MAX_MS = 400;
 
 const initialState = {
   postFee: '50',
@@ -122,6 +124,7 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
   const [state, dispatch] = useReducer(reducer, initialState);
   const refreshInFlightRef = useRef(null);
   const lastRefreshAtRef = useRef(0);
+  const lastSuccessfulRefreshAtRef = useRef(0);
   const optimisticLikedPostIdsRef = useRef(new Set());
 
   const service = useMemo(
@@ -286,14 +289,28 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     }
   }, [address, applyOptimisticLikes, contractAddress, hydrateFeedWithOffchain, ready, service]);
 
-  const refreshSmart = useCallback(async (limit = 10, { force = false } = {}) => {
+  const hasPendingSocialAction = state.isPublishing || Boolean(state.likingPostId) || Boolean(state.tippingPostId);
+
+  const refreshSmart = useCallback(async (limit = 10, { force = false, minStaleMs = 0, skipIfActionLocked = false } = {}) => {
+    if (skipIfActionLocked && hasPendingSocialAction) return null;
+
+    const now = Date.now();
+
     if (!force) {
-      const elapsed = Date.now() - lastRefreshAtRef.current;
+      const elapsed = now - lastRefreshAtRef.current;
       if (elapsed < REFRESH_DEBOUNCE_MS) return null;
+
+      if (minStaleMs > 0) {
+        const elapsedSinceSuccess = now - lastSuccessfulRefreshAtRef.current;
+        if (elapsedSinceSuccess < minStaleMs) return null;
+      }
     }
-    lastRefreshAtRef.current = Date.now();
-    return refresh(limit);
-  }, [refresh]);
+
+    lastRefreshAtRef.current = now;
+    const result = await refresh(limit);
+    if (result) lastSuccessfulRefreshAtRef.current = Date.now();
+    return result;
+  }, [hasPendingSocialAction, refresh]);
 
   const waitForFeedUpdate = useCallback(async (nextExpectedLastId = '') => {
     if (!ready) return;
@@ -729,24 +746,36 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
 
+    let visibilityTimer = null;
+
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        refreshSmart(10, { force: true });
-      }
+      if (document.hidden) return;
+      if (hasPendingSocialAction) return;
+
+      if (visibilityTimer) clearTimeout(visibilityTimer);
+      const jitterMs = Math.floor(Math.random() * VISIBILITY_REFRESH_JITTER_MAX_MS);
+
+      visibilityTimer = setTimeout(() => {
+        refreshSmart(10, {
+          minStaleMs: VISIBILITY_REFRESH_STALE_MS,
+          skipIfActionLocked: true
+        });
+      }, jitterMs);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
+      if (visibilityTimer) clearTimeout(visibilityTimer);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [refreshSmart]);
+  }, [hasPendingSocialAction, refreshSmart]);
 
   useEffect(() => {
     if (!ready) return undefined;
 
     const interval = setInterval(() => {
       if (isDocumentHidden()) return;
-      refreshSmart(10);
+      refreshSmart(10, { skipIfActionLocked: true });
     }, FEED_POLL_INTERVAL_MS);
 
     return () => clearInterval(interval);
