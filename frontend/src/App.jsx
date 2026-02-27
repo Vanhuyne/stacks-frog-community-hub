@@ -1231,12 +1231,31 @@ export default function App() {
                             {isTippingThisPost ? 'Tipping...' : isOwnPost ? 'Own post' : `Tip ${socialTipAmountStx} STX`}
                           </button>
                           <button
-                            className={hasLiked ? ghostButtonClass : primaryButtonClass}
+                            className={hasLiked
+                              ? 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#10162f]/25 bg-[#f5f3eb] text-[#10162f]/70'
+                              : 'inline-flex h-10 w-10 items-center justify-center rounded-none border border-[#10162f] bg-[#10162f] text-white transition hover:-translate-y-[1px] hover:bg-[#2e4cff]'
+                            }
                             type="button"
                             onClick={() => likeSocialPost(post.id)}
                             disabled={hasLiked || isOwnPost || social.likingPostId === String(post.id) || !faucet.address || isTippingThisPost || isSocialActionLocked}
+                            aria-label={social.likingPostId === String(post.id)
+                              ? 'Liking post'
+                              : hasLiked
+                                ? 'Post liked'
+                                : isOwnPost
+                                  ? 'Own post'
+                                  : `Like post (${social.likeFee || '5'} FROG)`}
+                            title={social.likingPostId === String(post.id)
+                              ? 'Liking...'
+                              : hasLiked
+                                ? 'Liked'
+                                : isOwnPost
+                                  ? 'Own post'
+                                  : `Like (${social.likeFee || '5'} FROG)`}
                           >
-                            {social.likingPostId === String(post.id) ? 'Liking...' : hasLiked ? 'Liked' : isOwnPost ? 'Own post' : `Like (${social.likeFee || '5'} FROG)`}
+                            <span className="text-base leading-none" aria-hidden="true">
+                              {social.likingPostId === String(post.id) ? '⏳' : hasLiked ? '❤️' : '🤍'}
+                            </span>
                           </button>
                         </div>
                       </div>
