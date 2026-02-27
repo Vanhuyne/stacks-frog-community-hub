@@ -60,6 +60,12 @@ const JOB_CLEANUP_FAILED_AFTER_HOURS = Number(process.env.JOB_CLEANUP_FAILED_AFT
 const JOB_BATCH_SIZE = Number(process.env.JOB_BATCH_SIZE || 6);
 const JOB_RETRY_MAX_ATTEMPTS = Number(process.env.JOB_RETRY_MAX_ATTEMPTS || 8);
 
+const ALERT_CHECK_INTERVAL_MS = Number(process.env.ALERT_CHECK_INTERVAL_MS || 60_000);
+const ALERT_429_PER_WINDOW_WARN = Number(process.env.ALERT_429_PER_WINDOW_WARN || 50);
+const ALERT_JOB_BACKLOG_WARN = Number(process.env.ALERT_JOB_BACKLOG_WARN || 100);
+const ALERT_COOLDOWN_MS = Number(process.env.ALERT_COOLDOWN_MS || 300_000);
+const ALERT_WEBHOOK_URL = String(process.env.ALERT_WEBHOOK_URL || '').trim();
+
 const JOB_TYPE_TIP_REVERIFY = 'tip_reverify';
 const JOB_STATUS_PENDING = 'pending';
 const JOB_STATUS_RUNNING = 'running';
@@ -86,6 +92,13 @@ const idempotencyStore = new Map();
 
 let jobsTableUnavailable = false;
 let isProcessingJobs = false;
+
+const runtimeMetrics = {
+  rateLimit429Count: 0,
+  healthProbeFailures: 0,
+  jobsProbeFailures: 0
+};
+const alertLastSentAt = new Map();
 
 const cacheGet = (key) => {
   const hit = memCache.get(key);
@@ -193,6 +206,7 @@ const createRateLimiter = ({ key, windowMs, maxRequests }) => {
     res.setHeader('X-RateLimit-Reset', String(Math.floor(existing.resetAt / 1000)));
 
     if (existing.count > maxAllowed) {
+      runtimeMetrics.rateLimit429Count += 1;
       const retryAfterSec = Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
       res.setHeader('Retry-After', String(retryAfterSec));
       return res.status(429).json({ error: 'rate limit exceeded, please retry shortly' });
@@ -769,6 +783,7 @@ const probeJobsRuntime = async () => {
     return;
   }
 
+  runtimeMetrics.jobsProbeFailures += 1;
   console.warn('[jobs] runtime probe error:', error.message || error);
 };
 
@@ -806,6 +821,93 @@ const fetchJobStatusCount = async (status) => {
   return Number(count || 0);
 };
 
+
+const emitAlert = async (key, message, metadata = {}) => {
+  const now = Date.now();
+  const lastSentAt = alertLastSentAt.get(key) || 0;
+
+  if (now - lastSentAt < ALERT_COOLDOWN_MS) return;
+  alertLastSentAt.set(key, now);
+
+  console.warn(`[alert:${key}] ${message}`, metadata);
+
+  if (!ALERT_WEBHOOK_URL) return;
+
+  try {
+    await fetch(ALERT_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        key,
+        message,
+        metadata,
+        at: new Date(now).toISOString()
+      })
+    });
+  } catch (error) {
+    console.warn('[alert] failed to send webhook:', error?.message || error);
+  }
+};
+
+const runAlertChecks = async () => {
+  const intervalSeconds = Math.max(1, Math.round(ALERT_CHECK_INTERVAL_MS / 1000));
+  const rateLimit429Count = runtimeMetrics.rateLimit429Count;
+  runtimeMetrics.rateLimit429Count = 0;
+
+  if (rateLimit429Count >= ALERT_429_PER_WINDOW_WARN) {
+    await emitAlert(
+      'rate-limit-spike',
+      `High 429 volume detected: ${rateLimit429Count} responses in ${intervalSeconds}s`,
+      { rateLimit429Count, intervalSeconds }
+    );
+  }
+
+  if (runtimeMetrics.healthProbeFailures > 0) {
+    await emitAlert(
+      'health-probe-failures',
+      `Health probe failures detected: ${runtimeMetrics.healthProbeFailures} in ${intervalSeconds}s`,
+      { failures: runtimeMetrics.healthProbeFailures, intervalSeconds }
+    );
+    runtimeMetrics.healthProbeFailures = 0;
+  }
+
+  if (runtimeMetrics.jobsProbeFailures > 0) {
+    await emitAlert(
+      'jobs-probe-failures',
+      `Jobs runtime probe failures detected: ${runtimeMetrics.jobsProbeFailures} in ${intervalSeconds}s`,
+      { failures: runtimeMetrics.jobsProbeFailures, intervalSeconds }
+    );
+    runtimeMetrics.jobsProbeFailures = 0;
+  }
+
+  if (jobsTableUnavailable) return;
+
+  try {
+    const [pending, retry] = await Promise.all([
+      fetchJobStatusCount(JOB_STATUS_PENDING),
+      fetchJobStatusCount(JOB_STATUS_RETRY)
+    ]);
+
+    const backlog = pending + retry;
+    if (backlog >= ALERT_JOB_BACKLOG_WARN) {
+      await emitAlert(
+        'jobs-backlog-high',
+        `Jobs backlog is high: ${backlog} (pending=${pending}, retry=${retry})`,
+        { backlog, pending, retry }
+      );
+    }
+  } catch (error) {
+    const msg = String(error?.message || '').toLowerCase();
+    if (msg.includes('relation') && msg.includes('jobs')) {
+      jobsTableUnavailable = true;
+      return;
+    }
+    console.warn('[alert] backlog check failed:', error?.message || error);
+  }
+};
+
 app.use(cors());
 app.use(express.json({ limit: '64kb' }));
 app.use(createRateLimiter({ key: 'general', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_GENERAL }));
@@ -816,7 +918,8 @@ app.get('/health', async (_req, res) => {
 
   const { error } = await supabase.from('posts').select('content_hash').limit(1);
   if (error) {
-    return res.status(500).json({ ok: false, error: `supabase health check failed: ${error.message}` });
+    runtimeMetrics.healthProbeFailures += 1;
+    return res.status(500).json({ ok: false, error: 'supabase health check failed: ' + (error.message || 'unknown error') });
   }
 
   const payload = { ok: true };
@@ -1245,6 +1348,7 @@ app.listen(port, () => {
   console.log(`backend server running on http://localhost:${port}`);
 
   probeJobsRuntime().catch((err) => {
+    runtimeMetrics.jobsProbeFailures += 1;
     console.warn('[jobs] runtime probe failed:', err?.message || err);
   });
 
@@ -1263,4 +1367,10 @@ app.listen(port, () => {
       console.warn('[jobs] periodic cleanup failed:', err?.message || err);
     });
   }, JOB_CLEANUP_INTERVAL_MS);
+
+  setInterval(() => {
+    runAlertChecks().catch((err) => {
+      console.warn('[alert] periodic check failed:', err?.message || err);
+    });
+  }, ALERT_CHECK_INTERVAL_MS);
 });
