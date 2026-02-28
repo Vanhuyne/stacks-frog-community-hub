@@ -21,6 +21,7 @@ const REFRESH_DEBOUNCE_MS = 1500;
 const FEED_POLL_INTERVAL_MS = 30000;
 const VISIBILITY_REFRESH_STALE_MS = 25000;
 const VISIBILITY_REFRESH_JITTER_MAX_MS = 400;
+const TIP_SYNC_PENDING_RETRY_DELAYS_MS = [4000, 8000, 12000, 20000];
 
 const initialState = {
   postFee: '50',
@@ -396,27 +397,44 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     }
 
     const baseUrl = apiBaseUrl.replace(/\/$/, '');
-    const response = await fetch(baseUrl + '/tips', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contentHash: String(contentHash || '').toLowerCase(),
-        postId: String(postId || ''),
-        amountMicroStx: String(amountMicroStx || ''),
-        txid: String(txid || '').toLowerCase(),
-        tipper: String(tipper || '').trim(),
-        recipient: String(recipient || '').trim()
-      })
-    });
+    const payload = {
+      contentHash: String(contentHash || '').toLowerCase(),
+      postId: String(postId || ''),
+      amountMicroStx: String(amountMicroStx || ''),
+      txid: String(txid || '').toLowerCase(),
+      tipper: String(tipper || '').trim(),
+      recipient: String(recipient || '').trim()
+    };
 
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error('Off-chain tip sync failed (' + response.status + '): ' + (body || 'unknown error'));
+    let attempts = 0;
+    const maxAttempts = TIP_SYNC_PENDING_RETRY_DELAYS_MS.length + 1;
+
+    while (attempts < maxAttempts) {
+      const response = await fetch(baseUrl + '/tips', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error('Off-chain tip sync failed (' + response.status + '): ' + (body || 'unknown error'));
+      }
+
+      const receipt = await response.json();
+      if (!receipt || receipt.pending !== true) return receipt;
+
+      const delayMs = TIP_SYNC_PENDING_RETRY_DELAYS_MS[attempts];
+      if (!delayMs) return receipt;
+
+      attempts += 1;
+      const jitterMs = Math.floor(Math.random() * 250);
+      await sleep(delayMs + jitterMs);
     }
 
-    return response.json();
+    return { pending: true };
   }, [apiBaseUrl]);
 
 
