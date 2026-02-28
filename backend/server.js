@@ -1068,6 +1068,23 @@ const parseLeaderboardRange = (value) => {
   return { range: 'weekly', windowDays: 7 };
 };
 
+const buildEmptyLeaderboardPayload = ({ range, windowDays, fromIso, toIso, warning = '' }) => ({
+  range,
+  windowDays,
+  from: fromIso,
+  to: toIso,
+  features: {
+    creatorTipperEnabled: false
+  },
+  leaders: {
+    posts: [],
+    creators: [],
+    tippers: []
+  },
+  updatedAt: new Date().toISOString(),
+  ...(warning ? { warning } : {})
+});
+
 const truncateOneLineText = (value, maxLength = 140) => {
   const text = String(value || '').replace(/\s+/g, ' ').trim();
   if (!text) return '';
@@ -1192,7 +1209,7 @@ app.get('/leaderboard', async (req, res) => {
         .in('content_hash', postHashes);
 
       if (postRowsError) {
-        return res.status(500).json({ error: 'internal server error' });
+        throw postRowsError;
       }
 
       for (const row of postRows || []) {
@@ -1254,8 +1271,17 @@ app.get('/leaderboard', async (req, res) => {
 
     cacheSet(cacheKey, payload, CACHE_TTL_LEADERBOARD_MS);
     return res.json(payload);
-  } catch (_error) {
-    return res.status(500).json({ error: 'internal server error' });
+  } catch (error) {
+    const message = String(error?.message || error || 'unknown error');
+    console.warn('[leaderboard] fallback payload due to error:', message);
+    const fallback = buildEmptyLeaderboardPayload({
+      range,
+      windowDays,
+      fromIso,
+      toIso,
+      warning: 'leaderboard temporarily unavailable'
+    });
+    return res.json(fallback);
   }
 });
 
