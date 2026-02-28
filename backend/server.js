@@ -1103,15 +1103,16 @@ const sortLeaderboardRows = (left, right) => {
 };
 
 const fetchTipReceiptsForLeaderboard = async ({ fromIso, toIso }) => {
-  const buildQuery = () => supabase
+  const selectWithRange = (columns) => supabase
     .from('tip_receipts')
+    .select(columns)
     .gte('verified_at', fromIso)
     .lte('verified_at', toIso)
     .order('verified_at', { ascending: false })
     .limit(LEADERBOARD_SOURCE_LIMIT);
 
   if (tipReceiptAddressColumnsAvailable) {
-    const withAddressCols = await buildQuery().select('content_hash, post_id, amount_micro_stx, verified_at, tipper_address, recipient_address');
+    const withAddressCols = await selectWithRange('content_hash, post_id, amount_micro_stx, verified_at, tipper_address, recipient_address');
     if (!withAddressCols.error) {
       return { rows: withAddressCols.data || [], addressColumnsEnabled: true };
     }
@@ -1123,7 +1124,7 @@ const fetchTipReceiptsForLeaderboard = async ({ fromIso, toIso }) => {
     }
   }
 
-  const withoutAddressCols = await buildQuery().select('content_hash, post_id, amount_micro_stx, verified_at');
+  const withoutAddressCols = await selectWithRange('content_hash, post_id, amount_micro_stx, verified_at');
   if (withoutAddressCols.error) throw withoutAddressCols.error;
   return { rows: withoutAddressCols.data || [], addressColumnsEnabled: false };
 };
