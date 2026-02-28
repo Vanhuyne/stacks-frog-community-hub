@@ -334,7 +334,11 @@ const extractUintFromFunctionArg = (arg) => {
 
 const isTransientHiroError = (message) => {
   const raw = String(message || '').toLowerCase();
-  return raw.includes('hiro request failed') || raw.includes('timed out') || raw.includes('abort');
+  return raw.includes('hiro request failed')
+    || raw.includes('timed out')
+    || raw.includes('abort')
+    || raw.includes('tx_status=pending')
+    || raw.includes('transaction not successful (tx_status=pending)');
 };
 
 const isTipReceiptAddressColumnsError = (error) => {
