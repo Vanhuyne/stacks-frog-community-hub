@@ -86,16 +86,6 @@ const toMicroStx = (amountStx) => {
   return micro > 0n ? micro.toString() : null;
 };
 
-const addMicroStx = (left, right) => {
-  try {
-    const a = BigInt(String(left || '0'));
-    const b = BigInt(String(right || '0'));
-    return (a + b).toString();
-  } catch (_) {
-    return String(left || '0');
-  }
-};
-
 const normalizeTxId = (value) => {
   const raw = String(value || '').trim().toLowerCase();
   return /^[0-9a-f]{64}$/.test(raw) ? raw : '';
@@ -690,35 +680,52 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
         offchainSyncError = String(err?.message || err || 'Unknown off-chain sync error');
       }
 
-      dispatch({
-        type: 'merge',
-        payload: {
-          posts: state.posts.map((item) => {
-            if (String(item.id) !== String(postId)) return item;
+      const hasSyncedTotals = Boolean(
+        offchainReceipt
+        && offchainReceipt.pending !== true
+        && offchainReceipt.totalTipMicroStx !== undefined
+      );
 
-            if (offchainReceipt && offchainReceipt.totalTipMicroStx !== undefined) {
+      if (hasSyncedTotals) {
+        dispatch({
+          type: 'merge',
+          payload: {
+            posts: state.posts.map((item) => {
+              if (String(item.id) !== String(postId)) return item;
               return {
                 ...item,
                 totalTipMicroStx: String(offchainReceipt.totalTipMicroStx || '0'),
                 tipCount: String(offchainReceipt.tipCount || '0')
               };
-            }
-
-            return {
-              ...item,
-              totalTipMicroStx: addMicroStx(item.totalTipMicroStx || '0', microAmount),
-              tipCount: String((Number.parseInt(String(item.tipCount || '0'), 10) || 0) + 1)
-            };
-          })
-        }
-      });
+            })
+          }
+        });
+      }
 
       if (offchainSyncError) {
-        toast.success('Tip sent: ' + tipAmountStx + ' STX');
+        toast('Tip submitted. Waiting for backend verification.');
         return {
           ok: true,
           tone: 'warning',
-          message: 'Tip sent (' + tipAmountStx + ' STX). On-chain success, off-chain sync pending.'
+          message: 'Tip submitted (' + tipAmountStx + ' STX), but verification is pending. It will appear after backend sync.'
+        };
+      }
+
+      if (offchainReceipt && offchainReceipt.pending) {
+        toast('Tip submitted. Waiting for on-chain confirmation.');
+        return {
+          ok: true,
+          tone: 'warning',
+          message: 'Tip submitted (' + tipAmountStx + ' STX). Waiting on-chain confirmation before counting.'
+        };
+      }
+
+      if (!hasSyncedTotals) {
+        toast('Tip submitted. Waiting for verification.');
+        return {
+          ok: true,
+          tone: 'warning',
+          message: 'Tip submitted (' + tipAmountStx + ' STX). Waiting for verification before updating totals.'
         };
       }
 
