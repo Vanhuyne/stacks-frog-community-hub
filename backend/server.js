@@ -1285,6 +1285,125 @@ app.get('/leaderboard', async (req, res) => {
   }
 });
 
+app.get('/leaderboard/debug', async (req, res) => {
+  const { range, windowDays } = parseLeaderboardRange(req.query?.range);
+  const now = new Date();
+  const from = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
+  const fromIso = from.toISOString();
+  const toIso = now.toISOString();
+
+  const errors = [];
+  const diagnostics = {
+    range,
+    windowDays,
+    from: fromIso,
+    to: toIso,
+    runtime: {
+      tipReceiptAddressColumnsAvailable,
+      leaderboardSourceLimit: LEADERBOARD_SOURCE_LIMIT,
+      leaderboardMaxRows: LEADERBOARD_MAX_ROWS
+    },
+    checks: {
+      totalTipReceipts: null,
+      tipReceiptsInWindow: null,
+      fetchedRows: 0,
+      addressColumnsEnabled: false,
+      validRows: 0,
+      invalidRows: 0,
+      selfTipRows: 0,
+      uniquePosts: 0,
+      uniqueCreators: 0,
+      uniqueTippers: 0,
+      nonEmptyTipperRows: 0,
+      nonEmptyRecipientRows: 0
+    },
+    sample: []
+  };
+
+  try {
+    const totalResult = await supabase
+      .from('tip_receipts')
+      .select('txid', { count: 'exact', head: true });
+
+    if (totalResult.error) {
+      errors.push({ step: 'count-total-tip-receipts', message: String(totalResult.error.message || totalResult.error) });
+    } else {
+      diagnostics.checks.totalTipReceipts = Number(totalResult.count || 0);
+    }
+
+    const windowResult = await supabase
+      .from('tip_receipts')
+      .select('txid', { count: 'exact', head: true })
+      .gte('verified_at', fromIso)
+      .lte('verified_at', toIso);
+
+    if (windowResult.error) {
+      errors.push({ step: 'count-window-tip-receipts', message: String(windowResult.error.message || windowResult.error) });
+    } else {
+      diagnostics.checks.tipReceiptsInWindow = Number(windowResult.count || 0);
+    }
+
+    const fetch = await fetchTipReceiptsForLeaderboard({ fromIso, toIso });
+    const rows = Array.isArray(fetch.rows) ? fetch.rows : [];
+
+    diagnostics.checks.fetchedRows = rows.length;
+    diagnostics.checks.addressColumnsEnabled = Boolean(fetch.addressColumnsEnabled);
+
+    const posts = new Set();
+    const creators = new Set();
+    const tippers = new Set();
+
+    for (const row of rows) {
+      const contentHash = String(row.content_hash || '').toLowerCase();
+      const postId = normalizePostId(row.post_id);
+      const amount = normalizeTipMicroStx(row.amount_micro_stx);
+      const tipper = normalizePrincipal(row.tipper_address);
+      const recipient = normalizePrincipal(row.recipient_address);
+
+      if (tipper) diagnostics.checks.nonEmptyTipperRows += 1;
+      if (recipient) diagnostics.checks.nonEmptyRecipientRows += 1;
+
+      const isValid = contentHashRegex.test(contentHash) && postId !== '0' && amount !== '0';
+      if (!isValid) {
+        diagnostics.checks.invalidRows += 1;
+        continue;
+      }
+
+      diagnostics.checks.validRows += 1;
+      posts.add(contentHash);
+
+      if (tipper && recipient && tipper === recipient) {
+        diagnostics.checks.selfTipRows += 1;
+      }
+
+      if (recipient && (!tipper || tipper !== recipient)) creators.add(recipient);
+      if (tipper && (!recipient || tipper !== recipient)) tippers.add(tipper);
+    }
+
+    diagnostics.checks.uniquePosts = posts.size;
+    diagnostics.checks.uniqueCreators = creators.size;
+    diagnostics.checks.uniqueTippers = tippers.size;
+
+    diagnostics.sample = rows.slice(0, 5).map((row) => ({
+      txid: String(row.txid || '').toLowerCase(),
+      contentHash: String(row.content_hash || '').toLowerCase(),
+      postId: normalizePostId(row.post_id),
+      amountMicroStx: normalizeTipMicroStx(row.amount_micro_stx),
+      tipper: normalizePrincipal(row.tipper_address),
+      recipient: normalizePrincipal(row.recipient_address),
+      verifiedAt: row.verified_at ? new Date(row.verified_at).toISOString() : ''
+    }));
+  } catch (error) {
+    errors.push({ step: 'fatal', message: String(error?.message || error || 'unknown error') });
+  }
+
+  return res.json({
+    ok: errors.length === 0,
+    diagnostics,
+    errors
+  });
+});
+
 app.post('/posts', createRateLimiter({ key: 'posts', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_POSTS }), upload.single('image'), async (req, res) => {
   const { key: idempotencyKey, error: idempotencyError } = getIdempotencyKey(req);
   if (idempotencyError) {
