@@ -52,6 +52,7 @@ const CACHE_TTL_HIRO_TX_MS = Number(process.env.CACHE_TTL_HIRO_TX_MS || 20_000);
 const CACHE_TTL_VERIFY_TX_MS = Number(process.env.CACHE_TTL_VERIFY_TX_MS || 20_000);
 const CACHE_TTL_STATS_MS = Number(process.env.CACHE_TTL_STATS_MS || 30_000);
 const CACHE_TTL_JOBS_STATS_MS = Number(process.env.CACHE_TTL_JOBS_STATS_MS || 10_000);
+const CACHE_TTL_LEADERBOARD_MS = Number(process.env.CACHE_TTL_LEADERBOARD_MS || 30_000);
 
 const JOB_POLL_INTERVAL_MS = Number(process.env.JOB_POLL_INTERVAL_MS || 15_000);
 const JOB_CLEANUP_INTERVAL_MS = Number(process.env.JOB_CLEANUP_INTERVAL_MS || 3_600_000);
@@ -59,6 +60,8 @@ const JOB_CLEANUP_DONE_AFTER_HOURS = Number(process.env.JOB_CLEANUP_DONE_AFTER_H
 const JOB_CLEANUP_FAILED_AFTER_HOURS = Number(process.env.JOB_CLEANUP_FAILED_AFTER_HOURS || 720);
 const JOB_BATCH_SIZE = Number(process.env.JOB_BATCH_SIZE || 6);
 const JOB_RETRY_MAX_ATTEMPTS = Number(process.env.JOB_RETRY_MAX_ATTEMPTS || 8);
+const LEADERBOARD_MAX_ROWS = Math.max(5, Math.min(100, Number(process.env.LEADERBOARD_MAX_ROWS || 20)));
+const LEADERBOARD_SOURCE_LIMIT = Math.max(100, Math.min(20_000, Number(process.env.LEADERBOARD_SOURCE_LIMIT || 5_000)));
 
 const ALERT_CHECK_INTERVAL_MS = Number(process.env.ALERT_CHECK_INTERVAL_MS || 60_000);
 const ALERT_429_PER_WINDOW_WARN = Number(process.env.ALERT_429_PER_WINDOW_WARN || 50);
@@ -80,6 +83,7 @@ const IDEMPOTENCY_KEY_REGEX = /^[A-Za-z0-9._:-]{8,128}$/;
 const urlRegex = /^https?:\/\//i;
 const txIdRegex = /^[0-9a-f]{64}$/i;
 const contentHashRegex = /^[0-9a-f]{64}$/;
+const principalRegex = /^S[PMTN][A-Z0-9]{39}$/;
 
 const memCache = new Map();
 const rateLimitStores = {
@@ -91,6 +95,7 @@ const rateLimitStores = {
 const idempotencyStore = new Map();
 
 let jobsTableUnavailable = false;
+let tipReceiptAddressColumnsAvailable = true;
 let isProcessingJobs = false;
 
 const runtimeMetrics = {
@@ -268,6 +273,12 @@ const normalizePostId = (value) => {
   return raw;
 };
 
+const normalizePrincipal = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return principalRegex.test(raw) ? raw : '';
+};
+
 const hashPayload = (payload) => {
   return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 };
@@ -324,6 +335,11 @@ const extractUintFromFunctionArg = (arg) => {
 const isTransientHiroError = (message) => {
   const raw = String(message || '').toLowerCase();
   return raw.includes('hiro request failed') || raw.includes('timed out') || raw.includes('abort');
+};
+
+const isTipReceiptAddressColumnsError = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('tipper_address') || message.includes('recipient_address');
 };
 
 const fetchJsonWithTimeout = async (url, timeoutMs = HIRO_TIMEOUT_MS) => {
@@ -498,7 +514,7 @@ const fetchPostTotals = async (contentHash) => {
   };
 };
 
-const persistTipReceiptAndTotals = async ({ txid, contentHash, postId, amountMicroStx, blockHeight }) => {
+const persistTipReceiptAndTotals = async ({ txid, contentHash, postId, amountMicroStx, blockHeight, tipper = '', recipient = '' }) => {
   const { data: existingReceipt, error: receiptReadError } = await supabase
     .from('tip_receipts')
     .select('content_hash, post_id, amount_micro_stx')
@@ -525,16 +541,36 @@ const persistTipReceiptAndTotals = async ({ txid, contentHash, postId, amountMic
     };
   }
 
-  const { error: insertReceiptError } = await supabase
+  const insertPayload = {
+    txid,
+    content_hash: contentHash,
+    post_id: postId,
+    amount_micro_stx: amountMicroStx,
+    verified_at: new Date().toISOString(),
+    block_height: blockHeight || 0
+  };
+
+  const tipperAddress = normalizePrincipal(tipper);
+  const recipientAddress = normalizePrincipal(recipient);
+
+  if (tipReceiptAddressColumnsAvailable) {
+    insertPayload.tipper_address = tipperAddress || null;
+    insertPayload.recipient_address = recipientAddress || null;
+  }
+
+  let { error: insertReceiptError } = await supabase
     .from('tip_receipts')
-    .insert({
-      txid,
-      content_hash: contentHash,
-      post_id: postId,
-      amount_micro_stx: amountMicroStx,
-      verified_at: new Date().toISOString(),
-      block_height: blockHeight || 0
-    });
+    .insert(insertPayload);
+
+  if (insertReceiptError && tipReceiptAddressColumnsAvailable && isTipReceiptAddressColumnsError(insertReceiptError)) {
+    tipReceiptAddressColumnsAvailable = false;
+    delete insertPayload.tipper_address;
+    delete insertPayload.recipient_address;
+    const retry = await supabase
+      .from('tip_receipts')
+      .insert(insertPayload);
+    insertReceiptError = retry.error;
+  }
 
   if (insertReceiptError) {
     if (String(insertReceiptError.code || '') === '23505') {
@@ -560,6 +596,7 @@ const persistTipReceiptAndTotals = async ({ txid, contentHash, postId, amountMic
   }
 
   cacheDeleteByPrefix('stats:');
+  cacheDeleteByPrefix('leaderboard:');
 
   return {
     duplicate: false,
@@ -568,7 +605,7 @@ const persistTipReceiptAndTotals = async ({ txid, contentHash, postId, amountMic
   };
 };
 
-const enqueueTipReverifyJob = async ({ txid, contentHash, postId, amountMicroStx, reason }) => {
+const enqueueTipReverifyJob = async ({ txid, contentHash, postId, amountMicroStx, reason, tipper = '', recipient = '' }) => {
   if (jobsTableUnavailable) return false;
 
   const dedupeKey = `tip-reverify:${txid}`;
@@ -576,7 +613,9 @@ const enqueueTipReverifyJob = async ({ txid, contentHash, postId, amountMicroStx
     txid,
     contentHash,
     postId,
-    amountMicroStx
+    amountMicroStx,
+    tipper: normalizePrincipal(tipper),
+    recipient: normalizePrincipal(recipient)
   };
 
   const { error } = await supabase
@@ -632,6 +671,8 @@ const processTipReverifyJob = async (job) => {
   const contentHash = String(payload.contentHash || '').trim().toLowerCase();
   const postId = normalizePostId(payload.postId);
   const amountMicroStx = normalizeTipMicroStx(payload.amountMicroStx);
+  const tipper = normalizePrincipal(payload.tipper);
+  const recipient = normalizePrincipal(payload.recipient);
 
   if (!txIdRegex.test(txid) || !contentHashRegex.test(contentHash) || postId === '0' || amountMicroStx === '0') {
     await markJobResult({
@@ -677,7 +718,9 @@ const processTipReverifyJob = async (job) => {
       contentHash,
       postId,
       amountMicroStx,
-      blockHeight: verify.blockHeight || 0
+      blockHeight: verify.blockHeight || 0,
+      tipper,
+      recipient
     });
 
     await markJobResult({
@@ -1017,6 +1060,205 @@ app.get('/stats', async (_req, res) => {
   return res.json(payload);
 });
 
+const parseLeaderboardRange = (value) => {
+  const normalized = String(value || 'weekly').trim().toLowerCase();
+  if (normalized === 'monthly') {
+    return { range: 'monthly', windowDays: 30 };
+  }
+  return { range: 'weekly', windowDays: 7 };
+};
+
+const truncateOneLineText = (value, maxLength = 140) => {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.slice(0, Math.max(0, maxLength - 3)) + '...';
+};
+
+const sortLeaderboardRows = (left, right) => {
+  if (right.tipCount !== left.tipCount) return right.tipCount - left.tipCount;
+
+  const leftAmount = BigInt(String(left.totalTipMicroStx || '0'));
+  const rightAmount = BigInt(String(right.totalTipMicroStx || '0'));
+  if (rightAmount !== leftAmount) return rightAmount > leftAmount ? 1 : -1;
+
+  return String(left.id || '').localeCompare(String(right.id || ''));
+};
+
+const fetchTipReceiptsForLeaderboard = async ({ fromIso, toIso }) => {
+  const buildQuery = () => supabase
+    .from('tip_receipts')
+    .gte('verified_at', fromIso)
+    .lte('verified_at', toIso)
+    .order('verified_at', { ascending: false })
+    .limit(LEADERBOARD_SOURCE_LIMIT);
+
+  if (tipReceiptAddressColumnsAvailable) {
+    const withAddressCols = await buildQuery().select('content_hash, post_id, amount_micro_stx, verified_at, tipper_address, recipient_address');
+    if (!withAddressCols.error) {
+      return { rows: withAddressCols.data || [], addressColumnsEnabled: true };
+    }
+
+    if (isTipReceiptAddressColumnsError(withAddressCols.error)) {
+      tipReceiptAddressColumnsAvailable = false;
+    } else {
+      throw withAddressCols.error;
+    }
+  }
+
+  const withoutAddressCols = await buildQuery().select('content_hash, post_id, amount_micro_stx, verified_at');
+  if (withoutAddressCols.error) throw withoutAddressCols.error;
+  return { rows: withoutAddressCols.data || [], addressColumnsEnabled: false };
+};
+
+app.get('/leaderboard', async (req, res) => {
+  const { range, windowDays } = parseLeaderboardRange(req.query?.range);
+  const cacheKey = 'leaderboard:' + range;
+  const cached = cacheGet(cacheKey);
+  if (cached) return res.json(cached);
+
+  const now = new Date();
+  const from = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
+  const fromIso = from.toISOString();
+  const toIso = now.toISOString();
+
+  try {
+    const { rows: receipts, addressColumnsEnabled } = await fetchTipReceiptsForLeaderboard({ fromIso, toIso });
+
+    const postsMap = new Map();
+    const creatorsMap = new Map();
+    const tippersMap = new Map();
+
+    for (const row of receipts) {
+      const contentHash = String(row.content_hash || '').toLowerCase();
+      if (!contentHashRegex.test(contentHash)) continue;
+
+      const postId = normalizePostId(row.post_id);
+      const amount = normalizeTipMicroStx(row.amount_micro_stx);
+      if (postId === '0' || amount === '0') continue;
+
+      const existingPost = postsMap.get(contentHash) || {
+        id: contentHash,
+        contentHash,
+        postId,
+        tipCount: 0,
+        totalTipMicroStx: '0'
+      };
+
+      existingPost.tipCount += 1;
+      existingPost.totalTipMicroStx = (BigInt(existingPost.totalTipMicroStx) + BigInt(amount)).toString();
+      postsMap.set(contentHash, existingPost);
+
+      const tipper = normalizePrincipal(row.tipper_address);
+      const recipient = normalizePrincipal(row.recipient_address);
+      const isSelfTip = tipper && recipient && tipper === recipient;
+
+      if (addressColumnsEnabled && !isSelfTip && recipient) {
+        const existingCreator = creatorsMap.get(recipient) || {
+          id: recipient,
+          address: recipient,
+          tipCount: 0,
+          totalTipMicroStx: '0'
+        };
+        existingCreator.tipCount += 1;
+        existingCreator.totalTipMicroStx = (BigInt(existingCreator.totalTipMicroStx) + BigInt(amount)).toString();
+        creatorsMap.set(recipient, existingCreator);
+      }
+
+      if (addressColumnsEnabled && !isSelfTip && tipper) {
+        const existingTipper = tippersMap.get(tipper) || {
+          id: tipper,
+          address: tipper,
+          tipCount: 0,
+          totalTipMicroStx: '0'
+        };
+        existingTipper.tipCount += 1;
+        existingTipper.totalTipMicroStx = (BigInt(existingTipper.totalTipMicroStx) + BigInt(amount)).toString();
+        tippersMap.set(tipper, existingTipper);
+      }
+    }
+
+    const topPostRows = [...postsMap.values()]
+      .sort(sortLeaderboardRows)
+      .slice(0, LEADERBOARD_MAX_ROWS);
+
+    const postHashes = topPostRows.map((row) => row.contentHash);
+    const postMetaMap = new Map();
+
+    if (postHashes.length > 0) {
+      const { data: postRows, error: postRowsError } = await supabase
+        .from('posts')
+        .select('content_hash, text, created_at')
+        .in('content_hash', postHashes);
+
+      if (postRowsError) {
+        return res.status(500).json({ error: 'internal server error' });
+      }
+
+      for (const row of postRows || []) {
+        postMetaMap.set(String(row.content_hash || '').toLowerCase(), {
+          textPreview: truncateOneLineText(row.text || ''),
+          createdAt: row.created_at ? new Date(row.created_at).toISOString() : ''
+        });
+      }
+    }
+
+    const topCreators = [...creatorsMap.values()]
+      .sort(sortLeaderboardRows)
+      .slice(0, LEADERBOARD_MAX_ROWS)
+      .map((item, index) => ({
+        rank: index + 1,
+        address: item.address,
+        tipCount: item.tipCount,
+        totalTipMicroStx: item.totalTipMicroStx
+      }));
+
+    const topTippers = [...tippersMap.values()]
+      .sort(sortLeaderboardRows)
+      .slice(0, LEADERBOARD_MAX_ROWS)
+      .map((item, index) => ({
+        rank: index + 1,
+        address: item.address,
+        tipCount: item.tipCount,
+        totalTipMicroStx: item.totalTipMicroStx
+      }));
+
+    const topPosts = topPostRows.map((item, index) => {
+      const meta = postMetaMap.get(item.contentHash) || { textPreview: '', createdAt: '' };
+      return {
+        rank: index + 1,
+        postId: item.postId,
+        contentHash: item.contentHash,
+        tipCount: item.tipCount,
+        totalTipMicroStx: item.totalTipMicroStx,
+        textPreview: meta.textPreview,
+        createdAt: meta.createdAt
+      };
+    });
+
+    const payload = {
+      range,
+      windowDays,
+      from: fromIso,
+      to: toIso,
+      features: {
+        creatorTipperEnabled: Boolean(addressColumnsEnabled)
+      },
+      leaders: {
+        posts: topPosts,
+        creators: topCreators,
+        tippers: topTippers
+      },
+      updatedAt: new Date().toISOString()
+    };
+
+    cacheSet(cacheKey, payload, CACHE_TTL_LEADERBOARD_MS);
+    return res.json(payload);
+  } catch (_error) {
+    return res.status(500).json({ error: 'internal server error' });
+  }
+});
+
 app.post('/posts', createRateLimiter({ key: 'posts', windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_POSTS }), upload.single('image'), async (req, res) => {
   const { key: idempotencyKey, error: idempotencyError } = getIdempotencyKey(req);
   if (idempotencyError) {
@@ -1104,6 +1346,7 @@ app.post('/posts', createRateLimiter({ key: 'posts', windowMs: RATE_LIMIT_WINDOW
 
       cacheDeleteByPrefix('posts-by-hash:');
       cacheDeleteByPrefix('stats:');
+      cacheDeleteByPrefix('leaderboard:');
     } else if (uploadedImage) {
       await supabase.storage.from(supabaseStorageBucket).remove([uploadedImage.objectPath]);
     }
@@ -1159,6 +1402,7 @@ app.delete('/posts/:hash', async (req, res) => {
 
   cacheDeleteByPrefix('posts-by-hash:');
   cacheDeleteByPrefix('stats:');
+  cacheDeleteByPrefix('leaderboard:');
   return res.json({ ok: true, deleted: true });
 });
 
@@ -1167,6 +1411,10 @@ app.post('/tips', createRateLimiter({ key: 'tips', windowMs: RATE_LIMIT_WINDOW_M
   const postId = normalizePostId(req.body?.postId);
   const amountMicroStx = normalizeTipMicroStx(req.body?.amountMicroStx);
   const txid = String(req.body?.txid || '').trim().toLowerCase();
+  const tipperRaw = req.body?.tipper;
+  const recipientRaw = req.body?.recipient;
+  const tipper = normalizePrincipal(tipperRaw);
+  const recipient = normalizePrincipal(recipientRaw);
 
   if (!contentHashRegex.test(contentHash)) {
     return res.status(400).json({ error: 'invalid contentHash' });
@@ -1182,6 +1430,14 @@ app.post('/tips', createRateLimiter({ key: 'tips', windowMs: RATE_LIMIT_WINDOW_M
 
   if (!txIdRegex.test(txid)) {
     return res.status(400).json({ error: 'invalid txid' });
+  }
+
+  if (tipperRaw !== undefined && tipperRaw !== null && String(tipperRaw).trim() && !tipper) {
+    return res.status(400).json({ error: 'invalid tipper' });
+  }
+
+  if (recipientRaw !== undefined && recipientRaw !== null && String(recipientRaw).trim() && !recipient) {
+    return res.status(400).json({ error: 'invalid recipient' });
   }
 
   const { data: postRow, error: postReadError } = await supabase
@@ -1240,7 +1496,9 @@ app.post('/tips', createRateLimiter({ key: 'tips', windowMs: RATE_LIMIT_WINDOW_M
         contentHash,
         postId,
         amountMicroStx,
-        reason: verification.error
+        reason: verification.error,
+        tipper,
+        recipient
       });
 
       return res.status(202).json({
@@ -1266,7 +1524,9 @@ app.post('/tips', createRateLimiter({ key: 'tips', windowMs: RATE_LIMIT_WINDOW_M
       contentHash,
       postId,
       amountMicroStx,
-      blockHeight: verification.blockHeight || 0
+      blockHeight: verification.blockHeight || 0,
+      tipper,
+      recipient
     });
 
     return res.json({

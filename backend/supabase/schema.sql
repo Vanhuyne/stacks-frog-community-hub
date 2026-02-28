@@ -17,11 +17,20 @@ create table if not exists public.tip_receipts (
   content_hash text not null references public.posts(content_hash) on delete cascade,
   post_id bigint not null,
   amount_micro_stx bigint not null check (amount_micro_stx > 0),
+  tipper_address text,
+  recipient_address text,
   verified_at timestamptz not null default timezone('utc', now()),
   block_height integer not null default 0
 );
 
 create index if not exists tip_receipts_content_hash_idx on public.tip_receipts (content_hash);
+create index if not exists tip_receipts_verified_at_idx on public.tip_receipts (verified_at desc);
+create index if not exists tip_receipts_tipper_verified_idx on public.tip_receipts (tipper_address, verified_at desc);
+create index if not exists tip_receipts_recipient_verified_idx on public.tip_receipts (recipient_address, verified_at desc);
+
+alter table if exists public.tip_receipts
+  add column if not exists tipper_address text,
+  add column if not exists recipient_address text;
 
 create or replace function public.increment_post_tip_totals(
   p_content_hash text,

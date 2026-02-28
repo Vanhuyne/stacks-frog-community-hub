@@ -238,6 +238,17 @@ export default function App() {
   const [socialImageFile, setSocialImageFile] = useState(null);
   const [socialImagePreviewUrl, setSocialImagePreviewUrl] = useState('');
   const [tipStatusByPostId, setTipStatusByPostId] = useState({});
+  const [leaderboardRange, setLeaderboardRange] = useState('weekly');
+  const [socialLeaderboard, setSocialLeaderboard] = useState({
+    loading: false,
+    error: '',
+    updatedAt: '',
+    creatorTipperEnabled: false,
+    posts: [],
+    creators: [],
+    tippers: []
+  });
+  const [leaderboardRefreshNonce, setLeaderboardRefreshNonce] = useState(0);
   const tipStatusTimeoutByPostIdRef = useRef(new Map());
   const socialComposerRef = useRef(null);
   const socialImageInputRef = useRef(null);
@@ -363,6 +374,57 @@ export default function App() {
   const userPostCount = userPosts.length;
 
   useEffect(() => {
+    if (activeTab !== 'social') return;
+
+    const baseUrl = String(socialApiBaseUrl || '').replace(/\/$/, '');
+    if (!baseUrl) return;
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    setSocialLeaderboard((prev) => ({ ...prev, loading: true, error: '' }));
+
+    const run = async () => {
+      try {
+        const response = await fetch(`${baseUrl}/leaderboard?range=${encodeURIComponent(leaderboardRange)}`, {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(body || `leaderboard request failed (${response.status})`);
+        }
+
+        const payload = await response.json();
+        if (cancelled) return;
+
+        setSocialLeaderboard({
+          loading: false,
+          error: '',
+          updatedAt: String(payload?.updatedAt || ''),
+          creatorTipperEnabled: Boolean(payload?.features?.creatorTipperEnabled),
+          posts: Array.isArray(payload?.leaders?.posts) ? payload.leaders.posts : [],
+          creators: Array.isArray(payload?.leaders?.creators) ? payload.leaders.creators : [],
+          tippers: Array.isArray(payload?.leaders?.tippers) ? payload.leaders.tippers : []
+        });
+      } catch (error) {
+        if (controller.signal.aborted || cancelled) return;
+        setSocialLeaderboard((prev) => ({
+          ...prev,
+          loading: false,
+          error: String(error?.message || error || 'Failed to load leaderboard')
+        }));
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [activeTab, leaderboardRange, leaderboardRefreshNonce, socialApiBaseUrl]);
+
+  useEffect(() => {
     const currentAddress = String(faucet.address || '').trim();
     if (!currentAddress || !registeredUsername) return;
 
@@ -380,6 +442,16 @@ export default function App() {
     for (const post of socialFeed) {
       const author = String(post?.author || '').trim();
       if (author) addresses.add(author);
+    }
+
+    for (const entry of socialLeaderboard.creators) {
+      const address = String(entry?.address || '').trim();
+      if (address) addresses.add(address);
+    }
+
+    for (const entry of socialLeaderboard.tippers) {
+      const address = String(entry?.address || '').trim();
+      if (address) addresses.add(address);
     }
 
     const targets = [...addresses].filter((addr) => !String(usernamesByAddress[addr] || '').trim());
@@ -416,7 +488,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [daoLookupService, faucet.address, socialFeed, usernamesByAddress]);
+  }, [daoLookupService, faucet.address, socialFeed, socialLeaderboard.creators, socialLeaderboard.tippers, usernamesByAddress]);
 
   const authorDashboard = useMemo(() => {
     const authors = new Map();
@@ -1182,6 +1254,109 @@ export default function App() {
               <p className="mt-4 text-base text-[#10162f]/70">Fees: Publish {social.postFee || '50'} FROG, Like {social.likeFee || '5'} FROG. Tip: {socialTipAmountStx} STX. Treasury: {shortenAddress(social.treasury)}</p>
             </div>
           </header>
+
+          <section className="mt-8">
+            <div className="ui-card rounded-none border border-[#10162f]/20 bg-white p-6 shadow-[0_18px_40px_rgba(14,35,24,0.12)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#10162f]/65">Community Leaderboard</p>
+                  <h2 className="text-2xl font-normal">Top Tippers, Creators, and Posts</h2>
+                  <p className="text-xs text-[#10162f]/65">Window: {leaderboardRange === 'weekly' ? 'Last 7 days' : 'Last 30 days'}{socialLeaderboard.updatedAt ? ' • Updated ' + formatPostTime(socialLeaderboard.updatedAt) : ''}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex rounded-none border border-[#10162f]/20 bg-[#f5f3eb] p-1">
+                    <button
+                      type="button"
+                      className={leaderboardRange === 'weekly'
+                        ? 'rounded-none bg-white px-3 py-1 text-xs font-medium text-[#10162f]'
+                        : 'rounded-none px-3 py-1 text-xs font-medium text-[#10162f]/75'}
+                      onClick={() => setLeaderboardRange('weekly')}
+                      disabled={socialLeaderboard.loading}
+                    >
+                      Weekly
+                    </button>
+                    <button
+                      type="button"
+                      className={leaderboardRange === 'monthly'
+                        ? 'rounded-none bg-white px-3 py-1 text-xs font-medium text-[#10162f]'
+                        : 'rounded-none px-3 py-1 text-xs font-medium text-[#10162f]/75'}
+                      onClick={() => setLeaderboardRange('monthly')}
+                      disabled={socialLeaderboard.loading}
+                    >
+                      Monthly
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className={ghostButtonClass + ' w-auto'}
+                    onClick={() => setLeaderboardRefreshNonce((prev) => prev + 1)}
+                    disabled={socialLeaderboard.loading}
+                  >
+                    {socialLeaderboard.loading ? 'Refreshing...' : 'Refresh leaderboard'}
+                  </button>
+                </div>
+              </div>
+
+              {socialLeaderboard.error && (
+                <p className="mt-3 text-sm text-[#9f1239]">{socialLeaderboard.error}</p>
+              )}
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                <div className="rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/80 p-4">
+                  <p className="text-xs uppercase tracking-[0.12em] text-[#10162f]/70">Top Creators</p>
+                  {socialLeaderboard.creatorTipperEnabled ? (
+                    <div className="mt-2 space-y-2">
+                      {socialLeaderboard.creators.slice(0, 5).map((entry) => (
+                        <div key={entry.address} className="flex items-center justify-between text-sm text-[#10162f]">
+                          <span>#{entry.rank} @{displayUserHandle(entry.address)}</span>
+                          <span>{formatTipAmountFromMicroStx(entry.totalTipMicroStx)} STX</span>
+                        </div>
+                      ))}
+                      {socialLeaderboard.creators.length === 0 && (
+                        <p className="text-sm text-[#10162f]/70">No creator data in this window.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-[#10162f]/70">Creator ranking will activate after tipper/recipient sync is enabled.</p>
+                  )}
+                </div>
+
+                <div className="rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/80 p-4">
+                  <p className="text-xs uppercase tracking-[0.12em] text-[#10162f]/70">Top Tippers</p>
+                  {socialLeaderboard.creatorTipperEnabled ? (
+                    <div className="mt-2 space-y-2">
+                      {socialLeaderboard.tippers.slice(0, 5).map((entry) => (
+                        <div key={entry.address} className="flex items-center justify-between text-sm text-[#10162f]">
+                          <span>#{entry.rank} @{displayUserHandle(entry.address)}</span>
+                          <span>{formatTipAmountFromMicroStx(entry.totalTipMicroStx)} STX</span>
+                        </div>
+                      ))}
+                      {socialLeaderboard.tippers.length === 0 && (
+                        <p className="text-sm text-[#10162f]/70">No tipper data in this window.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-[#10162f]/70">Tipper ranking will activate after tipper/recipient sync is enabled.</p>
+                  )}
+                </div>
+
+                <div className="rounded-none border border-[#10162f]/15 bg-[#f5f3eb]/80 p-4">
+                  <p className="text-xs uppercase tracking-[0.12em] text-[#10162f]/70">Top Posts</p>
+                  <div className="mt-2 space-y-2">
+                    {socialLeaderboard.posts.slice(0, 5).map((entry) => (
+                      <div key={entry.contentHash} className="border-b border-[#10162f]/10 pb-2 text-sm last:border-b-0 last:pb-0">
+                        <p className="font-medium text-[#10162f]">#{entry.rank} • {formatTipAmountFromMicroStx(entry.totalTipMicroStx)} STX • {entry.tipCount} tips</p>
+                        <p className="text-[#10162f]/70">{entry.textPreview || ('Post #' + entry.postId)}</p>
+                      </div>
+                    ))}
+                    {socialLeaderboard.posts.length === 0 && (
+                      <p className="text-sm text-[#10162f]/70">No tipped posts in this window.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
           <section className="mt-8">
             <div className="mb-4 flex items-center justify-between gap-3">

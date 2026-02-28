@@ -400,7 +400,7 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
     }
   }, [apiBaseUrl]);
 
-  const createOffchainTipReceipt = useCallback(async ({ contentHash, postId, amountMicroStx, txid }) => {
+  const createOffchainTipReceipt = useCallback(async ({ contentHash, postId, amountMicroStx, txid, tipper, recipient }) => {
     if (!apiBaseUrl) {
       throw new Error('Missing VITE_SOCIAL_API_BASE_URL for off-chain tip sync.');
     }
@@ -415,7 +415,9 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
         contentHash: String(contentHash || '').toLowerCase(),
         postId: String(postId || ''),
         amountMicroStx: String(amountMicroStx || ''),
-        txid: String(txid || '').toLowerCase()
+        txid: String(txid || '').toLowerCase(),
+        tipper: String(tipper || '').trim(),
+        recipient: String(recipient || '').trim()
       })
     });
 
@@ -680,7 +682,9 @@ export const useFrogSocial = ({ contractAddress, contractName, tipsContractAddre
           contentHash,
           postId: String(postId),
           amountMicroStx: microAmount,
-          txid
+          txid,
+          tipper: address,
+          recipient
         });
       } catch (err) {
         offchainSyncError = String(err?.message || err || 'Unknown off-chain sync error');
