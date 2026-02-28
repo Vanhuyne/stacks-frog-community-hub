@@ -238,6 +238,7 @@ export default function App() {
   const [socialImageFile, setSocialImageFile] = useState(null);
   const [socialImagePreviewUrl, setSocialImagePreviewUrl] = useState('');
   const [tipStatusByPostId, setTipStatusByPostId] = useState({});
+  const tipStatusTimeoutByPostIdRef = useRef(new Map());
   const socialComposerRef = useRef(null);
   const socialImageInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
@@ -310,8 +311,15 @@ export default function App() {
   }, [social.status]);
 
   useEffect(() => {
+    tipStatusTimeoutByPostIdRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+    tipStatusTimeoutByPostIdRef.current.clear();
     setTipStatusByPostId({});
   }, [faucet.address]);
+
+  useEffect(() => () => {
+    tipStatusTimeoutByPostIdRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+    tipStatusTimeoutByPostIdRef.current.clear();
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'admin' && !(Boolean(faucet.address) && isOwner)) {
@@ -610,20 +618,24 @@ export default function App() {
 
     const key = String(postId);
     const tone = result.tone || (result.ok ? 'success' : 'error');
+    const previousTimeoutId = tipStatusTimeoutByPostIdRef.current.get(key);
+    if (previousTimeoutId) clearTimeout(previousTimeoutId);
 
     setTipStatusByPostId((prev) => ({
       ...prev,
       [key]: { message: result.message, tone }
     }));
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setTipStatusByPostId((prev) => {
         if (!(key in prev)) return prev;
         const next = { ...prev };
         delete next[key];
         return next;
       });
+      tipStatusTimeoutByPostIdRef.current.delete(key);
     }, 8000);
+    tipStatusTimeoutByPostIdRef.current.set(key, timeoutId);
   };
 
 
